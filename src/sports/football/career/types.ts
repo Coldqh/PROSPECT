@@ -1,4 +1,5 @@
 import type { CharacterCreationInput } from "../../../core/character/types";
+import type { FootballTrainingState } from "../training/types";
 import type {
   DepthChartDecision,
   DepthChartEvaluation,
@@ -75,7 +76,7 @@ export interface FootballSeasonState {
 }
 
 export interface FootballCareerState {
-  moduleVersion: 3;
+  moduleVersion: 4;
   worldSeed: string;
   stage: "high-school-preseason";
   position: FootballPosition;
@@ -87,6 +88,7 @@ export interface FootballCareerState {
   staff: FootballTeamStaff;
   roster: FootballRosterPlayer[];
   teamDynamics: TeamDynamics;
+  training: FootballTrainingState;
   depthChart: DepthChartState;
   season: FootballSeasonState;
   recruitment: {

@@ -1211,3 +1211,159 @@ body::after {
   .roster-list-compact article { grid-template-columns: 34px minmax(0, 1fr) 27px; }
   .roster-status { display: none; }
 }
+
+/* v0.5 — training, body readiness and medical interface */
+.medical-pill {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #c9c9ce;
+  background: #101013;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.medical-pill--cleared { border-color: rgba(239,51,64,.24); color: #ff717c; }
+.medical-pill--questionable { color: #ff9a79; border-color: rgba(255,122,79,.28); }
+.medical-pill--limited, .medical-pill--out { color: #fff; border-color: #d7192d; background: rgba(201,24,42,.16); }
+.vital-row--body button:nth-child(2) i { background: linear-gradient(90deg, #5e0b13, #d51d2e); }
+.vital-row--body button:nth-child(3) i { background: linear-gradient(90deg, #5c0a12, #ff3547); }
+.training-brief,
+.medical-alert {
+  width: 100%;
+  min-height: 60px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-align: left;
+  background: #0d0d0f;
+  cursor: pointer;
+}
+.training-brief:hover { border-color: rgba(239,51,64,.34); }
+.training-brief__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #ff5965;
+  background: rgba(201,24,42,.11);
+}
+.training-brief small,
+.medical-alert small { display: block; color: #ff6671; font-size: 6px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.training-brief strong,
+.medical-alert strong { display: block; margin-top: 3px; font-size: 10px; }
+.training-brief p { margin: 3px 0 0; color: var(--muted); font-size: 7px; }
+.medical-alert { border-color: rgba(239,51,64,.3); background: linear-gradient(120deg, rgba(201,24,42,.11), #0d0d0f 52%); }
+.medical-alert > svg:first-child { color: #ff4a58; }
+.medical-alert span { display: block; margin-top: 3px; color: var(--muted); font-size: 7px; }
+.training-view { gap: 6px; }
+.training-body-strip {
+  display: grid;
+  grid-template-columns: .8fr .7fr .7fr 1.25fr;
+  gap: 5px;
+}
+.training-body-strip button {
+  min-width: 0;
+  min-height: 47px;
+  padding: 7px 6px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  text-align: left;
+  color: var(--text);
+  background: #0d0d0f;
+  cursor: pointer;
+}
+.training-body-strip small { color: var(--muted); font-size: 6px; letter-spacing: .06em; text-transform: uppercase; }
+.training-body-strip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.training-body-strip button:last-child strong { color: #ff626e; font-size: 9px; }
+.training-focus-list { display: grid; gap: 5px; }
+.training-focus-list button {
+  width: 100%;
+  min-height: 52px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  text-align: left;
+  background: #0d0d0f;
+  cursor: pointer;
+}
+.training-focus-list button > span {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #b2b2b8;
+  background: rgba(255,255,255,.035);
+}
+.training-focus-list strong { display: block; font-size: 9px; }
+.training-focus-list small { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 6px; }
+.training-focus-list em { font-style: normal; color: #74747b; font-size: 11px; font-weight: 900; text-align: right; }
+.training-focus-list button.is-active { border-color: rgba(239,51,64,.45); background: linear-gradient(115deg, rgba(201,24,42,.12), #0d0d0f 55%); }
+.training-focus-list button.is-active > span { color: #fff; background: linear-gradient(145deg, #e72234, #8f0f1c); }
+.training-focus-list button.is-active em { color: #ff6671; }
+.training-control-card {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0d0d0f;
+}
+.training-control-card header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.training-control-card header small { display: block; color: var(--muted); font-size: 6px; letter-spacing: .07em; text-transform: uppercase; }
+.training-control-card header strong { display: block; margin-top: 2px; font-size: 8px; }
+.training-control-card header > span { color: #ff5965; font-size: 12px; font-weight: 900; }
+.medical-status-card {
+  min-height: 62px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #d7192d;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  background: #0d0d0f;
+}
+.medical-status-card > svg { color: #ff4c59; }
+.medical-status-card small { display: block; color: var(--muted); font-size: 7px; text-transform: uppercase; }
+.medical-status-card strong { display: block; margin-top: 4px; font-size: 10px; line-height: 1.35; }
+.medical-status-card--out,
+.medical-status-card--limited { background: linear-gradient(120deg, rgba(201,24,42,.15), #0d0d0f 58%); }
+.active-issue-card { margin-top: 9px; padding: 12px; border-radius: 14px; background: rgba(201,24,42,.08); }
+.active-issue-card small { color: #ff6671; font-size: 7px; text-transform: uppercase; }
+.active-issue-card h3 { margin: 5px 0; font-size: 15px; }
+.active-issue-card p { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.45; }
+
+@media (max-width: 760px) {
+  .today-section .section-tabs button { padding-left: 7px; padding-right: 7px; font-size: 7px; }
+  .training-focus-list button { min-height: 48px; }
+  .training-body-strip { gap: 4px; }
+  .training-body-strip button { min-height: 43px; }
+  .training-view .primary-action-bar { min-height: 50px; }
+}
+
+@media (max-width: 390px) {
+  .training-body-strip { grid-template-columns: repeat(3, 1fr); }
+  .training-body-strip button:last-child { grid-column: 1 / -1; min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
+  .training-focus-list small { max-width: 245px; }
+}

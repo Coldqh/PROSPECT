@@ -3,6 +3,9 @@ import { getWeeklyPlanTemplate } from "../../../core/life/planCatalog";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../../core/life/types";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { evaluateDepthChart } from "../team/evaluateDepthChart";
+import { getTrainingFocus } from "../training/catalog";
+import { resolveTrainingDay } from "../training/resolveTrainingDay";
+import type { TrainingFocusId } from "../training/types";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -54,41 +57,75 @@ export function updateWeeklyPlan(
   };
 }
 
+export function updateTrainingPlan(
+  save: CareerSave,
+  focusId: TrainingFocusId,
+  intensity: TrainingIntensity,
+): CareerSave {
+  const focus = getTrainingFocus(save.football.position, focusId);
+  return {
+    ...save,
+    football: {
+      ...save.football,
+      training: {
+        ...save.football.training,
+        plan: {
+          focusId,
+          intensity,
+          revision: save.football.training.plan.revision + 1,
+        },
+      },
+    },
+    history: [
+      ...save.history,
+      {
+        id: `training-plan-${save.meta.id}-${save.football.training.plan.revision + 1}`,
+        occurredAt: save.meta.updatedAt,
+        type: "training-plan-updated",
+        title: `Тренировочный акцент: ${focus.name}`,
+        description: `${focus.summary} Интенсивность: ${intensity}. План действует до следующего изменения.`,
+      },
+    ],
+  };
+}
+
 export function advanceFootballCareerDay(save: CareerSave): CareerSave {
   const result = advanceLifeDay(save.character, save.life, save.meta.currentDate, save.meta.worldSeed);
   const weekday = save.life.dayIndex;
   const practiceFactor = [0.9, 1, 1.15, 1.05, 0.72, 0.95, 0.2][weekday] ?? 1;
-  const plan = save.life.weeklyPlan;
-  const filmBonus = plan.templateId === "film-room" ? 1.25 : 1;
-  const trainingBonus = plan.templateId === "breakout" ? 1.16 : 1;
-  const recoveryPenalty = result.character.condition.fatigue >= 72 ? 0.58 : result.character.condition.fatigue >= 58 ? 0.82 : 1;
+  const trainingResolution = resolveTrainingDay(
+    save.football,
+    result.character,
+    result.effects,
+    save.meta.currentDate,
+    save.meta.worldSeed,
+    practiceFactor,
+  );
 
-  const techniqueGain = round((result.effects.trainingQuality / 560) * practiceFactor * trainingBonus * recoveryPenalty, 2);
-  const athleticismGain = round((result.effects.trainingQuality / 760) * practiceFactor * trainingBonus * recoveryPenalty, 2);
-  const footballIqGain = round(((result.effects.studyQuality + result.effects.trainingQuality * 0.35) / 850) * filmBonus, 2);
-  const competitivenessGain = round((result.effects.trainingQuality / 1200) * (plan.intensity === "aggressive" ? 1.2 : 1), 2);
-
-  const nextRatings = {
-    ...save.football.ratings,
-    technique: clamp(save.football.ratings.technique + techniqueGain),
-    athleticism: clamp(save.football.ratings.athleticism + athleticismGain),
-    footballIq: clamp(save.football.ratings.footballIq + footballIqGain),
-    competitiveness: clamp(save.football.ratings.competitiveness + competitivenessGain),
-  };
   const previousOverall = save.football.ratings.overall;
-  nextRatings.overall = calculateOverall(nextRatings);
+  const nextRatings = {
+    ...trainingResolution.ratings,
+    overall: calculateOverall(trainingResolution.ratings),
+  };
   const overallDelta = round(nextRatings.overall - previousOverall, 2);
-
-  const coachTrustDelta = round(
-    (result.effects.trainingQuality - 55) * 0.03 +
+  const baseTrustDelta = round(
+    (result.effects.trainingQuality - 55) * 0.018 +
       (result.character.education.attendance - 85) * 0.008 -
       Math.max(0, result.character.condition.fatigue - 78) * 0.025,
     1,
   );
+  const coachTrustDelta = round(baseTrustDelta + trainingResolution.coachTrustDelta, 1);
   const nextCoachTrust = clamp(save.football.depthChart.coachTrust + coachTrustDelta);
 
   const nextOutcome = {
     ...result.outcome,
+    highlights: [
+      ...result.outcome.highlights,
+      `${trainingResolution.session.focusName}: ${trainingResolution.session.grade}, нагрузка ${Math.round(trainingResolution.session.load)}.`,
+      ...(trainingResolution.session.issueOccurred
+        ? [`Медицинский штаб зафиксировал: ${trainingResolution.session.issueOccurred}.`]
+        : []),
+    ],
     deltas: {
       ...result.outcome.deltas,
       coachTrust: coachTrustDelta,
@@ -100,10 +137,13 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
   const provisionalFootball: CareerSave["football"] = {
     ...save.football,
     ratings: nextRatings,
+    training: trainingResolution.training,
     teamDynamics: {
       ...save.football.teamDynamics,
       morale: clamp(save.football.teamDynamics.morale + teamMoraleDelta),
-      schemeMastery: clamp(save.football.teamDynamics.schemeMastery + footballIqGain * 0.35),
+      schemeMastery: clamp(
+        save.football.teamDynamics.schemeMastery + trainingResolution.session.gains.footballIq * 0.42,
+      ),
     },
     depthChart: {
       ...save.football.depthChart,
@@ -114,7 +154,7 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
       week: Math.max(0, result.life.weekNumber - 1),
     },
   };
-  const depthUpdate = evaluateDepthChart(provisionalFootball, result.character, result.nextDate);
+  const depthUpdate = evaluateDepthChart(provisionalFootball, trainingResolution.character, result.nextDate);
   const depthChanged = depthUpdate.rank !== save.football.depthChart.rank;
   const nextFootball: CareerSave["football"] = {
     ...provisionalFootball,
@@ -130,7 +170,7 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
       ...save.meta,
       currentDate: result.nextDate,
     },
-    character: result.character,
+    character: trainingResolution.character,
     life: {
       ...result.life,
       lastOutcome: nextOutcome,
@@ -145,14 +185,34 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
         title: nextOutcome.title,
         description: nextOutcome.summary,
       },
+      {
+        id: trainingResolution.session.id,
+        occurredAt: save.meta.updatedAt,
+        type: "training-session-completed",
+        title: `${trainingResolution.session.focusName}: ${trainingResolution.session.grade}`,
+        description: trainingResolution.session.note,
+      },
+      ...(trainingResolution.session.issueOccurred
+        ? [
+            {
+              id: `medical-${trainingResolution.session.id}`,
+              occurredAt: save.meta.updatedAt,
+              type: "health-issue",
+              title: "Медицинский статус изменён",
+              description: `${trainingResolution.session.issueOccurred}. ${trainingResolution.training.body.restriction}`,
+            },
+          ]
+        : []),
       ...(depthChanged
-        ? [{
-            id: `depth-${save.meta.id}-${result.life.completedDays}`,
-            occurredAt: save.meta.updatedAt,
-            type: "depth-chart-changed",
-            title: depthUpdate.lastDecision.title,
-            description: depthUpdate.lastDecision.description,
-          }]
+        ? [
+            {
+              id: `depth-${save.meta.id}-${result.life.completedDays}`,
+              occurredAt: save.meta.updatedAt,
+              type: "depth-chart-changed",
+              title: depthUpdate.lastDecision.title,
+              description: depthUpdate.lastDecision.description,
+            },
+          ]
         : []),
     ],
   };

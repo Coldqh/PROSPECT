@@ -28,7 +28,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "career",
-      schemaVersion: 4,
+      schemaVersion: 5,
       sport: "american-football",
       worldSeed: "simulation-seed",
       createdAt: "2026-07-21T10:00:00.000Z",
@@ -57,6 +57,7 @@ describe("football day simulation", () => {
     expect(advanced.meta.currentDate).toEqual({ year: 2026, month: 8, day: 18 });
     expect(advanced.life.completedDays).toBe(1);
     expect(advanced.football.ratings.technique).toBeGreaterThanOrEqual(save.football.ratings.technique);
-    expect(advanced.history.at(-1)?.type).toBe("day-completed");
+    expect(advanced.history.some((entry) => entry.type === "day-completed")).toBe(true);
+    expect(advanced.football.training.lastSession?.date).toEqual(save.meta.currentDate);
   });
 });

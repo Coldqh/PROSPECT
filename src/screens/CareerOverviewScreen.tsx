@@ -84,7 +84,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, advanceDay } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [careerView, setCareerView] = useState<CareerView>("overview");
   const [teamView, setTeamView] = useState<TeamView>("overview");
@@ -179,6 +179,7 @@ export default function CareerOverviewScreen() {
               mutating={mutating}
               {...(actionError ? { actionError } : {})}
               onUpdatePlan={updateWeeklyPlan}
+              onUpdateTrainingPlan={updateTrainingPlan}
               onAdvanceDay={advanceDay}
             />
           )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types";
+import type { TrainingFocusId } from "../sports/football/training/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -10,6 +11,7 @@ interface CareerSaveState {
   error?: string;
   actionError?: string;
   updateWeeklyPlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
+  updateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   advanceDay(): Promise<void>;
 }
 
@@ -67,6 +69,20 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const updateTrainingPlan = useCallback(async (focusId: TrainingFocusId, intensity: TrainingIntensity) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.updateTrainingPlan(careerId, focusId, intensity));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось сохранить тренировочный план.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   const advanceDay = useCallback(async () => {
     if (!careerId || mutating) return;
     setMutating(true);
@@ -88,6 +104,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     ...(error ? { error } : {}),
     ...(actionError ? { actionError } : {}),
     updateWeeklyPlan,
+    updateTrainingPlan,
     advanceDay,
   };
 }

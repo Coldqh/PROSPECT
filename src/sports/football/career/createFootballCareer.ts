@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { evaluateDepthChart } from "../team/evaluateDepthChart";
 import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../team/generateTeam";
+import { createInitialTrainingState } from "../training/createTrainingState";
 
 const FIRST_NAMES = ["Cameron", "Jaylen", "Marcus", "Darius", "Devin", "Malik", "Jordan", "Tyler"] as const;
 const LAST_NAMES = ["Hayes", "Carter", "Brooks", "Reed", "Mitchell", "Coleman", "Ward", "Foster"] as const;
@@ -224,7 +225,7 @@ export function createFootballCareerState(
   }
 
   let football: FootballCareerState = {
-    moduleVersion: 3,
+    moduleVersion: 4,
     worldSeed,
     stage: "high-school-preseason",
     position: setup.position,
@@ -236,6 +237,7 @@ export function createFootballCareerState(
     staff,
     roster,
     teamDynamics,
+    training: createInitialTrainingState(worldSeed, setup.position, character, ratings),
     depthChart: {
       rank: 1,
       playersAtPosition: roster.filter((player) => player.position === setup.position).length + 1,

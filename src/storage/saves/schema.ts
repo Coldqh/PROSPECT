@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -138,8 +138,67 @@ const depthDecisionSchema = z.object({
   occurredOn: z.string().min(8),
 });
 
+const trainingFocusSchema = z.enum(["position-craft", "explosive-power", "film-install", "recovery-reset"]);
+const trainingIntensitySchema = z.enum(["controlled", "standard", "aggressive"]);
+const activeHealthIssueSchema = z.object({
+  id: z.string().min(1),
+  diagnosis: z.string().min(2),
+  area: z.enum(["lower-body", "upper-body", "head-neck", "back-core"]),
+  severity: z.enum(["minor", "moderate"]),
+  daysRemaining: z.number().int().nonnegative(),
+  recurrenceRisk: z.number().min(0).max(100),
+  startedOn: z.string().min(8),
+});
+const trainingSessionSchema = z.object({
+  id: z.string().min(1),
+  date: gameDateSchema,
+  focusId: trainingFocusSchema,
+  focusName: z.string().min(2),
+  intensity: trainingIntensitySchema,
+  grade: z.enum(["A", "B", "C", "D"]),
+  load: z.number().min(0).max(100),
+  readinessBefore: z.number().min(0).max(100),
+  readinessAfter: z.number().min(0).max(100),
+  sorenessDelta: z.number(),
+  riskAfter: z.number().min(0).max(100),
+  gains: z.object({
+    technique: z.number(),
+    athleticism: z.number(),
+    footballIq: z.number(),
+    competitiveness: z.number(),
+  }),
+  note: z.string().min(2),
+  issueOccurred: z.string().min(2).optional(),
+});
+const footballTrainingSchema = z.object({
+  moduleVersion: z.literal(1),
+  plan: z.object({
+    focusId: trainingFocusSchema,
+    intensity: trainingIntensitySchema,
+    revision: z.number().int().min(1),
+  }),
+  body: z.object({
+    readiness: z.number().min(0).max(100),
+    acuteLoad: z.number().min(0).max(100),
+    chronicLoad: z.number().min(0).max(100),
+    soreness: z.number().min(0).max(100),
+    pain: z.number().min(0).max(100),
+    injuryRisk: z.number().min(0).max(100),
+    medicalStatus: z.enum(["cleared", "questionable", "limited", "out"]),
+    restriction: z.string().min(2),
+    activeIssue: activeHealthIssueSchema.optional(),
+  }),
+  momentum: z.object({
+    technique: z.number().min(0).max(100),
+    athleticism: z.number().min(0).max(100),
+    footballIq: z.number().min(0).max(100),
+    competitiveness: z.number().min(0).max(100),
+  }),
+  lastSession: trainingSessionSchema.optional(),
+});
+
 const footballSchema = z.object({
-  moduleVersion: z.literal(3),
+  moduleVersion: z.literal(4),
   worldSeed: z.string().min(1),
   stage: z.literal("high-school-preseason"),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
@@ -168,6 +227,7 @@ const footballSchema = z.object({
     discipline: z.number().min(0).max(100),
     schemeMastery: z.number().min(0).max(100),
   }),
+  training: footballTrainingSchema,
   depthChart: z.object({
     rank: z.number().int().min(1),
     playersAtPosition: z.number().int().min(1),

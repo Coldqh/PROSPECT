@@ -1,8 +1,13 @@
 import type { FootballCareerSetup } from "../../sports/football/career/types";
-import { advanceFootballCareerDay, updateWeeklyPlan as applyWeeklyPlan } from "../../sports/football/simulation/advanceFootballDay";
+import {
+  advanceFootballCareerDay,
+  updateTrainingPlan as applyTrainingPlan,
+  updateWeeklyPlan as applyWeeklyPlan,
+} from "../../sports/football/simulation/advanceFootballDay";
 import { createSeed } from "../../core/random/createSeed";
 import { createInitialLifeState } from "../../core/life/createInitialLifeState";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../core/life/types";
+import type { TrainingFocusId } from "../../sports/football/training/types";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -123,6 +128,16 @@ export class CareerRepository {
   ): Promise<CareerSave> {
     const current = await this.load(careerId);
     return this.save(applyWeeklyPlan(current, templateId, intensity));
+  }
+
+
+  async updateTrainingPlan(
+    careerId: string,
+    focusId: TrainingFocusId,
+    intensity: TrainingIntensity,
+  ): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(applyTrainingPlan(current, focusId, intensity));
   }
 
   async advanceDay(careerId: string): Promise<CareerSave> {
