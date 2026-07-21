@@ -1,3 +1,4 @@
+import type { FootballCareerSetup } from "../../sports/football/career/types";
 import { createSeed } from "../../core/random/createSeed";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
@@ -18,12 +19,18 @@ function snapshotId(careerId: string, revision: number): string {
 function toIndexRecord(save: CareerSave): CareerIndexRecord {
   return {
     id: save.meta.id,
-    displayName: "Новый проспект",
+    displayName: save.character.identity.fullName,
     sport: save.meta.sport,
     phase: save.meta.phase,
     currentDate: `${save.meta.currentDate.year}-${String(save.meta.currentDate.month).padStart(2, "0")}-${String(save.meta.currentDate.day).padStart(2, "0")}`,
     updatedAt: save.meta.updatedAt,
     revision: save.meta.revision,
+    position: save.football.position,
+    jerseyNumber: save.football.jerseyNumber,
+    schoolName: save.football.school.name,
+    stateCode: save.character.origin.stateCode,
+    overall: save.football.ratings.overall,
+    potentialBand: save.football.ratings.potentialBand,
   };
 }
 
@@ -54,14 +61,27 @@ export class CareerRepository {
   async list(): Promise<CareerIndexRecord[]> {
     const database = await getDatabase();
     const records = await database.getAll("careerIndex");
-    return records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const normalized: CareerIndexRecord[] = [];
+
+    for (const record of records) {
+      if ("position" in record && typeof record.position === "string") {
+        normalized.push(record);
+        continue;
+      }
+
+      const migrated = await this.load(record.id);
+      normalized.push(toIndexRecord(migrated));
+    }
+
+    return normalized.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }
 
-  async createFootballCareer(): Promise<CareerSave> {
+  async createFootballCareer(setup: FootballCareerSetup): Promise<CareerSave> {
     const careerId = crypto.randomUUID();
     const worldSeed = createSeed("football");
     const now = new Date().toISOString();
     const footballModule = await loadSportModule("american-football");
+    const generated = footballModule.createInitialState(worldSeed, setup) as Pick<CareerSave, "character" | "football">;
 
     const save: CareerSave = {
       meta: {
@@ -72,17 +92,18 @@ export class CareerRepository {
         createdAt: now,
         updatedAt: now,
         currentDate: { year: 2026, month: 8, day: 17 },
-        phase: "foundation",
+        phase: "high-school-preseason",
         revision: 0,
       },
-      football: footballModule.createInitialState(worldSeed) as CareerSave["football"],
+      character: generated.character,
+      football: generated.football,
       history: [
         {
           id: crypto.randomUUID(),
           occurredAt: now,
           type: "career-created",
-          title: "Карьера создана",
-          description: "Футбольный мир получил постоянный seed и первое безопасное сохранение.",
+          title: "Первый день",
+          description: `${generated.character.identity.fullName} начинает последний школьный сезон в ${generated.football.school.name}.`,
         },
       ],
     };
@@ -101,9 +122,10 @@ export class CareerRepository {
       },
     };
 
+    const validated = careerSaveSchemaSafeParse(save);
     const database = await getDatabase();
-    const snapshot = toSnapshot(save);
-    const previous = await this.readLatestSnapshot(save.meta.id);
+    const snapshot = toSnapshot(validated);
+    const previous = await this.readLatestSnapshot(validated.meta.id);
     const transaction = database.transaction(
       ["careerIndex", "careerSnapshots", "autosaveBackups"],
       "readwrite",
@@ -114,18 +136,22 @@ export class CareerRepository {
     }
 
     await transaction.objectStore("careerSnapshots").put(snapshot);
-    await transaction.objectStore("careerIndex").put(toIndexRecord(save));
+    await transaction.objectStore("careerIndex").put(toIndexRecord(validated));
     await transaction.done;
-    await pruneBackups(save.meta.id);
+    await pruneBackups(validated.meta.id);
 
-    return save;
+    return validated;
   }
 
   async load(careerId: string): Promise<CareerSave> {
     const latest = await this.readLatestSnapshot(careerId);
 
     if (latest && latest.checksum === createChecksum(latest.state)) {
-      return migrateCareerSave(latest.state).save;
+      const migration = migrateCareerSave(latest.state);
+      if (migration.migratedFrom !== undefined) {
+        return this.save({ ...migration.save, meta: { ...migration.save.meta, revision: latest.revision } });
+      }
+      return migration.save;
     }
 
     const database = await getDatabase();
@@ -136,8 +162,8 @@ export class CareerRepository {
       if (backup.checksum !== createChecksum(backup.state)) {
         continue;
       }
-
-      return migrateCareerSave(backup.state).save;
+      const migration = migrateCareerSave(backup.state);
+      return migration.migratedFrom !== undefined ? this.save(migration.save) : migration.save;
     }
 
     throw new Error("Career save is missing or corrupted");
@@ -200,6 +226,10 @@ export class CareerRepository {
     records.sort((left, right) => right.revision - left.revision);
     return records[0];
   }
+}
+
+function careerSaveSchemaSafeParse(save: CareerSave): CareerSave {
+  return migrateCareerSave(save).save;
 }
 
 export const careerRepository = new CareerRepository();

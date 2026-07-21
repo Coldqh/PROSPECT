@@ -1,0 +1,85 @@
+import type { CharacterCreationInput } from "../../../core/character/types";
+
+export type FootballPosition = "QB" | "RB" | "WR" | "LB" | "CB";
+
+export interface FootballCareerSetup {
+  character: CharacterCreationInput;
+  position: FootballPosition;
+  archetypeId: string;
+  jerseyNumber: number;
+}
+
+export interface FootballRatings {
+  overall: number;
+  potentialBand: "role-player" | "starter" | "high-upside" | "national-ceiling";
+  athleticism: number;
+  technique: number;
+  footballIq: number;
+  competitiveness: number;
+}
+
+export interface SchoolIdentity {
+  id: string;
+  name: string;
+  shortName: string;
+  mascot: string;
+  city: string;
+  stateCode: string;
+  primaryColor: string;
+  secondaryColor: string;
+  prestige: number;
+  facilities: number;
+  coaching: number;
+  medicine: number;
+  discipline: number;
+  youthTrust: number;
+  philosophy: string;
+}
+
+export interface DepthChartState {
+  rank: number;
+  playersAtPosition: number;
+  coachTrust: number;
+  projectedRole: "starter" | "rotation" | "special-teams" | "developmental";
+  directRival: {
+    id: string;
+    name: string;
+    year: "Senior" | "Junior";
+    overall: number;
+    style: string;
+  };
+}
+
+export interface FootballSeasonState {
+  year: number;
+  phase: "preseason";
+  week: number;
+  wins: number;
+  losses: number;
+  nextOpponent: {
+    id: string;
+    name: string;
+    record: string;
+    threat: string;
+  };
+}
+
+export interface FootballCareerState {
+  moduleVersion: 2;
+  worldSeed: string;
+  stage: "high-school-preseason";
+  position: FootballPosition;
+  archetypeId: string;
+  archetypeName: string;
+  jerseyNumber: number;
+  ratings: FootballRatings;
+  school: SchoolIdentity;
+  depthChart: DepthChartState;
+  season: FootballSeasonState;
+  recruitment: {
+    visibility: number;
+    interestedPrograms: number;
+    offers: number;
+    regionalRankLabel: string;
+  };
+}

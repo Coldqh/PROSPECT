@@ -1,4 +1,6 @@
 import type { SportDescriptor } from "../../core/sports/types";
+import { createFootballCareerState } from "./career/createFootballCareer";
+import type { FootballCareerSetup } from "./career/types";
 
 export const descriptor: SportDescriptor = {
   id: "american-football",
@@ -9,16 +11,8 @@ export const descriptor: SportDescriptor = {
   summary: "Школьный сезон, depth chart, матчи и рекрутинг колледжей.",
 };
 
-export interface FootballFoundationState {
-  moduleVersion: 1;
-  worldSeed: string;
-  stage: "foundation";
+export function createInitialState(worldSeed: string, setup: unknown): unknown {
+  return createFootballCareerState(worldSeed, setup as FootballCareerSetup);
 }
 
-export function createInitialState(worldSeed: string): FootballFoundationState {
-  return {
-    moduleVersion: 1,
-    worldSeed,
-    stage: "foundation",
-  };
-}
+export type { FootballCareerSetup, FootballCareerState, FootballPosition } from "./career/types";

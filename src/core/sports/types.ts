@@ -11,5 +11,5 @@ export interface SportDescriptor {
 
 export interface SportModule {
   descriptor: SportDescriptor;
-  createInitialState(worldSeed: string): unknown;
+  createInitialState(worldSeed: string, setup: unknown): unknown;
 }

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { FootballCareerSetup } from "../sports/football/career/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerIndexRecord, CareerSave } from "../storage/saves/schema";
 
@@ -15,7 +16,7 @@ interface CareerLibraryContextValue {
   loading: boolean;
   error?: string;
   refresh(): Promise<void>;
-  createFootballCareer(): Promise<CareerSave>;
+  createFootballCareer(setup: FootballCareerSetup): Promise<CareerSave>;
   removeCareer(careerId: string): Promise<void>;
   importCareer(file: File): Promise<CareerSave>;
   exportCareer(careerId: string): Promise<Blob>;
@@ -46,8 +47,8 @@ export function CareerLibraryProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const createFootballCareer = useCallback(async () => {
-    const save = await careerRepository.createFootballCareer();
+  const createFootballCareer = useCallback(async (setup: FootballCareerSetup) => {
+    const save = await careerRepository.createFootballCareer(setup);
     await refresh();
     return save;
   }, [refresh]);
