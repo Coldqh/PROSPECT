@@ -1,15 +1,38 @@
-# Roadmap
+# PROSPECT Roadmap
 
-1. Фундамент проекта — готово.
-2. Создание спортсмена.
-3. Календарь и недельное планирование.
-4. Школа, команда и depth chart.
-5. Здоровье и развитие.
-6. Матчи.
-7. События и память.
-8. Рекрутинг.
-9. Первый год колледжа.
-10. Расширение жизненных систем.
-11. Профессиональный футбол.
-12. Жизнь после спорта.
-13. Basketball.
+## Completed
+
+### v0.1 — Foundation
+
+- React, TypeScript, Vite and PWA shell;
+- IndexedDB snapshots, backups, import and export;
+- seeded random service;
+- GitHub Pages deployment.
+
+### v0.2 — Player creation
+
+- six-step career builder;
+- origin, family, personality, position and archetype;
+- generated school, rival, depth chart and starting conditions;
+- schema v2 migration;
+- redesigned mobile-first interface.
+
+### v0.3 — Day and week loop
+
+- weekly plan templates and intensity;
+- derived seven-day schedule;
+- energy, fatigue, stress, sleep and consistency;
+- academic consequences;
+- football development and coach trust;
+- daily reports and calendar advancement;
+- schema v3 migration.
+
+## Next
+
+### v0.4 — School and team world
+
+- named coaching staff;
+- complete position room and roster summaries;
+- team culture and practice evaluation;
+- depth-chart movement with explicit reasons;
+- first relationship values with coaches and rivals.

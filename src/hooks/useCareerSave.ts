@@ -1,37 +1,50 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
 interface CareerSaveState {
   save?: CareerSave;
   loading: boolean;
+  mutating: boolean;
   error?: string;
+  actionError?: string;
+  updateWeeklyPlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
+  advanceDay(): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
-  const [state, setState] = useState<CareerSaveState>({ loading: true });
+  const [save, setSave] = useState<CareerSave>();
+  const [loading, setLoading] = useState(true);
+  const [mutating, setMutating] = useState(false);
+  const [error, setError] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
 
     if (!careerId) {
-      setState({ loading: false, error: "Не указан ID карьеры" });
+      setLoading(false);
+      setError("Не указан ID карьеры");
       return;
     }
 
-    setState({ loading: true });
+    setLoading(true);
+    setError(undefined);
 
     void careerRepository
       .load(careerId)
-      .then((save) => {
+      .then((loadedSave) => {
         if (!cancelled) {
-          setState({ loading: false, save });
+          setSave(loadedSave);
+          setLoading(false);
         }
       })
-      .catch((error: unknown) => {
-        console.error(error);
+      .catch((caught: unknown) => {
+        console.error(caught);
         if (!cancelled) {
-          setState({ loading: false, error: "Сохранение повреждено или отсутствует" });
+          setError("Сохранение повреждено или отсутствует");
+          setLoading(false);
         }
       });
 
@@ -40,5 +53,41 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     };
   }, [careerId]);
 
-  return state;
+  const updateWeeklyPlan = useCallback(async (templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.updateWeeklyPlan(careerId, templateId, intensity));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось сохранить недельный план.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const advanceDay = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.advanceDay(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить игровой день.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  return {
+    ...(save ? { save } : {}),
+    loading,
+    mutating,
+    ...(error ? { error } : {}),
+    ...(actionError ? { actionError } : {}),
+    updateWeeklyPlan,
+    advanceDay,
+  };
 }

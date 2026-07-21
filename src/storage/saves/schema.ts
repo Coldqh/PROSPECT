@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -141,6 +141,49 @@ const footballSchema = z.object({
   }),
 });
 
+const focusSchema = z.object({
+  training: z.number().min(0).max(100),
+  recovery: z.number().min(0).max(100),
+  study: z.number().min(0).max(100),
+  social: z.number().min(0).max(100),
+});
+
+const dayDeltaSchema = z.object({
+  energy: z.number(),
+  fatigue: z.number(),
+  stress: z.number(),
+  confidence: z.number(),
+  health: z.number(),
+  gpa: z.number(),
+  coachTrust: z.number(),
+  overall: z.number(),
+});
+
+const dayOutcomeSchema = z.object({
+  id: z.string().min(1),
+  date: gameDateSchema,
+  grade: z.enum(["A", "B", "C", "D"]),
+  title: z.string().min(1),
+  summary: z.string().min(1),
+  highlights: z.array(z.string().min(1)),
+  deltas: dayDeltaSchema,
+});
+
+const lifeSchema = z.object({
+  moduleVersion: z.literal(1),
+  weekNumber: z.number().int().min(1),
+  dayIndex: z.number().int().min(0).max(6),
+  completedDays: z.number().int().nonnegative(),
+  weeklyPlan: z.object({
+    templateId: z.enum(["balanced", "breakout", "recovery", "academic", "film-room"]),
+    intensity: z.enum(["controlled", "standard", "aggressive"]),
+    focus: focusSchema,
+    revision: z.number().int().min(1),
+  }),
+  consistency: z.number().min(0).max(100),
+  lastOutcome: dayOutcomeSchema.optional(),
+});
+
 const careerMetaSchema = z.object({
   id: z.string().min(1),
   schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
@@ -164,6 +207,7 @@ const historyEntrySchema = z.object({
 export const careerSaveSchema = z.object({
   meta: careerMetaSchema,
   character: characterSchema,
+  life: lifeSchema,
   football: footballSchema,
   history: z.array(historyEntrySchema),
 });

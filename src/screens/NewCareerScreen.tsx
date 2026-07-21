@@ -484,7 +484,7 @@ export default function NewCareerScreen() {
               <div className="launch-sequence">
                 <span><Icon name="spark" /><strong>Генерация школы</strong><small>Культура, тренеры, медицина, depth chart</small></span>
                 <span><Icon name="team" /><strong>Генерация команды</strong><small>Конкурент, роль, следующий соперник</small></span>
-                <span><Icon name="database" /><strong>Безопасный снимок</strong><small>Schema v2 · IndexedDB · backup</small></span>
+                <span><Icon name="database" /><strong>Безопасный снимок</strong><small>Schema v3 · IndexedDB · backup</small></span>
               </div>
               {error && <div className="inline-message inline-message--error">{error}</div>}
             </div>

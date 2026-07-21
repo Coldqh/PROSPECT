@@ -5,7 +5,7 @@ import { ScreenShell } from "../components/layout/ScreenShell";
 import { LoadingScreen } from "../components/feedback/LoadingScreen";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { MetricBar } from "../components/ui/MetricBar";
-import { formatGameDate } from "../core/calendar/types";
+import { TodayDashboard } from "../components/career/TodayDashboard";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -36,30 +36,10 @@ function potentialLabel(value: "role-player" | "starter" | "high-upside" | "nati
   }[value];
 }
 
-function roleLabel(value: "starter" | "rotation" | "special-teams" | "developmental"): string {
-  return {
-    starter: "Projected Starter",
-    rotation: "Rotation",
-    "special-teams": "Special Teams",
-    developmental: "Developmental",
-  }[value];
-}
-
-function StatTile({ label, value, meta, icon }: { label: string; value: string | number; meta: string; icon: IconName }) {
-  return (
-    <article className="stat-tile">
-      <span className="stat-tile__icon"><Icon name={icon} /></span>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      <p>{meta}</p>
-    </article>
-  );
-}
-
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, advanceDay } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
 
   if (loading) {
@@ -149,54 +129,13 @@ export default function CareerOverviewScreen() {
           </section>
 
           {activeTab === "today" && (
-            <div className="dashboard-stack">
-              <header className="dashboard-heading">
-                <div><span className="eyebrow">MONDAY // 17 AUG 2026</span><h2>Первый день сезона</h2></div>
-                <span className="dashboard-heading__date">{formatGameDate(save.meta.currentDate)}</span>
-              </header>
-
-              <div className="stat-grid">
-                <StatTile label="ENERGY" value={character.condition.energy} meta={`${character.condition.sleepHours} h sleep`} icon="bolt" />
-                <StatTile label="HEALTH" value={`${character.condition.health}%`} meta="No restrictions" icon="pulse" />
-                <StatTile label="CONFIDENCE" value={character.condition.confidence} meta={mindsetLabels[character.personality.preset].name} icon="flame" />
-                <StatTile label="COACH TRUST" value={football.depthChart.coachTrust} meta={roleLabel(football.depthChart.projectedRole)} icon="shield" />
-              </div>
-
-              <div className="dashboard-grid dashboard-grid--today">
-                <section className="panel panel--schedule">
-                  <header className="panel__header"><div><small>TODAY</small><h3>Team check-in</h3></div><span className="panel-index">01</span></header>
-                  <div className="day-timeline">
-                    <article><time>08:00</time><i /><div><strong>Senior orientation</strong><span>Auditorium · mandatory</span></div><em>45 min</em></article>
-                    <article><time>11:30</time><i /><div><strong>Equipment issue</strong><span>Locker room · jersey #{football.jerseyNumber}</span></div><em>30 min</em></article>
-                    <article className="is-key"><time>15:15</time><i /><div><strong>Baseline testing</strong><span>Speed, movement, conditioning</span></div><em>90 min</em></article>
-                    <article><time>18:00</time><i /><div><strong>Position meeting</strong><span>Depth chart briefing</span></div><em>60 min</em></article>
-                  </div>
-                </section>
-
-                <section className="panel panel--decision">
-                  <header className="panel__header"><div><small>STATUS</small><h3>Role projection</h3></div><Icon name="target" /></header>
-                  <div className="role-rank"><span>#{football.depthChart.rank}</span><div><small>{football.position} DEPTH CHART</small><strong>{roleLabel(football.depthChart.projectedRole)}</strong></div></div>
-                  <p>Прямой конкурент: <strong>{football.depthChart.directRival.name}</strong>. {football.depthChart.directRival.year}, общий уровень {football.depthChart.directRival.overall}.</p>
-                  <div className="decision-footer"><span>{football.depthChart.playersAtPosition} игроков на позиции</span><strong>{football.depthChart.directRival.style}</strong></div>
-                </section>
-
-                <section className="panel panel--opponent">
-                  <header className="panel__header"><div><small>NEXT GAME</small><h3>Week 1</h3></div><span className="panel-index">08.28</span></header>
-                  <div className="matchup">
-                    <div><span>{football.school.shortName.slice(0, 2).toUpperCase()}</span><strong>{football.school.shortName}</strong><small>HOME</small></div>
-                    <em>VS</em>
-                    <div><span>OP</span><strong>{football.season.nextOpponent.name}</strong><small>0–0</small></div>
-                  </div>
-                  <p>Главная угроза: {football.season.nextOpponent.threat}.</p>
-                </section>
-
-                <section className="panel panel--coach">
-                  <header className="panel__header"><div><small>COACH NOTE</small><h3>Первое впечатление</h3></div><Icon name="book" /></header>
-                  <blockquote>«Рейтинг сейчас ничего не решает. Хочу увидеть, кто держит технику, когда ноги уже тяжёлые.»</blockquote>
-                  <footer><span>Position Coach</span><strong>Evaluation begins today</strong></footer>
-                </section>
-              </div>
-            </div>
+            <TodayDashboard
+              save={save}
+              mutating={mutating}
+              {...(actionError ? { actionError } : {})}
+              onUpdatePlan={updateWeeklyPlan}
+              onAdvanceDay={advanceDay}
+            />
           )}
 
           {activeTab === "career" && (
