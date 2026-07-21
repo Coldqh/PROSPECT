@@ -5,6 +5,7 @@ import { ScreenShell } from "../components/layout/ScreenShell";
 import { LoadingScreen } from "../components/feedback/LoadingScreen";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { MetricBar } from "../components/ui/MetricBar";
+import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
 import {
   familyIncomeLabels,
@@ -18,10 +19,30 @@ const tabs = [
   { id: "today", label: "Сегодня", icon: "home" },
   { id: "career", label: "Карьера", icon: "chart" },
   { id: "team", label: "Команда", icon: "team" },
-  { id: "profile", label: "Персонаж", icon: "user" },
+  { id: "profile", label: "Игрок", icon: "user" },
 ] as const satisfies readonly { id: string; label: string; icon: IconName }[];
 
+const careerViews = [
+  { id: "overview", label: "Путь" },
+  { id: "history", label: "История" },
+  { id: "recruiting", label: "Рекрутинг" },
+] as const;
+const teamViews = [
+  { id: "overview", label: "Сводка" },
+  { id: "depth", label: "Состав" },
+  { id: "program", label: "Программа" },
+] as const;
+const profileViews = [
+  { id: "body", label: "Тело" },
+  { id: "mind", label: "Характер" },
+  { id: "origin", label: "Дом" },
+  { id: "study", label: "Учёба" },
+] as const;
+
 type TabId = (typeof tabs)[number]["id"];
+type CareerView = (typeof careerViews)[number]["id"];
+type TeamView = (typeof teamViews)[number]["id"];
+type ProfileView = (typeof profileViews)[number]["id"];
 
 function heightLabel(inches: number): string {
   return `${Math.floor(inches / 12)}′${inches % 12}″`;
@@ -41,6 +62,9 @@ export default function CareerOverviewScreen() {
   const { careerId } = useParams();
   const { save, loading, error, mutating, actionError, updateWeeklyPlan, advanceDay } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
+  const [careerView, setCareerView] = useState<CareerView>("overview");
+  const [teamView, setTeamView] = useState<TeamView>("overview");
+  const [profileView, setProfileView] = useState<ProfileView>("body");
 
   if (loading) {
     return <LoadingScreen label="Восстановление карьеры" />;
@@ -59,7 +83,10 @@ export default function CareerOverviewScreen() {
   }
 
   const { character, football } = save;
-  const teamStyle = { "--team-accent": football.school.primaryColor, "--team-dark": football.school.secondaryColor } as CSSProperties;
+  const teamStyle = {
+    "--team-accent": football.school.primaryColor,
+    "--team-dark": football.school.secondaryColor,
+  } as CSSProperties;
   const initials = `${character.identity.firstName[0] ?? "P"}${character.identity.lastName[0] ?? "R"}`;
 
   return (
@@ -68,7 +95,7 @@ export default function CareerOverviewScreen() {
         <AppHeader
           compact
           action={
-            <button className="icon-button" aria-label="К списку карьер" onClick={() => navigate("/")}>
+            <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
               <Icon name="menu" />
             </button>
           }
@@ -85,8 +112,8 @@ export default function CareerOverviewScreen() {
         </nav>
       }
     >
-      <div className="career-layout">
-        <aside className="career-sidebar">
+      <div className="career-layout career-layout--compact">
+        <aside className="career-sidebar career-sidebar--compact">
           <div className="career-sidebar__logo"><span>{football.position}</span><strong>#{String(football.jerseyNumber).padStart(2, "0")}</strong></div>
           <nav>
             {tabs.map((tab) => (
@@ -103,29 +130,14 @@ export default function CareerOverviewScreen() {
         </aside>
 
         <div className="career-main">
-          <section className="player-banner" style={teamStyle}>
-            <div className="player-banner__grid" />
-            <div className="player-banner__topline">
-              <span>PROSPECT // HIGH SCHOOL</span>
-              <div><i /> PRESEASON</div>
+          <section className="player-compact-header" style={teamStyle}>
+            <div className="player-compact-header__avatar"><span>{initials}</span><small>{football.position}</small></div>
+            <div className="player-compact-header__identity">
+              <small>#{football.jerseyNumber} · {football.archetypeName}</small>
+              <h1>{character.identity.fullName}</h1>
+              <p>{football.school.shortName} {football.school.mascot} · {character.origin.city}, {character.origin.stateCode}</p>
             </div>
-            <div className="player-banner__body">
-              <div className="player-banner__portrait"><span>{initials}</span><small>{football.position}</small></div>
-              <div className="player-banner__identity">
-                <small>{football.archetypeName} · {character.origin.city}, {character.origin.stateCode}</small>
-                <h1>{character.identity.firstName}<br />{character.identity.lastName}</h1>
-                <div className="player-banner__tags">
-                  <span>#{football.jerseyNumber}</span>
-                  <span>{heightLabel(character.physical.heightInches)} · {character.physical.weightLbs} LB</span>
-                  <span>{character.identity.age} YEARS</span>
-                </div>
-              </div>
-              <div className="overall-dial">
-                <small>OVR</small>
-                <strong>{football.ratings.overall}</strong>
-                <span>{potentialLabel(football.ratings.potentialBand)}</span>
-              </div>
-            </div>
+            <div className="player-compact-header__rating"><small>OVR</small><strong>{football.ratings.overall}</strong><span>{potentialLabel(football.ratings.potentialBand)}</span></div>
           </section>
 
           {activeTab === "today" && (
@@ -139,115 +151,190 @@ export default function CareerOverviewScreen() {
           )}
 
           {activeTab === "career" && (
-            <div className="dashboard-stack">
-              <header className="dashboard-heading"><div><span className="eyebrow">CAREER PATH</span><h2>История только начинается</h2></div></header>
-              <div className="career-path">
-                <article className="is-active"><span>01</span><div><small>AUG 2026</small><strong>Последний школьный сезон</strong><p>Борьба за роль, первые матчи и выход на рынок рекрутинга.</p></div><em>ACTIVE</em></article>
-                <article><span>02</span><div><small>WINTER 2026</small><strong>Recruiting window</strong><p>Интерес программ, визиты, предложения и академические требования.</p></div><em>LOCKED</em></article>
-                <article><span>03</span><div><small>2027</small><strong>College freshman</strong><p>Новая команда, общежитие, redshirt и борьба за место.</p></div><em>LOCKED</em></article>
-              </div>
-              <div className="dashboard-grid">
-                <section className="panel panel--wide">
-                  <header className="panel__header"><div><small>HISTORY</small><h3>Ключевые события</h3></div><Icon name="clock" /></header>
-                  <div className="history-feed">
-                    {save.history.map((entry) => (
-                      <article key={entry.id}><i /><div><small>{new Date(entry.occurredAt).toLocaleDateString("ru-RU")}</small><strong>{entry.title}</strong><p>{entry.description}</p></div></article>
-                    ))}
+            <div className="compact-section">
+              <header className="compact-page-head">
+                <div><span>Senior season 2026</span><h2>Карьера</h2></div>
+                <strong className="compact-head-score">W{football.season.week}</strong>
+              </header>
+              <SectionTabs<CareerView> tabs={careerViews} active={careerView} onChange={setCareerView} ariaLabel="Разделы карьеры" />
+
+              {careerView === "overview" && (
+                <div className="compact-view">
+                  <section className="career-stage-compact">
+                    <div className="career-stage-compact__number">01</div>
+                    <div><small>Текущий этап</small><h3>Последний школьный сезон</h3><p>Закрепиться в составе, сыграть сезон и выйти на рынок колледжей.</p></div>
+                    <span>ACTIVE</span>
+                  </section>
+                  <div className="compact-stat-pair">
+                    <article><small>Видимость</small><strong>{football.recruitment.visibility}</strong><span>{football.recruitment.regionalRankLabel}</span></article>
+                    <article><small>Программы</small><strong>{football.recruitment.interestedPrograms}</strong><span>проявляют интерес</span></article>
                   </div>
-                </section>
-                <section className="panel">
-                  <header className="panel__header"><div><small>RECRUITING</small><h3>Visibility</h3></div><span className="panel-index">{football.recruitment.visibility}</span></header>
-                  <MetricBar label="Regional visibility" value={football.recruitment.visibility} />
-                  <div className="recruiting-zero"><strong>{football.recruitment.interestedPrograms}</strong><span>interested programs</span></div>
-                  <p className="panel-copy">Статус: {football.recruitment.regionalRankLabel}. Первые оценки появятся после игровых эпизодов.</p>
-                </section>
-              </div>
+                  <button type="button" className="compact-link-card" onClick={() => setCareerView("recruiting")}>
+                    <Icon name="target" /><div><strong>Рынок рекрутинга</strong><small>Оценки, интерес и будущие предложения</small></div><Icon name="arrow-right" />
+                  </button>
+                  <button type="button" className="compact-link-card" onClick={() => setCareerView("history")}>
+                    <Icon name="clock" /><div><strong>История карьеры</strong><small>{save.history.length} зафиксированных событий</small></div><Icon name="arrow-right" />
+                  </button>
+                </div>
+              )}
+
+              {careerView === "history" && (
+                <div className="compact-view history-list-compact">
+                  {save.history.map((entry) => (
+                    <article key={entry.id}>
+                      <time>{new Date(entry.occurredAt).toLocaleDateString("ru-RU")}</time>
+                      <div><strong>{entry.title}</strong><p>{entry.description}</p></div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {careerView === "recruiting" && (
+                <div className="compact-view">
+                  <section className="recruiting-card-compact">
+                    <div><small>Regional visibility</small><strong>{football.recruitment.visibility}</strong><span>{football.recruitment.regionalRankLabel}</span></div>
+                    <MetricBar compact label="Известность" value={football.recruitment.visibility} />
+                  </section>
+                  <div className="compact-stat-pair">
+                    <article><small>Интерес</small><strong>{football.recruitment.interestedPrograms}</strong><span>программ</span></article>
+                    <article><small>Потолок</small><strong>{football.ratings.overall}</strong><span>{potentialLabel(football.ratings.potentialBand)}</span></article>
+                  </div>
+                  <div className="compact-note"><Icon name="spark" /><p>Первые серьёзные оценки появятся после матчей. Учитываются уровень соперника, роль, стабильность, учёба и поведение.</p></div>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "team" && (
-            <div className="dashboard-stack">
-              <header className="dashboard-heading"><div><span className="eyebrow">{football.school.city}, {football.school.stateCode}</span><h2>{football.school.name} {football.school.mascot}</h2></div><span className="team-color-dot" style={{ background: football.school.primaryColor }} /></header>
-              <section className="team-identity" style={teamStyle}>
-                <div className="team-identity__mark">{football.school.shortName.slice(0, 2).toUpperCase()}</div>
-                <div><small>PROGRAM IDENTITY</small><h3>{football.school.philosophy}</h3><p>Prestige {football.school.prestige} · Senior season 2026</p></div>
-                <span>{football.school.mascot.toUpperCase()}</span>
-              </section>
-              <div className="dashboard-grid">
-                <section className="panel">
-                  <header className="panel__header"><div><small>PROGRAM</small><h3>Infrastructure</h3></div><Icon name="home" /></header>
-                  <MetricBar label="Facilities" value={football.school.facilities} />
-                  <MetricBar label="Coaching" value={football.school.coaching} />
-                  <MetricBar label="Medicine" value={football.school.medicine} />
-                  <MetricBar label="Youth trust" value={football.school.youthTrust} />
-                </section>
-                <section className="panel">
-                  <header className="panel__header"><div><small>DEPTH CHART</small><h3>{football.position} room</h3></div><span className="panel-index">#{football.depthChart.rank}</span></header>
-                  <div className="depth-list">
-                    {football.depthChart.rank === 1 ? (
-                      <>
-                        <article className="is-player"><span>1</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
-                        <article><span>2</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
-                      </>
-                    ) : (
-                      <>
-                        <article><span>1</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
-                        <article className="is-player"><span>2</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
-                      </>
-                    )}
+            <div className="compact-section">
+              <header className="compact-page-head">
+                <div><span>{football.school.city}, {football.school.stateCode}</span><h2>Команда</h2></div>
+                <span className="team-color-dot" style={{ background: football.school.primaryColor }} />
+              </header>
+              <SectionTabs<TeamView> tabs={teamViews} active={teamView} onChange={setTeamView} ariaLabel="Разделы команды" />
+
+              {teamView === "overview" && (
+                <div className="compact-view">
+                  <section className="team-card-compact" style={teamStyle}>
+                    <div className="team-card-compact__mark">{football.school.shortName.slice(0, 2).toUpperCase()}</div>
+                    <div><small>{football.school.shortName}</small><h3>{football.school.mascot}</h3><p>{football.school.philosophy}</p></div>
+                    <strong>{football.school.prestige}</strong>
+                  </section>
+                  <div className="compact-stat-pair">
+                    <article><small>Твоя роль</small><strong>#{football.depthChart.rank}</strong><span>{football.depthChart.projectedRole}</span></article>
+                    <article><small>Доверие</small><strong>{Math.round(football.depthChart.coachTrust)}</strong><span>главного тренера</span></article>
                   </div>
-                  <p className="panel-copy">Coach trust: {football.depthChart.coachTrust}. Место не закреплено до завершения лагеря.</p>
-                </section>
-              </div>
+                  <button type="button" className="compact-link-card" onClick={() => setTeamView("depth")}>
+                    <Icon name="team" /><div><strong>{football.position} depth chart</strong><small>Прямой конкурент и борьба за роль</small></div><Icon name="arrow-right" />
+                  </button>
+                  <button type="button" className="compact-link-card" onClick={() => setTeamView("program")}>
+                    <Icon name="home" /><div><strong>Условия программы</strong><small>Тренеры, база, медицина и доверие молодым</small></div><Icon name="arrow-right" />
+                  </button>
+                </div>
+              )}
+
+              {teamView === "depth" && (
+                <div className="compact-view">
+                  <section className="depth-card-compact">
+                    <header><div><small>{football.position} ROOM</small><h3>Depth chart</h3></div><span>#{football.depthChart.rank}</span></header>
+                    <div className="depth-list depth-list--compact">
+                      {football.depthChart.rank === 1 ? (
+                        <>
+                          <article className="is-player"><span>1</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
+                          <article><span>2</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
+                        </>
+                      ) : (
+                        <>
+                          <article><span>1</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
+                          <article className="is-player"><span>2</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
+                        </>
+                      )}
+                    </div>
+                  </section>
+                  <MetricBar compact label="Доверие тренера" value={football.depthChart.coachTrust} />
+                  <div className="compact-note"><Icon name="shield" /><p>Место в составе зависит от тренировок, здоровья, дисциплины и игровых решений. Один общий рейтинг его не гарантирует.</p></div>
+                </div>
+              )}
+
+              {teamView === "program" && (
+                <div className="compact-view metric-list-card">
+                  <MetricBar compact label="Тренировочная база" value={football.school.facilities} />
+                  <MetricBar compact label="Тренерский штаб" value={football.school.coaching} />
+                  <MetricBar compact label="Медицина" value={football.school.medicine} />
+                  <MetricBar compact label="Доверие молодым" value={football.school.youthTrust} />
+                  <div className="compact-note"><Icon name="home" /><p>{football.school.philosophy}. Престиж программы: {football.school.prestige}/100.</p></div>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "profile" && (
-            <div className="dashboard-stack">
-              <header className="dashboard-heading"><div><span className="eyebrow">PLAYER PROFILE</span><h2>{character.identity.fullName}</h2></div></header>
-              <div className="profile-grid">
-                <section className="panel profile-card">
-                  <header className="panel__header"><div><small>ATHLETE</small><h3>Physical profile</h3></div><Icon name="bolt" /></header>
-                  <div className="body-readout">
-                    <span><small>HEIGHT</small><strong>{heightLabel(character.physical.heightInches)}</strong></span>
-                    <span><small>WEIGHT</small><strong>{character.physical.weightLbs}</strong><em>LB</em></span>
-                    <span><small>FRAME</small><strong>{character.physical.frame}</strong></span>
+            <div className="compact-section">
+              <header className="compact-page-head">
+                <div><span>Player profile</span><h2>Игрок</h2></div>
+                <strong className="compact-head-score">{football.position}</strong>
+              </header>
+              <SectionTabs<ProfileView> tabs={profileViews} active={profileView} onChange={setProfileView} ariaLabel="Разделы профиля" />
+
+              {profileView === "body" && (
+                <div className="compact-view">
+                  <div className="body-readout body-readout--compact">
+                    <span><small>Рост</small><strong>{heightLabel(character.physical.heightInches)}</strong></span>
+                    <span><small>Вес</small><strong>{character.physical.weightLbs}</strong><em>LB</em></span>
+                    <span><small>Телосложение</small><strong>{character.physical.frame}</strong></span>
                   </div>
-                  <MetricBar label="Speed" value={character.physical.speed} />
-                  <MetricBar label="Strength" value={character.physical.strength} />
-                  <MetricBar label="Agility" value={character.physical.agility} />
-                  <MetricBar label="Explosiveness" value={character.physical.explosiveness} />
-                  <MetricBar label="Stamina" value={character.physical.stamina} />
-                </section>
-                <section className="panel profile-card">
-                  <header className="panel__header"><div><small>MINDSET</small><h3>{mindsetLabels[character.personality.preset].name}</h3></div><Icon name="brain" /></header>
-                  <MetricBar label="Discipline" value={character.personality.discipline} />
-                  <MetricBar label="Ambition" value={character.personality.ambition} />
-                  <MetricBar label="Composure" value={character.personality.composure} />
-                  <MetricBar label="Coachability" value={character.personality.coachability} />
-                  <MetricBar label="Adaptability" value={character.personality.adaptability} />
-                  <MetricBar label="Risk tolerance" value={character.personality.riskTolerance} />
-                </section>
-                <section className="panel profile-card">
-                  <header className="panel__header"><div><small>ORIGIN</small><h3>{character.origin.city}, {character.origin.stateCode}</h3></div><Icon name="map" /></header>
-                  <div className="info-list">
-                    <span><small>REGION</small><strong>{character.origin.region}</strong></span>
-                    <span><small>FAMILY FINANCES</small><strong>{familyIncomeLabels[character.origin.familyIncome]}</strong></span>
-                    <span><small>HOUSEHOLD</small><strong>{familyStructureLabels[character.origin.familyStructure]}</strong></span>
-                    <span><small>SPORT SUPPORT</small><strong>{familySupportLabels[character.origin.familySupport]}</strong></span>
+                  <div className="metric-list-card">
+                    <MetricBar compact label="Скорость" value={character.physical.speed} />
+                    <MetricBar compact label="Сила" value={character.physical.strength} />
+                    <MetricBar compact label="Ловкость" value={character.physical.agility} />
+                    <MetricBar compact label="Взрывная мощь" value={character.physical.explosiveness} />
+                    <MetricBar compact label="Выносливость" value={character.physical.stamina} />
                   </div>
-                  <MetricBar label="Training access" value={character.origin.trainingAccess} />
-                  <MetricBar label="Medical access" value={character.origin.medicalAccess} />
-                  <MetricBar label="Football culture" value={character.origin.footballCulture} />
-                </section>
-                <section className="panel profile-card">
-                  <header className="panel__header"><div><small>ACADEMICS</small><h3>Eligibility</h3></div><Icon name="book" /></header>
-                  <div className="gpa-display"><small>GPA</small><strong>{character.education.gpa.toFixed(2)}</strong><span>{character.education.eligibilityStatus.toUpperCase()}</span></div>
-                  <MetricBar label="Academic ability" value={character.education.academicAbility} />
-                  <MetricBar label="Attendance" value={character.education.attendance} />
-                  <p className="panel-copy">Академические требования будут влиять на доступные предложения колледжей.</p>
-                </section>
-              </div>
+                </div>
+              )}
+
+              {profileView === "mind" && (
+                <div className="compact-view">
+                  <section className="mindset-card-compact"><small>Архетип</small><h3>{mindsetLabels[character.personality.preset].name}</h3><p>{mindsetLabels[character.personality.preset].summary}</p></section>
+                  <div className="metric-list-card">
+                    <MetricBar compact label="Дисциплина" value={character.personality.discipline} />
+                    <MetricBar compact label="Амбиции" value={character.personality.ambition} />
+                    <MetricBar compact label="Самообладание" value={character.personality.composure} />
+                    <MetricBar compact label="Обучаемость" value={character.personality.coachability} />
+                    <MetricBar compact label="Адаптивность" value={character.personality.adaptability} />
+                  </div>
+                </div>
+              )}
+
+              {profileView === "origin" && (
+                <div className="compact-view">
+                  <section className="origin-card-compact"><Icon name="map" /><div><small>Родной город</small><h3>{character.origin.city}, {character.origin.stateCode}</h3><p>{character.origin.region}</p></div></section>
+                  <div className="info-list info-list--compact">
+                    <span><small>Финансы семьи</small><strong>{familyIncomeLabels[character.origin.familyIncome]}</strong></span>
+                    <span><small>Дом</small><strong>{familyStructureLabels[character.origin.familyStructure]}</strong></span>
+                    <span><small>Поддержка спорта</small><strong>{familySupportLabels[character.origin.familySupport]}</strong></span>
+                  </div>
+                  <div className="metric-list-card">
+                    <MetricBar compact label="Доступ к тренировкам" value={character.origin.trainingAccess} />
+                    <MetricBar compact label="Доступ к медицине" value={character.origin.medicalAccess} />
+                    <MetricBar compact label="Футбольная культура" value={character.origin.footballCulture} />
+                  </div>
+                </div>
+              )}
+
+              {profileView === "study" && (
+                <div className="compact-view">
+                  <section className="academic-card-compact">
+                    <div><small>GPA</small><strong>{character.education.gpa.toFixed(2)}</strong></div>
+                    <span>{character.education.eligibilityStatus.toUpperCase()}</span>
+                  </section>
+                  <div className="metric-list-card">
+                    <MetricBar compact label="Академические способности" value={character.education.academicAbility} />
+                    <MetricBar compact label="Посещаемость" value={character.education.attendance} />
+                  </div>
+                  <div className="compact-note"><Icon name="book" /><p>Учёба влияет на eligibility и список доступных колледжей. Высокий рейтинг не отменяет академические требования.</p></div>
+                </div>
+              )}
             </div>
           )}
         </div>

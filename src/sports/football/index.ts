@@ -7,7 +7,7 @@ export const descriptor: SportDescriptor = {
   name: "American Football",
   shortName: "Football",
   status: "available",
-  accent: "#d8ff3e",
+  accent: "#b9c5a7",
   summary: "Школьный сезон, depth chart, матчи и рекрутинг колледжей.",
 };
 
