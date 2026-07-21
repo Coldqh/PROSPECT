@@ -36,3 +36,22 @@
 - team culture and practice evaluation;
 - depth-chart movement with explicit reasons;
 - first relationship values with coaches and rivals.
+
+### v0.4 — School and team world
+
+- deterministic 51-player school roster;
+- head coach, position coach and both coordinators;
+- team morale, cohesion, discipline and scheme mastery;
+- dynamic position-room evaluation;
+- promotion and demotion decisions with explicit reasons;
+- schema v4 migration for existing careers;
+- black and red visual system across the app and PWA assets.
+
+## Next
+
+### v0.5 — Training and development
+
+- position-specific training sessions;
+- coach feedback and practice grades;
+- workload, recovery and development plateaus;
+- explicit competition actions inside the position room.

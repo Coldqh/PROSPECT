@@ -2,6 +2,7 @@ import { advanceLifeDay } from "../../../core/life/advanceLifeDay";
 import { getWeeklyPlanTemplate } from "../../../core/life/planCatalog";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../../core/life/types";
 import type { CareerSave } from "../../../storage/saves/schema";
+import { evaluateDepthChart } from "../team/evaluateDepthChart";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -95,6 +96,34 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
     },
   };
 
+  const teamMoraleDelta = result.outcome.grade === "A" ? 0.5 : result.outcome.grade === "D" ? -0.7 : 0;
+  const provisionalFootball: CareerSave["football"] = {
+    ...save.football,
+    ratings: nextRatings,
+    teamDynamics: {
+      ...save.football.teamDynamics,
+      morale: clamp(save.football.teamDynamics.morale + teamMoraleDelta),
+      schemeMastery: clamp(save.football.teamDynamics.schemeMastery + footballIqGain * 0.35),
+    },
+    depthChart: {
+      ...save.football.depthChart,
+      coachTrust: nextCoachTrust,
+    },
+    season: {
+      ...save.football.season,
+      week: Math.max(0, result.life.weekNumber - 1),
+    },
+  };
+  const depthUpdate = evaluateDepthChart(provisionalFootball, result.character, result.nextDate);
+  const depthChanged = depthUpdate.rank !== save.football.depthChart.rank;
+  const nextFootball: CareerSave["football"] = {
+    ...provisionalFootball,
+    depthChart: {
+      ...provisionalFootball.depthChart,
+      ...depthUpdate,
+    },
+  };
+
   return {
     ...save,
     meta: {
@@ -106,24 +135,7 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
       ...result.life,
       lastOutcome: nextOutcome,
     },
-    football: {
-      ...save.football,
-      ratings: nextRatings,
-      depthChart: {
-        ...save.football.depthChart,
-        coachTrust: nextCoachTrust,
-        projectedRole:
-          nextCoachTrust >= 68 && save.football.depthChart.rank === 1
-            ? "starter"
-            : nextCoachTrust >= 56
-              ? "rotation"
-              : save.football.depthChart.projectedRole,
-      },
-      season: {
-        ...save.football.season,
-        week: Math.max(0, result.life.weekNumber - 1),
-      },
-    },
+    football: nextFootball,
     history: [
       ...save.history,
       {
@@ -133,6 +145,15 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
         title: nextOutcome.title,
         description: nextOutcome.summary,
       },
+      ...(depthChanged
+        ? [{
+            id: `depth-${save.meta.id}-${result.life.completedDays}`,
+            occurredAt: save.meta.updatedAt,
+            type: "depth-chart-changed",
+            title: depthUpdate.lastDecision.title,
+            description: depthUpdate.lastDecision.description,
+          }]
+        : []),
     ],
   };
 }

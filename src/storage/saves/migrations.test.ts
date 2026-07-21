@@ -34,11 +34,13 @@ describe("migrateCareerSave", () => {
   it("migrates foundation saves through player creation into the weekly loop schema", () => {
     const result = migrateCareerSave(legacySave);
     expect(result.migratedFrom).toBe(1);
-    expect(result.save.meta.schemaVersion).toBe(3);
+    expect(result.save.meta.schemaVersion).toBe(4);
     expect(result.save.meta.phase).toBe("high-school-preseason");
     expect(result.save.character.identity.fullName.length).toBeGreaterThan(3);
     expect(result.save.football.stage).toBe("high-school-preseason");
     expect(result.save.life.weekNumber).toBe(1);
+    expect(result.save.football.roster.length).toBeGreaterThan(40);
+    expect(result.save.football.staff.headCoach.name.length).toBeGreaterThan(3);
     expect(result.save.life.weeklyPlan.templateId).toBe("balanced");
     expect(result.save.history.at(-1)?.type).toBe("save-migrated");
   });
@@ -64,6 +66,46 @@ describe("migrateCareerSave", () => {
     expect(result.migratedFrom).toBe(2);
     expect(result.save.character).toEqual(generated.character);
     expect(result.save.life.completedDays).toBe(0);
+  });
+
+  it("migrates version three saves into the generated team world", () => {
+    const generated = createFootballCareerState("football-v3-seed", createLegacyFootballSetup("football-v3-seed"));
+    const { staff: _staff, roster: _roster, teamDynamics: _teamDynamics, ...footballWithoutTeam } = generated.football;
+    const { evaluation: _evaluation, lastDecision: _lastDecision, ...legacyDepthChart } = footballWithoutTeam.depthChart;
+    const versionThree = {
+      meta: {
+        id: "v3-career",
+        schemaVersion: 3,
+        sport: "american-football",
+        worldSeed: "football-v3-seed",
+        createdAt: "2026-07-21T10:00:00.000Z",
+        updatedAt: "2026-07-21T10:00:00.000Z",
+        currentDate: { year: 2026, month: 8, day: 17 },
+        phase: "high-school-preseason",
+        revision: 3,
+      },
+      character: generated.character,
+      life: {
+        moduleVersion: 1,
+        weekNumber: 1,
+        dayIndex: 0,
+        completedDays: 0,
+        weeklyPlan: {
+          templateId: "balanced",
+          intensity: "standard",
+          focus: { training: 34, recovery: 25, study: 25, social: 16 },
+          revision: 1,
+        },
+        consistency: 58,
+      },
+      football: { ...footballWithoutTeam, moduleVersion: 2, depthChart: legacyDepthChart },
+      history: [],
+    };
+    const result = migrateCareerSave(versionThree);
+    expect(result.migratedFrom).toBe(3);
+    expect(result.save.meta.schemaVersion).toBe(4);
+    expect(result.save.football.roster.length).toBeGreaterThan(40);
+    expect(result.save.football.school.primaryColor).toBe("#d7192d");
   });
 
   it("produces the same migrated athlete for the same seed", () => {

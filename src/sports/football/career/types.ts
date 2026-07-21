@@ -1,4 +1,12 @@
 import type { CharacterCreationInput } from "../../../core/character/types";
+import type {
+  DepthChartDecision,
+  DepthChartEvaluation,
+  FootballRosterPlayer,
+  FootballTeamStaff,
+  PlayerYear,
+  TeamDynamics,
+} from "../team/types";
 
 export type FootballPosition = "QB" | "RB" | "WR" | "LB" | "CB";
 
@@ -44,10 +52,12 @@ export interface DepthChartState {
   directRival: {
     id: string;
     name: string;
-    year: "Senior" | "Junior";
+    year: PlayerYear;
     overall: number;
     style: string;
   };
+  evaluation: DepthChartEvaluation;
+  lastDecision: DepthChartDecision;
 }
 
 export interface FootballSeasonState {
@@ -65,7 +75,7 @@ export interface FootballSeasonState {
 }
 
 export interface FootballCareerState {
-  moduleVersion: 2;
+  moduleVersion: 3;
   worldSeed: string;
   stage: "high-school-preseason";
   position: FootballPosition;
@@ -74,6 +84,9 @@ export interface FootballCareerState {
   jerseyNumber: number;
   ratings: FootballRatings;
   school: SchoolIdentity;
+  staff: FootballTeamStaff;
+  roster: FootballRosterPlayer[];
+  teamDynamics: TeamDynamics;
   depthChart: DepthChartState;
   season: FootballSeasonState;
   recruitment: {

@@ -17,4 +17,4 @@ The page itself remains vertically scrollable as a safety mechanism. Bottom shee
 
 ## Visual direction
 
-The global acid-green accent was replaced with a restrained grey-green accent. Team colors are used as local identity marks rather than full-screen gradients.
+The global interface now uses black surfaces and a restrained crimson red accent. Generated team colors no longer take over navigation or full-screen backgrounds.

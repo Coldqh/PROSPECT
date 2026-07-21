@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -90,8 +90,56 @@ const schoolSchema = z.object({
   philosophy: z.string().min(2),
 });
 
+
+const playerYearSchema = z.enum(["Freshman", "Sophomore", "Junior", "Senior"]);
+const rosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "K", "P"]);
+const coachSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(3),
+  role: z.enum(["head-coach", "position-coach", "offensive-coordinator", "defensive-coordinator"]),
+  age: z.number().int().min(25).max(80),
+  archetype: z.enum(["builder", "disciplinarian", "strategist", "recruiter"]),
+  development: z.number().min(0).max(100),
+  tactics: z.number().min(0).max(100),
+  discipline: z.number().min(0).max(100),
+  communication: z.number().min(0).max(100),
+  youthPatience: z.number().min(0).max(100),
+  pressure: z.number().min(0).max(100),
+  relationship: z.number().min(0).max(100),
+  summary: z.string().min(2),
+});
+const rosterPlayerSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(3),
+  position: rosterPositionSchema,
+  unit: z.enum(["offense", "defense", "special"]),
+  year: playerYearSchema,
+  overall: z.number().min(0).max(100),
+  potential: z.number().min(0).max(100),
+  style: z.string().min(2),
+  coachStanding: z.number().min(0).max(100),
+  health: z.number().min(0).max(100),
+  status: z.enum(["starter", "rotation", "backup", "injured"]),
+  depthRank: z.number().int().min(1),
+});
+const depthEvaluationSchema = z.object({
+  heroScore: z.number(),
+  comparisonScore: z.number(),
+  gap: z.number().min(0),
+  trend: z.enum(["rising", "stable", "falling"]),
+  summary: z.string().min(2),
+  reasons: z.array(z.string().min(2)).min(1),
+  updatedOn: z.string().min(8),
+});
+const depthDecisionSchema = z.object({
+  type: z.enum(["promoted", "demoted", "held"]),
+  title: z.string().min(2),
+  description: z.string().min(2),
+  occurredOn: z.string().min(8),
+});
+
 const footballSchema = z.object({
-  moduleVersion: z.literal(2),
+  moduleVersion: z.literal(3),
   worldSeed: z.string().min(1),
   stage: z.literal("high-school-preseason"),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
@@ -107,6 +155,19 @@ const footballSchema = z.object({
     competitiveness: z.number().min(0).max(100),
   }),
   school: schoolSchema,
+  staff: z.object({
+    headCoach: coachSchema,
+    positionCoach: coachSchema,
+    offensiveCoordinator: coachSchema,
+    defensiveCoordinator: coachSchema,
+  }),
+  roster: z.array(rosterPlayerSchema).min(35),
+  teamDynamics: z.object({
+    morale: z.number().min(0).max(100),
+    cohesion: z.number().min(0).max(100),
+    discipline: z.number().min(0).max(100),
+    schemeMastery: z.number().min(0).max(100),
+  }),
   depthChart: z.object({
     rank: z.number().int().min(1),
     playersAtPosition: z.number().int().min(1),
@@ -115,10 +176,12 @@ const footballSchema = z.object({
     directRival: z.object({
       id: z.string().min(1),
       name: z.string().min(3),
-      year: z.enum(["Senior", "Junior"]),
+      year: playerYearSchema,
       overall: z.number().min(0).max(100),
       style: z.string().min(2),
     }),
+    evaluation: depthEvaluationSchema,
+    lastDecision: depthDecisionSchema,
   }),
   season: z.object({
     year: z.number().int().min(2000),

@@ -16,20 +16,15 @@ import type {
   FootballRatings,
   SchoolIdentity,
 } from "./types";
+import { evaluateDepthChart } from "../team/evaluateDepthChart";
+import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../team/generateTeam";
 
 const FIRST_NAMES = ["Cameron", "Jaylen", "Marcus", "Darius", "Devin", "Malik", "Jordan", "Tyler"] as const;
 const LAST_NAMES = ["Hayes", "Carter", "Brooks", "Reed", "Mitchell", "Coleman", "Ward", "Foster"] as const;
 const SCHOOL_PREFIXES = ["Northline", "West Harbor", "Cedar Ridge", "Eastgate", "Union Park", "Stonebridge", "Lakeview", "Central Heights"] as const;
 const MASCOTS = ["Wolves", "Vipers", "Falcons", "Bulls", "Panthers", "Ravens", "Titans", "Coyotes"] as const;
 const RIVAL_PREFIXES = ["South County", "Bishop Rowe", "Riverside", "Franklin Tech", "Oak Valley", "Jefferson"] as const;
-const COLORS = [
-  ["#d8ff3e", "#111317"],
-  ["#ff5d45", "#16181d"],
-  ["#68a7ff", "#101720"],
-  ["#f4c84b", "#17130c"],
-  ["#d38cff", "#17101f"],
-  ["#56e0bf", "#0c1816"],
-] as const;
+const COLORS = [["#d7192d", "#08090b"]] as const;
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value)));
@@ -177,11 +172,6 @@ export function createFootballCareerState(
   const education = createEducation(setup, random.fork("education"), origin.schoolQuality, personality);
   const physical = createPhysical(archetype, random.fork("physical"));
   const ratings = createRatings(setup, archetype, personality, random.fork("ratings"));
-  const rivalRandom = random.fork("rival");
-  const rivalName = `${rivalRandom.pick(FIRST_NAMES)} ${rivalRandom.pick(LAST_NAMES)}`;
-  const rivalOverall = clamp(ratings.overall + rivalRandom.integer(-3, 7), 52, 91);
-  const depthRank = rivalOverall > ratings.overall + 2 ? 2 : 1;
-  const rivalStyle = rivalRandom.pick(["physical veteran", "film-room specialist", "explosive athlete", "coach favorite"]);
   const opponentPrefix = random.fork("opponent").pick(RIVAL_PREFIXES);
   const income = incomeModifier(setup.character.familyIncome);
   const support = supportModifier(setup.character.familySupport);
@@ -224,8 +214,17 @@ export function createFootballCareerState(
     },
   };
 
-  const football: FootballCareerState = {
-    moduleVersion: 2,
+  const roster = createFootballRoster(worldSeed, school, setup.position);
+  const initialTrust = clamp(54 + personality.coachability * 0.22 + school.youthTrust * 0.15 + random.integer(-5, 6));
+  const staff = createTeamStaff(worldSeed, school, setup.position, initialTrust);
+  const teamDynamics = createTeamDynamics(worldSeed, school);
+  const firstRoomPlayer = roster.find((player) => player.position === setup.position);
+  if (!firstRoomPlayer) {
+    throw new Error("Generated roster has no player in the selected position room");
+  }
+
+  let football: FootballCareerState = {
+    moduleVersion: 3,
     worldSeed,
     stage: "high-school-preseason",
     position: setup.position,
@@ -234,17 +233,35 @@ export function createFootballCareerState(
     jerseyNumber: setup.jerseyNumber,
     ratings,
     school,
+    staff,
+    roster,
+    teamDynamics,
     depthChart: {
-      rank: depthRank,
-      playersAtPosition: rivalRandom.integer(3, 6),
-      coachTrust: clamp(54 + personality.coachability * 0.22 + school.youthTrust * 0.15 + random.integer(-5, 6)),
-      projectedRole: depthRank === 1 ? "starter" : ratings.overall >= 70 ? "rotation" : "developmental",
+      rank: 1,
+      playersAtPosition: roster.filter((player) => player.position === setup.position).length + 1,
+      coachTrust: initialTrust,
+      projectedRole: "rotation",
       directRival: {
-        id: `rival-${rivalName.toLowerCase().replaceAll(" ", "-")}`,
-        name: rivalName,
-        year: rivalRandom.chance(0.66) ? "Senior" : "Junior",
-        overall: rivalOverall,
-        style: rivalStyle,
+        id: firstRoomPlayer.id,
+        name: firstRoomPlayer.name,
+        year: firstRoomPlayer.year,
+        overall: firstRoomPlayer.overall,
+        style: firstRoomPlayer.style,
+      },
+      evaluation: {
+        heroScore: 0,
+        comparisonScore: 0,
+        gap: 0,
+        trend: "stable",
+        summary: "Штаб формирует стартовый depth chart.",
+        reasons: ["Первые места определяются по физической готовности, технике и доверию штаба."],
+        updatedOn: "2026-08-17",
+      },
+      lastDecision: {
+        type: "held",
+        title: "Стартовая оценка",
+        description: "Тренеры сформировали первый порядок игроков перед началом сезона.",
+        occurredOn: "2026-08-17",
       },
     },
     season: {
@@ -265,6 +282,19 @@ export function createFootballCareerState(
       interestedPrograms: 0,
       offers: 0,
       regionalRankLabel: ratings.overall >= 80 ? "regional watchlist" : ratings.overall >= 72 ? "local prospect" : "unrated",
+    },
+  };
+
+  const evaluation = evaluateDepthChart(football, character, { year: 2026, month: 8, day: 17 });
+  football = {
+    ...football,
+    depthChart: {
+      ...football.depthChart,
+      ...evaluation,
+      lastDecision: {
+        ...evaluation.lastDecision,
+        title: "Стартовый depth chart",
+      },
     },
   };
 

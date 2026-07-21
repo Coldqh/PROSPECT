@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../components/layout/AppHeader";
 import { ScreenShell } from "../components/layout/ScreenShell";
@@ -29,8 +29,14 @@ const careerViews = [
 ] as const;
 const teamViews = [
   { id: "overview", label: "Сводка" },
-  { id: "depth", label: "Состав" },
-  { id: "program", label: "Программа" },
+  { id: "depth", label: "Depth" },
+  { id: "roster", label: "Ростер" },
+  { id: "staff", label: "Штаб" },
+] as const;
+const rosterViews = [
+  { id: "offense", label: "Атака" },
+  { id: "defense", label: "Защита" },
+  { id: "special", label: "Спец." },
 ] as const;
 const profileViews = [
   { id: "body", label: "Тело" },
@@ -43,6 +49,7 @@ type TabId = (typeof tabs)[number]["id"];
 type CareerView = (typeof careerViews)[number]["id"];
 type TeamView = (typeof teamViews)[number]["id"];
 type ProfileView = (typeof profileViews)[number]["id"];
+type RosterView = (typeof rosterViews)[number]["id"];
 
 function heightLabel(inches: number): string {
   return `${Math.floor(inches / 12)}′${inches % 12}″`;
@@ -57,6 +64,23 @@ function potentialLabel(value: "role-player" | "starter" | "high-upside" | "nati
   }[value];
 }
 
+function roleLabel(value: "starter" | "rotation" | "special-teams" | "developmental"): string {
+  return { starter: "Стартер", rotation: "Ротация", "special-teams": "Спецкоманды", developmental: "Развитие" }[value];
+}
+
+function coachRoleLabel(value: "head-coach" | "position-coach" | "offensive-coordinator" | "defensive-coordinator"): string {
+  return {
+    "head-coach": "Главный тренер",
+    "position-coach": "Позиционный тренер",
+    "offensive-coordinator": "Координатор атаки",
+    "defensive-coordinator": "Координатор защиты",
+  }[value];
+}
+
+function trendLabel(value: "rising" | "stable" | "falling"): string {
+  return { rising: "Растёт", stable: "Стабильно", falling: "Падает" }[value];
+}
+
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
@@ -65,6 +89,7 @@ export default function CareerOverviewScreen() {
   const [careerView, setCareerView] = useState<CareerView>("overview");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("body");
+  const [rosterView, setRosterView] = useState<RosterView>("offense");
 
   if (loading) {
     return <LoadingScreen label="Восстановление карьеры" />;
@@ -83,11 +108,19 @@ export default function CareerOverviewScreen() {
   }
 
   const { character, football } = save;
-  const teamStyle = {
-    "--team-accent": football.school.primaryColor,
-    "--team-dark": football.school.secondaryColor,
-  } as CSSProperties;
   const initials = `${character.identity.firstName[0] ?? "P"}${character.identity.lastName[0] ?? "R"}`;
+  const positionRivals = football.roster
+    .filter((player) => player.position === football.position)
+    .sort((left, right) => (right.overall * 0.72 + right.coachStanding * 0.28) - (left.overall * 0.72 + left.coachStanding * 0.28));
+  const depthRoom: Array<{ id: string; name: string; year: string; style: string; overall: number; status: string; isHero: boolean }> = positionRivals.map((player) => ({
+    id: player.id, name: player.name, year: player.year, style: player.style, overall: player.overall, status: player.status, isHero: false,
+  }));
+  depthRoom.splice(Math.max(0, football.depthChart.rank - 1), 0, {
+    id: "hero", name: character.identity.fullName, year: "Senior", style: football.archetypeName, overall: football.ratings.overall, status: football.depthChart.projectedRole, isHero: true,
+  });
+  const visibleRoster = football.roster
+    .filter((player) => player.unit === rosterView)
+    .sort((left, right) => left.position.localeCompare(right.position) || left.depthRank - right.depthRank);
 
   return (
     <ScreenShell
@@ -130,7 +163,7 @@ export default function CareerOverviewScreen() {
         </aside>
 
         <div className="career-main">
-          <section className="player-compact-header" style={teamStyle}>
+          <section className="player-compact-header">
             <div className="player-compact-header__avatar"><span>{initials}</span><small>{football.position}</small></div>
             <div className="player-compact-header__identity">
               <small>#{football.jerseyNumber} · {football.archetypeName}</small>
@@ -209,27 +242,30 @@ export default function CareerOverviewScreen() {
             <div className="compact-section">
               <header className="compact-page-head">
                 <div><span>{football.school.city}, {football.school.stateCode}</span><h2>Команда</h2></div>
-                <span className="team-color-dot" style={{ background: football.school.primaryColor }} />
+                <span className="team-color-dot" />
               </header>
               <SectionTabs<TeamView> tabs={teamViews} active={teamView} onChange={setTeamView} ariaLabel="Разделы команды" />
 
               {teamView === "overview" && (
                 <div className="compact-view">
-                  <section className="team-card-compact" style={teamStyle}>
+                  <section className="team-card-compact team-card-compact--red">
                     <div className="team-card-compact__mark">{football.school.shortName.slice(0, 2).toUpperCase()}</div>
                     <div><small>{football.school.shortName}</small><h3>{football.school.mascot}</h3><p>{football.school.philosophy}</p></div>
                     <strong>{football.school.prestige}</strong>
                   </section>
                   <div className="compact-stat-pair">
-                    <article><small>Твоя роль</small><strong>#{football.depthChart.rank}</strong><span>{football.depthChart.projectedRole}</span></article>
-                    <article><small>Доверие</small><strong>{Math.round(football.depthChart.coachTrust)}</strong><span>главного тренера</span></article>
+                    <article><small>Твоя роль</small><strong>#{football.depthChart.rank}</strong><span>{roleLabel(football.depthChart.projectedRole)}</span></article>
+                    <article><small>До места выше</small><strong>{football.depthChart.evaluation.gap.toFixed(1)}</strong><span>{trendLabel(football.depthChart.evaluation.trend)}</span></article>
                   </div>
-                  <button type="button" className="compact-link-card" onClick={() => setTeamView("depth")}>
-                    <Icon name="team" /><div><strong>{football.position} depth chart</strong><small>Прямой конкурент и борьба за роль</small></div><Icon name="arrow-right" />
-                  </button>
-                  <button type="button" className="compact-link-card" onClick={() => setTeamView("program")}>
-                    <Icon name="home" /><div><strong>Условия программы</strong><small>Тренеры, база, медицина и доверие молодым</small></div><Icon name="arrow-right" />
-                  </button>
+                  <section className={`staff-decision staff-decision--${football.depthChart.lastDecision.type}`}>
+                    <div><small>Решение штаба</small><h3>{football.depthChart.lastDecision.title}</h3></div>
+                    <p>{football.depthChart.lastDecision.description}</p>
+                  </section>
+                  <div className="team-action-grid">
+                    <button type="button" onClick={() => setTeamView("depth")}><Icon name="target" /><span><strong>Depth chart</strong><small>Почему ты на этом месте</small></span></button>
+                    <button type="button" onClick={() => setTeamView("roster")}><Icon name="team" /><span><strong>{football.roster.length + 1} игроков</strong><small>Полный состав программы</small></span></button>
+                    <button type="button" onClick={() => setTeamView("staff")}><Icon name="brain" /><span><strong>{football.staff.headCoach.name}</strong><small>Тренерский штаб</small></span></button>
+                  </div>
                 </div>
               )}
 
@@ -237,32 +273,59 @@ export default function CareerOverviewScreen() {
                 <div className="compact-view">
                   <section className="depth-card-compact">
                     <header><div><small>{football.position} ROOM</small><h3>Depth chart</h3></div><span>#{football.depthChart.rank}</span></header>
-                    <div className="depth-list depth-list--compact">
-                      {football.depthChart.rank === 1 ? (
-                        <>
-                          <article className="is-player"><span>1</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
-                          <article><span>2</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
-                        </>
-                      ) : (
-                        <>
-                          <article><span>1</span><div><strong>{football.depthChart.directRival.name}</strong><small>{football.depthChart.directRival.style}</small></div><em>{football.depthChart.directRival.overall}</em></article>
-                          <article className="is-player"><span>2</span><div><strong>{character.identity.fullName}</strong><small>{football.archetypeName}</small></div><em>{football.ratings.overall}</em></article>
-                        </>
-                      )}
+                    <div className="depth-list depth-list--compact depth-list--full">
+                      {depthRoom.map((player, index) => (
+                        <article key={player.id} className={player.isHero ? "is-player" : ""}>
+                          <span>{index + 1}</span>
+                          <div><strong>{player.name}</strong><small>{player.year} · {player.style}</small></div>
+                          <em>{player.overall}</em>
+                        </article>
+                      ))}
                     </div>
                   </section>
-                  <MetricBar compact label="Доверие тренера" value={football.depthChart.coachTrust} />
-                  <div className="compact-note"><Icon name="shield" /><p>Место в составе зависит от тренировок, здоровья, дисциплины и игровых решений. Один общий рейтинг его не гарантирует.</p></div>
+                  <section className="depth-evaluation">
+                    <header><span>Оценка штаба</span><strong>{football.depthChart.evaluation.heroScore.toFixed(1)}</strong></header>
+                    <p>{football.depthChart.evaluation.summary}</p>
+                    <ul>{football.depthChart.evaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                  </section>
+                  <MetricBar compact label="Доверие позиционного тренера" value={football.depthChart.coachTrust} />
                 </div>
               )}
 
-              {teamView === "program" && (
-                <div className="compact-view metric-list-card">
-                  <MetricBar compact label="Тренировочная база" value={football.school.facilities} />
-                  <MetricBar compact label="Тренерский штаб" value={football.school.coaching} />
-                  <MetricBar compact label="Медицина" value={football.school.medicine} />
-                  <MetricBar compact label="Доверие молодым" value={football.school.youthTrust} />
-                  <div className="compact-note"><Icon name="home" /><p>{football.school.philosophy}. Престиж программы: {football.school.prestige}/100.</p></div>
+              {teamView === "roster" && (
+                <div className="compact-view">
+                  <SectionTabs<RosterView> tabs={rosterViews} active={rosterView} onChange={setRosterView} ariaLabel="Группы состава" />
+                  <div className="roster-list-compact">
+                    {visibleRoster.map((player) => (
+                      <article key={player.id}>
+                        <span className="roster-position">{player.position}</span>
+                        <div><strong>{player.name}</strong><small>{player.year} · #{player.depthRank} · {player.style}</small></div>
+                        <span className={`roster-status roster-status--${player.status}`}>{player.status}</span>
+                        <em>{player.overall}</em>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {teamView === "staff" && (
+                <div className="compact-view">
+                  <div className="coach-grid">
+                    {[football.staff.headCoach, football.staff.positionCoach, football.staff.offensiveCoordinator, football.staff.defensiveCoordinator].map((coach) => (
+                      <article key={coach.id} className={coach.role === "position-coach" ? "is-key" : ""}>
+                        <header><span>{coachRoleLabel(coach.role)}</span><em>{coach.age}</em></header>
+                        <h3>{coach.name}</h3>
+                        <p>{coach.summary}</p>
+                        <div><small>Развитие <strong>{coach.development}</strong></small><small>Тактика <strong>{coach.tactics}</strong></small><small>Отношение <strong>{coach.relationship}</strong></small></div>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="team-dynamics">
+                    <MetricBar compact label="Мораль" value={football.teamDynamics.morale} />
+                    <MetricBar compact label="Сыгранность" value={football.teamDynamics.cohesion} />
+                    <MetricBar compact label="Дисциплина" value={football.teamDynamics.discipline} />
+                    <MetricBar compact label="Знание схемы" value={football.teamDynamics.schemeMastery} />
+                  </div>
                 </div>
               )}
             </div>
