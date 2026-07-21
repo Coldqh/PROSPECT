@@ -15,3 +15,13 @@
 ## v0.8 — People and memory
 
 Permanent NPCs, one relationship parameter, contextual life events, memory and delayed follow-ups.
+
+## v0.9 — College recruiting
+
+- 24 seeded fictional college programs;
+- independent interest and scouting confidence;
+- film, competition, health, academics and coach recommendation;
+- position need and college depth-chart competition;
+- two recruiting actions per week;
+- contacts, priority status and conditional scholarship offers;
+- compact mobile recruiting dashboard.

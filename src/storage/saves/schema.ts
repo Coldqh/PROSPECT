@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -294,8 +294,74 @@ const footballMatchSchema = z.object({
   }).optional(),
 });
 
+const recruitingProgramTierSchema = z.enum(["national", "power", "regional", "developmental"]);
+const recruitingStageSchema = z.enum(["unaware", "watchlist", "evaluating", "contact", "priority", "offered", "cooled"]);
+const projectedCollegeRoleSchema = z.enum(["immediate-competition", "rotation-path", "developmental", "long-shot"]);
+const recruitingProgramSchema = z.object({
+  id: z.string().min(1),
+  seed: z.string().min(1),
+  name: z.string().min(2),
+  shortName: z.string().min(2),
+  city: z.string().min(2),
+  stateCode: z.string().length(2),
+  distanceMiles: z.number().int().nonnegative(),
+  tier: recruitingProgramTierSchema,
+  prestige: z.number().min(0).max(100),
+  conferenceLevel: z.number().min(0).max(100),
+  scheme: z.string().min(2),
+  academicStandard: z.number().min(0).max(100),
+  medicine: z.number().min(0).max(100),
+  facilities: z.number().min(0).max(100),
+  youthOpportunity: z.number().min(0).max(100),
+  positionNeed: z.number().min(0).max(100),
+  depthCompetition: z.number().min(0).max(100),
+  fit: z.number().min(0).max(100),
+  interest: z.number().min(0).max(100),
+  scoutingConfidence: z.number().min(0).max(100),
+  stage: recruitingStageSchema,
+  academicEligible: z.boolean(),
+  medicalConcern: z.boolean(),
+  projectedRole: projectedCollegeRoleSchema,
+  recruiterName: z.string().min(2),
+  recruiterStyle: z.enum(["direct", "patient", "salesman", "analytical"]),
+  evaluation: z.string().min(2),
+  lastUpdate: z.string().min(2),
+  offer: z.object({
+    id: z.string().min(1),
+    issuedWeek: z.number().int().nonnegative(),
+    scholarship: z.literal("full"),
+    projectedRole: projectedCollegeRoleSchema,
+    expiresAfterWeek: z.number().int().min(1),
+  }).optional(),
+});
+const footballRecruitingSchema = z.object({
+  moduleVersion: z.literal(1),
+  visibility: z.number().min(0).max(100),
+  filmGrade: z.number().min(0).max(100),
+  consistency: z.number().min(0).max(100),
+  healthConfidence: z.number().min(0).max(100),
+  academicClearance: z.number().min(0).max(100),
+  coachRecommendation: z.number().min(0).max(100),
+  competitionLevel: z.number().min(0).max(100),
+  regionalRankLabel: z.string().min(2),
+  interestedPrograms: z.number().int().nonnegative(),
+  offers: z.number().int().nonnegative(),
+  actionWeek: z.number().int().nonnegative(),
+  actionsUsed: z.number().int().nonnegative().max(2),
+  programs: z.array(recruitingProgramSchema).min(20),
+  activity: z.array(z.object({
+    id: z.string().min(1),
+    week: z.number().int().nonnegative(),
+    programId: z.string().min(1).optional(),
+    date: gameDateSchema,
+    kind: z.enum(["evaluation", "contact", "action", "offer", "cooling"]),
+    title: z.string().min(2),
+    detail: z.string().min(2),
+  })),
+});
+
 const footballSchema = z.object({
-  moduleVersion: z.literal(6),
+  moduleVersion: z.literal(7),
   worldSeed: z.string().min(1),
   stage: z.literal("high-school-preseason"),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
@@ -415,12 +481,7 @@ const footballSchema = z.object({
       value: z.string().min(1),
     })),
   }),
-  recruitment: z.object({
-    visibility: z.number().min(0).max(100),
-    interestedPrograms: z.number().int().nonnegative(),
-    offers: z.number().int().nonnegative(),
-    regionalRankLabel: z.string().min(2),
-  }),
+  recruitment: footballRecruitingSchema,
 });
 
 const focusSchema = z.object({

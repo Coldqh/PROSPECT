@@ -11,6 +11,8 @@ import type { TrainingFocusId } from "../../sports/football/training/types";
 import { resolveMatchDecision, startMatch } from "../../sports/football/matches/simulateMatch";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { resolveRelationshipEvent } from "../../sports/football/relationships/relationshipEvents";
+import { performRecruitingAction } from "../../sports/football/recruiting/updateRecruiting";
+import type { RecruitingActionId } from "../../sports/football/recruiting/types";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -160,6 +162,11 @@ export class CareerRepository {
   async resolveRelationshipEvent(careerId: string, optionId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
     return this.save(resolveRelationshipEvent(current, optionId));
+  }
+
+  async performRecruitingAction(careerId: string, programId: string, actionId: RecruitingActionId): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(performRecruitingAction(current, programId, actionId));
   }
 
   async advanceDay(careerId: string): Promise<CareerSave> {

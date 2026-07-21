@@ -31,7 +31,7 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
   return {
     meta: {
       id: `career-${position}`,
-      schemaVersion: 8,
+      schemaVersion: 9,
       sport: "american-football",
       worldSeed: `match-${position}`,
       createdAt: "2026-07-21T10:00:00.000Z",

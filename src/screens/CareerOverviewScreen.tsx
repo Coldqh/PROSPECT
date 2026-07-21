@@ -8,7 +8,7 @@ import { MetricBar } from "../components/ui/MetricBar";
 import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
 import { MatchDashboard } from "../components/career/MatchDashboard";
-import { SeasonDashboard } from "../components/career/SeasonDashboard";
+import { CareerDashboard } from "../components/career/CareerDashboard";
 import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import {
   familyIncomeLabels,
@@ -83,7 +83,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("people");
@@ -195,7 +195,7 @@ export default function CareerOverviewScreen() {
           )}
 
           {activeTab === "career" && (
-            <SeasonDashboard save={save} onOpenMatch={() => setActiveTab("match")} />
+            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} />
           )}
 
           {activeTab === "team" && (

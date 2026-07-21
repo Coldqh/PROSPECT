@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { applyCompletedMatchToSeason } from "../season/updateSeason";
+import { updateRecruitingAfterMatch } from "../recruiting/updateRecruiting";
 import type { FootballPosition } from "../career/types";
 import type {
   FootballMatchState,
@@ -427,10 +428,12 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
         ...save.football.depthChart,
         coachTrust: clamp(save.football.depthChart.coachTrust + result.coachTrustDelta),
       },
-      recruitment: {
-        ...save.football.recruitment,
-        visibility: clamp(save.football.recruitment.visibility + result.visibilityDelta),
-      },
+      recruitment: save.football.recruitment,
+    };
+    const recruitingSave: CareerSave = { ...save, character: nextCharacter, football: nextFootball };
+    nextFootball = {
+      ...nextFootball,
+      recruitment: updateRecruitingAfterMatch(recruitingSave, nextMatch),
     };
     history = [
       ...history,

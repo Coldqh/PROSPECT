@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types";
 import type { TrainingFocusId } from "../sports/football/training/types";
+import type { RecruitingActionId } from "../sports/football/recruiting/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -16,6 +17,7 @@ interface CareerSaveState {
   startMatch(): Promise<void>;
   resolveMatchDecision(optionId: string): Promise<void>;
   resolveRelationshipEvent(optionId: string): Promise<void>;
+  performRecruitingAction(programId: string, actionId: RecruitingActionId): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -143,6 +145,20 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const performRecruitingAction = useCallback(async (programId: string, actionId: RecruitingActionId) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.performRecruitingAction(careerId, programId, actionId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось выполнить действие в рекрутинге.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -155,5 +171,6 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     startMatch,
     resolveMatchDecision,
     resolveRelationshipEvent,
+    performRecruitingAction,
   };
 }

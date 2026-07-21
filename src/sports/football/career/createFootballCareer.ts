@@ -21,6 +21,7 @@ import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../te
 import { createInitialTrainingState } from "../training/createTrainingState";
 import { createInitialMatchState } from "../matches/createMatchState";
 import { generateHighSchoolSeason } from "../season/generateSeason";
+import { createRecruitingState } from "../recruiting/createRecruitingState";
 
 const FIRST_NAMES = ["Cameron", "Jaylen", "Marcus", "Darius", "Devin", "Malik", "Jordan", "Tyler"] as const;
 const LAST_NAMES = ["Hayes", "Carter", "Brooks", "Reed", "Mitchell", "Coleman", "Ward", "Foster"] as const;
@@ -227,7 +228,7 @@ export function createFootballCareerState(
   const season = generateHighSchoolSeason(worldSeed, school, { year: 2026, month: 8, day: 17 });
 
   let football: FootballCareerState = {
-    moduleVersion: 6,
+    moduleVersion: 7,
     worldSeed,
     stage: "high-school-preseason",
     position: setup.position,
@@ -270,12 +271,12 @@ export function createFootballCareerState(
       },
     },
     season,
-    recruitment: {
-      visibility: clamp(20 + ratings.overall * 0.28 + school.prestige * 0.18 + random.integer(-4, 5)),
-      interestedPrograms: 0,
-      offers: 0,
-      regionalRankLabel: ratings.overall >= 80 ? "regional watchlist" : ratings.overall >= 72 ? "local prospect" : "unrated",
-    },
+    recruitment: undefined as never,
+  };
+
+  football = {
+    ...football,
+    recruitment: createRecruitingState(worldSeed, character, football),
   };
 
   const evaluation = evaluateDepthChart(football, character, { year: 2026, month: 8, day: 17 });
