@@ -7,6 +7,8 @@ import { Icon, type IconName } from "../components/ui/Icon";
 import { MetricBar } from "../components/ui/MetricBar";
 import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
+import { MatchDashboard } from "../components/career/MatchDashboard";
+import { SeasonDashboard } from "../components/career/SeasonDashboard";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -17,16 +19,12 @@ import { useCareerSave } from "../hooks/useCareerSave";
 
 const tabs = [
   { id: "today", label: "Сегодня", icon: "home" },
+  { id: "match", label: "Матч", icon: "football" },
   { id: "career", label: "Карьера", icon: "chart" },
   { id: "team", label: "Команда", icon: "team" },
   { id: "profile", label: "Игрок", icon: "user" },
 ] as const satisfies readonly { id: string; label: string; icon: IconName }[];
 
-const careerViews = [
-  { id: "overview", label: "Путь" },
-  { id: "history", label: "История" },
-  { id: "recruiting", label: "Рекрутинг" },
-] as const;
 const teamViews = [
   { id: "overview", label: "Сводка" },
   { id: "depth", label: "Depth" },
@@ -46,7 +44,6 @@ const profileViews = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
-type CareerView = (typeof careerViews)[number]["id"];
 type TeamView = (typeof teamViews)[number]["id"];
 type ProfileView = (typeof profileViews)[number]["id"];
 type RosterView = (typeof rosterViews)[number]["id"];
@@ -84,9 +81,8 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
-  const [careerView, setCareerView] = useState<CareerView>("overview");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("body");
   const [rosterView, setRosterView] = useState<RosterView>("offense");
@@ -181,62 +177,22 @@ export default function CareerOverviewScreen() {
               onUpdatePlan={updateWeeklyPlan}
               onUpdateTrainingPlan={updateTrainingPlan}
               onAdvanceDay={advanceDay}
+              onOpenMatch={() => setActiveTab("match")}
+            />
+          )}
+
+          {activeTab === "match" && (
+            <MatchDashboard
+              save={save}
+              mutating={mutating}
+              {...(actionError ? { actionError } : {})}
+              onStartMatch={startMatch}
+              onResolveDecision={resolveMatchDecision}
             />
           )}
 
           {activeTab === "career" && (
-            <div className="compact-section">
-              <header className="compact-page-head">
-                <div><span>Senior season 2026</span><h2>Карьера</h2></div>
-                <strong className="compact-head-score">W{football.season.week}</strong>
-              </header>
-              <SectionTabs<CareerView> tabs={careerViews} active={careerView} onChange={setCareerView} ariaLabel="Разделы карьеры" />
-
-              {careerView === "overview" && (
-                <div className="compact-view">
-                  <section className="career-stage-compact">
-                    <div className="career-stage-compact__number">01</div>
-                    <div><small>Текущий этап</small><h3>Последний школьный сезон</h3><p>Закрепиться в составе, сыграть сезон и выйти на рынок колледжей.</p></div>
-                    <span>ACTIVE</span>
-                  </section>
-                  <div className="compact-stat-pair">
-                    <article><small>Видимость</small><strong>{football.recruitment.visibility}</strong><span>{football.recruitment.regionalRankLabel}</span></article>
-                    <article><small>Программы</small><strong>{football.recruitment.interestedPrograms}</strong><span>проявляют интерес</span></article>
-                  </div>
-                  <button type="button" className="compact-link-card" onClick={() => setCareerView("recruiting")}>
-                    <Icon name="target" /><div><strong>Рынок рекрутинга</strong><small>Оценки, интерес и будущие предложения</small></div><Icon name="arrow-right" />
-                  </button>
-                  <button type="button" className="compact-link-card" onClick={() => setCareerView("history")}>
-                    <Icon name="clock" /><div><strong>История карьеры</strong><small>{save.history.length} зафиксированных событий</small></div><Icon name="arrow-right" />
-                  </button>
-                </div>
-              )}
-
-              {careerView === "history" && (
-                <div className="compact-view history-list-compact">
-                  {save.history.map((entry) => (
-                    <article key={entry.id}>
-                      <time>{new Date(entry.occurredAt).toLocaleDateString("ru-RU")}</time>
-                      <div><strong>{entry.title}</strong><p>{entry.description}</p></div>
-                    </article>
-                  ))}
-                </div>
-              )}
-
-              {careerView === "recruiting" && (
-                <div className="compact-view">
-                  <section className="recruiting-card-compact">
-                    <div><small>Regional visibility</small><strong>{football.recruitment.visibility}</strong><span>{football.recruitment.regionalRankLabel}</span></div>
-                    <MetricBar compact label="Известность" value={football.recruitment.visibility} />
-                  </section>
-                  <div className="compact-stat-pair">
-                    <article><small>Интерес</small><strong>{football.recruitment.interestedPrograms}</strong><span>программ</span></article>
-                    <article><small>Потолок</small><strong>{football.ratings.overall}</strong><span>{potentialLabel(football.ratings.potentialBand)}</span></article>
-                  </div>
-                  <div className="compact-note"><Icon name="spark" /><p>Первые серьёзные оценки появятся после матчей. Учитываются уровень соперника, роль, стабильность, учёба и поведение.</p></div>
-                </div>
-              )}
-            </div>
+            <SeasonDashboard save={save} onOpenMatch={() => setActiveTab("match")} />
           )}
 
           {activeTab === "team" && (

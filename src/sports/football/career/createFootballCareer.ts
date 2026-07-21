@@ -19,12 +19,13 @@ import type {
 import { evaluateDepthChart } from "../team/evaluateDepthChart";
 import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../team/generateTeam";
 import { createInitialTrainingState } from "../training/createTrainingState";
+import { createInitialMatchState } from "../matches/createMatchState";
+import { generateHighSchoolSeason } from "../season/generateSeason";
 
 const FIRST_NAMES = ["Cameron", "Jaylen", "Marcus", "Darius", "Devin", "Malik", "Jordan", "Tyler"] as const;
 const LAST_NAMES = ["Hayes", "Carter", "Brooks", "Reed", "Mitchell", "Coleman", "Ward", "Foster"] as const;
 const SCHOOL_PREFIXES = ["Northline", "West Harbor", "Cedar Ridge", "Eastgate", "Union Park", "Stonebridge", "Lakeview", "Central Heights"] as const;
 const MASCOTS = ["Wolves", "Vipers", "Falcons", "Bulls", "Panthers", "Ravens", "Titans", "Coyotes"] as const;
-const RIVAL_PREFIXES = ["South County", "Bishop Rowe", "Riverside", "Franklin Tech", "Oak Valley", "Jefferson"] as const;
 const COLORS = [["#d7192d", "#08090b"]] as const;
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -173,7 +174,6 @@ export function createFootballCareerState(
   const education = createEducation(setup, random.fork("education"), origin.schoolQuality, personality);
   const physical = createPhysical(archetype, random.fork("physical"));
   const ratings = createRatings(setup, archetype, personality, random.fork("ratings"));
-  const opponentPrefix = random.fork("opponent").pick(RIVAL_PREFIXES);
   const income = incomeModifier(setup.character.familyIncome);
   const support = supportModifier(setup.character.familySupport);
 
@@ -224,8 +224,10 @@ export function createFootballCareerState(
     throw new Error("Generated roster has no player in the selected position room");
   }
 
+  const season = generateHighSchoolSeason(worldSeed, school, { year: 2026, month: 8, day: 17 });
+
   let football: FootballCareerState = {
-    moduleVersion: 4,
+    moduleVersion: 6,
     worldSeed,
     stage: "high-school-preseason",
     position: setup.position,
@@ -238,6 +240,7 @@ export function createFootballCareerState(
     roster,
     teamDynamics,
     training: createInitialTrainingState(worldSeed, setup.position, character, ratings),
+    match: createInitialMatchState(worldSeed, setup.position, season, { year: 2026, month: 8, day: 17 }),
     depthChart: {
       rank: 1,
       playersAtPosition: roster.filter((player) => player.position === setup.position).length + 1,
@@ -266,19 +269,7 @@ export function createFootballCareerState(
         occurredOn: "2026-08-17",
       },
     },
-    season: {
-      year: 2026,
-      phase: "preseason",
-      week: 0,
-      wins: 0,
-      losses: 0,
-      nextOpponent: {
-        id: `opponent-${opponentPrefix.toLowerCase().replaceAll(" ", "-")}`,
-        name: `${opponentPrefix} ${random.fork("opponent-mascot").pick(MASCOTS)}`,
-        record: "0–0",
-        threat: random.fork("opponent-threat").pick(["aggressive secondary", "heavy pressure front", "fast perimeter defense", "disciplined zone coverage"]),
-      },
-    },
+    season,
     recruitment: {
       visibility: clamp(20 + ratings.overall * 0.28 + school.prestige * 0.18 + random.integer(-4, 5)),
       interestedPrograms: 0,

@@ -1,5 +1,7 @@
 import type { CharacterCreationInput } from "../../../core/character/types";
 import type { FootballTrainingState } from "../training/types";
+import type { FootballMatchState } from "../matches/types";
+import type { FootballSeasonState } from "../season/types";
 import type {
   DepthChartDecision,
   DepthChartEvaluation,
@@ -61,22 +63,8 @@ export interface DepthChartState {
   lastDecision: DepthChartDecision;
 }
 
-export interface FootballSeasonState {
-  year: number;
-  phase: "preseason";
-  week: number;
-  wins: number;
-  losses: number;
-  nextOpponent: {
-    id: string;
-    name: string;
-    record: string;
-    threat: string;
-  };
-}
-
 export interface FootballCareerState {
-  moduleVersion: 4;
+  moduleVersion: 6;
   worldSeed: string;
   stage: "high-school-preseason";
   position: FootballPosition;
@@ -89,6 +77,7 @@ export interface FootballCareerState {
   roster: FootballRosterPlayer[];
   teamDynamics: TeamDynamics;
   training: FootballTrainingState;
+  match: FootballMatchState;
   depthChart: DepthChartState;
   season: FootballSeasonState;
   recruitment: {

@@ -6,6 +6,7 @@ import { evaluateDepthChart } from "../team/evaluateDepthChart";
 import { getTrainingFocus } from "../training/catalog";
 import { resolveTrainingDay } from "../training/resolveTrainingDay";
 import type { TrainingFocusId } from "../training/types";
+import { createInitialMatchState } from "../matches/createMatchState";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -149,20 +150,34 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
       ...save.football.depthChart,
       coachTrust: nextCoachTrust,
     },
-    season: {
-      ...save.football.season,
-      week: Math.max(0, result.life.weekNumber - 1),
-    },
+    season: save.football.season,
   };
   const depthUpdate = evaluateDepthChart(provisionalFootball, trainingResolution.character, result.nextDate);
   const depthChanged = depthUpdate.rank !== save.football.depthChart.rank;
-  const nextFootball: CareerSave["football"] = {
+  let nextFootball: CareerSave["football"] = {
     ...provisionalFootball,
     depthChart: {
       ...provisionalFootball.depthChart,
       ...depthUpdate,
     },
   };
+
+  if (
+    result.life.dayIndex === 0 &&
+    save.football.match.status === "complete" &&
+    nextFootball.season.phase === "regular-season"
+  ) {
+    nextFootball = {
+      ...nextFootball,
+      match: createInitialMatchState(
+        save.meta.worldSeed,
+        save.football.position,
+        nextFootball.season,
+        result.nextDate,
+        result.life.dayIndex,
+      ),
+    };
+  }
 
   return {
     ...save,

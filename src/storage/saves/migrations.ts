@@ -4,6 +4,8 @@ import type { FootballCareerState } from "../../sports/football/career/types";
 import { evaluateDepthChart } from "../../sports/football/team/evaluateDepthChart";
 import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../../sports/football/team/generateTeam";
 import { createInitialTrainingState } from "../../sports/football/training/createTrainingState";
+import { createInitialMatchState } from "../../sports/football/matches/createMatchState";
+import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
 export interface MigrationResult {
@@ -36,14 +38,18 @@ interface LegacyFoundationSave {
 
 type LegacyFootball = Omit<
   FootballCareerState,
-  "moduleVersion" | "staff" | "roster" | "teamDynamics" | "training" | "depthChart"
+  "moduleVersion" | "staff" | "roster" | "teamDynamics" | "training" | "match" | "depthChart"
 > & {
   moduleVersion: 2;
   depthChart: Omit<FootballCareerState["depthChart"], "evaluation" | "lastDecision">;
 };
 
-type LegacyTeamFootball = Omit<FootballCareerState, "moduleVersion" | "training"> & {
+type LegacyTeamFootball = Omit<FootballCareerState, "moduleVersion" | "training" | "match"> & {
   moduleVersion: 3;
+};
+
+type LegacyTrainingFootball = Omit<FootballCareerState, "moduleVersion" | "match"> & {
+  moduleVersion: 4;
 };
 
 interface LegacyPlayerCreationSave {
@@ -69,6 +75,42 @@ interface LegacyTeamWorldSave {
   history: HistoryEntry[];
 }
 
+interface LegacyTrainingHealthSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 5 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyTrainingFootball;
+  history: HistoryEntry[];
+}
+
+type LegacyMatchFootball = Omit<FootballCareerState, "moduleVersion" | "season"> & {
+  moduleVersion: 5;
+  season: {
+    year: number;
+    phase: "preseason";
+    week: number;
+    wins: number;
+    losses: number;
+    nextOpponent: { id: string; name: string; record: string; threat: string };
+  };
+};
+
+interface LegacyMatchSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 6 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyMatchFootball;
+  history: HistoryEntry[];
+}
+
+function seasonForMigration(
+  football: { school: FootballCareerState["school"] },
+  worldSeed: string,
+  currentDate: CareerSave["meta"]["currentDate"],
+) {
+  return generateHighSchoolSeason(worldSeed, football.school, currentDate);
+}
+
 function enrichFootball(
   football: LegacyFootball,
   character: CareerSave["character"],
@@ -81,9 +123,10 @@ function enrichFootball(
   const firstRoomPlayer = roster.find((player) => player.position === football.position);
   if (!firstRoomPlayer) throw new Error("Cannot migrate career without a position room");
 
+  const season = seasonForMigration(football, worldSeed, currentDate);
   let enriched: FootballCareerState = {
     ...football,
-    moduleVersion: 4,
+    moduleVersion: 6,
     school: {
       ...football.school,
       primaryColor: "#d7192d",
@@ -93,6 +136,8 @@ function enrichFootball(
     roster,
     teamDynamics,
     training: createInitialTrainingState(worldSeed, football.position, character, football.ratings),
+    season,
+    match: createInitialMatchState(worldSeed, football.position, season, currentDate),
     depthChart: {
       ...football.depthChart,
       playersAtPosition: roster.filter((player) => player.position === football.position).length + 1,
@@ -141,19 +186,88 @@ function addTraining(
   football: LegacyTeamFootball,
   character: CareerSave["character"],
   worldSeed: string,
+  currentDate: CareerSave["meta"]["currentDate"],
+  dayIndex: number,
 ): FootballCareerState {
+  const season = seasonForMigration(football, worldSeed, currentDate);
   return {
     ...football,
-    moduleVersion: 4,
+    moduleVersion: 6,
+    season,
     training: createInitialTrainingState(worldSeed, football.position, character, football.ratings),
+    match: createInitialMatchState(worldSeed, football.position, season, currentDate, dayIndex),
   };
+}
+
+function addMatch(
+  football: LegacyTrainingFootball,
+  worldSeed: string,
+  currentDate: CareerSave["meta"]["currentDate"],
+  dayIndex: number,
+): FootballCareerState {
+  const season = seasonForMigration(football, worldSeed, currentDate);
+  return {
+    ...football,
+    moduleVersion: 6,
+    season,
+    match: createInitialMatchState(worldSeed, football.position, season, currentDate, dayIndex),
+  };
+}
+
+function migrateVersionSix(input: LegacyMatchSave): CareerSave {
+  const season = seasonForMigration(input.football, input.meta.worldSeed, input.meta.currentDate);
+  const football: FootballCareerState = {
+    ...input.football,
+    moduleVersion: 6,
+    season,
+    match: createInitialMatchState(
+      input.meta.worldSeed,
+      input.football.position,
+      season,
+      input.meta.currentDate,
+      input.life.dayIndex,
+    ),
+  };
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football,
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v7`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Школьный сезон сформирован",
+        description: "Карьера получила расписание, региональную таблицу, историю матчей и сезонную статистику.",
+      },
+    ],
+  });
+}
+
+function migrateVersionFive(input: LegacyTrainingHealthSave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football: addMatch(input.football, input.meta.worldSeed, input.meta.currentDate, input.life.dayIndex),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v6`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Матчевый модуль подключён",
+        description: "Карьера получила ключевые игровые эпизоды для атаки и защиты, статистику матча и оценку штаба.",
+      },
+    ],
+  });
 }
 
 function migrateVersionFour(input: LegacyTeamWorldSave): CareerSave {
   return careerSaveSchema.parse({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
-    football: addTraining(input.football, input.character, input.meta.worldSeed),
+    football: addTraining(input.football, input.character, input.meta.worldSeed, input.meta.currentDate, input.life.dayIndex),
     history: [
       ...input.history,
       {
@@ -234,6 +348,8 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 6) return { save: migrateVersionSix(input as LegacyMatchSave), migratedFrom: 6 };
+  if (schemaVersion === 5) return { save: migrateVersionFive(input as LegacyTrainingHealthSave), migratedFrom: 5 };
   if (schemaVersion === 4) return { save: migrateVersionFour(input as LegacyTeamWorldSave), migratedFrom: 4 };
   if (schemaVersion === 3) return { save: migrateVersionThree(input as LegacyWeeklyLoopSave), migratedFrom: 3 };
   if (schemaVersion === 2) return { save: migrateVersionTwo(input as LegacyPlayerCreationSave), migratedFrom: 2 };

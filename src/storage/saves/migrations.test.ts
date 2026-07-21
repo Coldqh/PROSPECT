@@ -34,7 +34,7 @@ describe("migrateCareerSave", () => {
   it("migrates foundation saves through player creation into the weekly loop schema", () => {
     const result = migrateCareerSave(legacySave);
     expect(result.migratedFrom).toBe(1);
-    expect(result.save.meta.schemaVersion).toBe(5);
+    expect(result.save.meta.schemaVersion).toBe(7);
     expect(result.save.meta.phase).toBe("high-school-preseason");
     expect(result.save.character.identity.fullName.length).toBeGreaterThan(3);
     expect(result.save.football.stage).toBe("high-school-preseason");
@@ -103,7 +103,7 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionThree);
     expect(result.migratedFrom).toBe(3);
-    expect(result.save.meta.schemaVersion).toBe(5);
+    expect(result.save.meta.schemaVersion).toBe(7);
     expect(result.save.football.roster.length).toBeGreaterThan(40);
     expect(result.save.football.school.primaryColor).toBe("#d7192d");
     expect(result.save.football.training.body.medicalStatus).toBe("cleared");
@@ -144,9 +144,107 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionFour);
     expect(result.migratedFrom).toBe(4);
-    expect(result.save.meta.schemaVersion).toBe(5);
-    expect(result.save.football.moduleVersion).toBe(4);
+    expect(result.save.meta.schemaVersion).toBe(7);
+    expect(result.save.football.moduleVersion).toBe(6);
     expect(result.save.football.training.plan.focusId).toBe("position-craft");
+    expect(result.save.football.match.status).toBe("upcoming");
+  });
+
+  it("migrates version five saves into the match schema", () => {
+    const generated = createFootballCareerState("football-v5-seed", createLegacyFootballSetup("football-v5-seed"));
+    const { match: _match, ...legacyFootball } = generated.football;
+    const versionFive = {
+      meta: {
+        id: "v5-career",
+        schemaVersion: 5,
+        sport: "american-football",
+        worldSeed: "football-v5-seed",
+        createdAt: "2026-07-21T10:00:00.000Z",
+        updatedAt: "2026-07-21T10:00:00.000Z",
+        currentDate: { year: 2026, month: 8, day: 20 },
+        phase: "high-school-preseason",
+        revision: 5,
+      },
+      character: generated.character,
+      life: {
+        moduleVersion: 1,
+        weekNumber: 1,
+        dayIndex: 3,
+        completedDays: 3,
+        weeklyPlan: {
+          templateId: "balanced",
+          intensity: "standard",
+          focus: { training: 34, recovery: 25, study: 25, social: 16 },
+          revision: 1,
+        },
+        consistency: 58,
+      },
+      football: { ...legacyFootball, moduleVersion: 4 },
+      history: [],
+    };
+    const result = migrateCareerSave(versionFive);
+    expect(result.migratedFrom).toBe(5);
+    expect(result.save.meta.schemaVersion).toBe(7);
+    expect(result.save.football.match.status).toBe("upcoming");
+    expect(result.save.football.match.heroUnit).toMatch(/offense|defense/);
+  });
+
+
+  it("migrates version six match saves into the full season schema", () => {
+    const generated = createFootballCareerState("football-v6-seed", createLegacyFootballSetup("football-v6-seed"));
+    const firstOpponent = generated.football.season.opponents[0];
+    if (!firstOpponent) throw new Error("No generated opponent");
+    const versionSix = {
+      meta: {
+        id: "v6-career",
+        schemaVersion: 6,
+        sport: "american-football",
+        worldSeed: "football-v6-seed",
+        createdAt: "2026-07-21T10:00:00.000Z",
+        updatedAt: "2026-07-21T10:00:00.000Z",
+        currentDate: { year: 2026, month: 8, day: 20 },
+        phase: "high-school-preseason",
+        revision: 6,
+      },
+      character: generated.character,
+      life: {
+        moduleVersion: 1,
+        weekNumber: 1,
+        dayIndex: 3,
+        completedDays: 3,
+        weeklyPlan: {
+          templateId: "balanced",
+          intensity: "standard",
+          focus: { training: 34, recovery: 25, study: 25, social: 16 },
+          revision: 1,
+        },
+        consistency: 58,
+      },
+      football: {
+        ...generated.football,
+        moduleVersion: 5,
+        season: {
+          year: 2026,
+          phase: "preseason",
+          week: 0,
+          wins: 0,
+          losses: 0,
+          nextOpponent: {
+            id: firstOpponent.id,
+            name: firstOpponent.name,
+            record: "0–0",
+            threat: firstOpponent.defenseStyle,
+          },
+        },
+      },
+      history: [],
+    };
+    const result = migrateCareerSave(versionSix);
+    expect(result.migratedFrom).toBe(6);
+    expect(result.save.meta.schemaVersion).toBe(7);
+    expect(result.save.football.moduleVersion).toBe(6);
+    expect(result.save.football.season.schedule).toHaveLength(8);
+    expect(result.save.football.season.standings.length).toBeGreaterThan(8);
   });
 
   it("produces the same migrated athlete for the same seed", () => {
