@@ -39,7 +39,7 @@ const views = [
 ] as const;
 
 type TodayView = (typeof views)[number]["id"];
-type SheetId = "condition" | "result" | "training-result" | "medical" | null;
+type SheetId = "condition" | "result" | "training-result" | "medical" | "event" | null;
 
 function signed(value: number, digits = 1): string {
   const rounded = value.toFixed(digits);
@@ -66,6 +66,8 @@ interface TodayDashboardProps {
   onUpdatePlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
   onUpdateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   onAdvanceDay(): Promise<void>;
+  onResolveRelationshipEvent(optionId: string): Promise<void>;
+  onOpenMatch(): void;
 }
 
 export function TodayDashboard({
@@ -75,6 +77,8 @@ export function TodayDashboard({
   onUpdatePlan,
   onUpdateTrainingPlan,
   onAdvanceDay,
+  onResolveRelationshipEvent,
+  onOpenMatch,
 }: TodayDashboardProps) {
   const { character, football, life } = save;
   const [view, setView] = useState<TodayView>("overview");
@@ -160,6 +164,18 @@ export function TodayDashboard({
             </button>
           </div>
 
+          {save.relationships.pendingEvent && (() => {
+            const event = save.relationships.pendingEvent;
+            const npc = save.relationships.npcs.find((item) => item.id === event.primaryNpcId);
+            return (
+              <button type="button" className="relationship-event-teaser" onClick={() => setSheet("event")}>
+                <span><Icon name="message" /></span>
+                <div><small>{npc?.name ?? "Важный разговор"}</small><strong>{event.title}</strong><p>{event.scene}</p></div>
+                <Icon name="arrow-right" />
+              </button>
+            );
+          })()}
+
           <button type="button" className="training-brief" onClick={() => setView("training")}>
             <span className="training-brief__icon"><Icon name={trainingIcons[currentTrainingFocus.id]} /></span>
             <div><small>Тренировочный акцент</small><strong>{currentTrainingFocus.name}</strong><p>{getIntensityDescriptor(football.training.plan.intensity).name} · готовность {Math.round(body.readiness)}</p></div>
@@ -188,10 +204,22 @@ export function TodayDashboard({
             </button>
           )}
 
-          <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceDay()}>
-            <span><small>План и тренировка применятся автоматически</small><strong>{mutating ? "Расчёт дня…" : "Завершить день"}</strong></span>
-            <Icon name="arrow-right" />
-          </button>
+          {save.relationships.pendingEvent ? (
+            <button type="button" className="primary-action-bar primary-action-bar--conversation" disabled={mutating} onClick={() => setSheet("event")}>
+              <span><small>Ситуацию нельзя пропустить</small><strong>Ответить</strong></span>
+              <Icon name="message" />
+            </button>
+          ) : life.dayIndex === 5 && football.match.status !== "complete" ? (
+            <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={onOpenMatch}>
+              <span><small>Суббота · {football.match.opponentName}</small><strong>Перейти к матчу</strong></span>
+              <Icon name="arrow-right" />
+            </button>
+          ) : (
+            <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceDay()}>
+              <span><small>План и тренировка применятся автоматически</small><strong>{mutating ? "Расчёт дня…" : "Завершить день"}</strong></span>
+              <Icon name="arrow-right" />
+            </button>
+          )}
         </div>
       )}
 
@@ -299,6 +327,26 @@ export function TodayDashboard({
           </button>
         </div>
       )}
+
+      <BottomSheet open={sheet === "event" && Boolean(save.relationships.pendingEvent)} title={save.relationships.pendingEvent?.title ?? "Разговор"} eyebrow="Живая ситуация" onClose={() => setSheet(null)}>
+        {save.relationships.pendingEvent && (() => {
+          const event = save.relationships.pendingEvent;
+          const npc = save.relationships.npcs.find((item) => item.id === event.primaryNpcId);
+          return (
+            <div className="relationship-event-sheet">
+              <header><span>{npc?.name.slice(0, 2).toUpperCase() ?? "NPC"}</span><div><small>{npc?.name}</small><strong>{event.scene}</strong></div></header>
+              <div className="relationship-event-context">{event.context.map((item) => <p key={item}>{item}</p>)}</div>
+              <div className="relationship-event-options">
+                {event.options.map((eventOption) => (
+                  <button type="button" key={eventOption.id} disabled={mutating} onClick={() => void onResolveRelationshipEvent(eventOption.id).then(() => setSheet(null))}>
+                    <strong>{eventOption.label}</strong><span>{eventOption.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </BottomSheet>
 
       <BottomSheet open={sheet === "condition"} title="Состояние спортсмена" eyebrow="Сегодня" onClose={() => setSheet(null)}>
         <div className="sheet-metric-list">

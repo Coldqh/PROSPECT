@@ -6,6 +6,7 @@ import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../..
 import { createInitialTrainingState } from "../../sports/football/training/createTrainingState";
 import { createInitialMatchState } from "../../sports/football/matches/createMatchState";
 import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
+import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
 export interface MigrationResult {
@@ -95,12 +96,53 @@ type LegacyMatchFootball = Omit<FootballCareerState, "moduleVersion" | "season">
   };
 };
 
+
+interface LegacySeasonSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 7 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  history: HistoryEntry[];
+}
+
 interface LegacyMatchSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 6 };
   character: CareerSave["character"];
   life: CareerSave["life"];
   football: LegacyMatchFootball;
   history: HistoryEntry[];
+}
+
+
+function parseMigratedSave(input: {
+  meta: CareerSave["meta"];
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  history: HistoryEntry[];
+  relationships?: CareerSave["relationships"];
+}): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    relationships: input.relationships ?? createFootballRelationships(input.meta.worldSeed, input.character, input.football),
+  });
+}
+
+function migrateVersionSeven(input: LegacySeasonSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v8`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Люди получили память",
+        description: "Карьера получила постоянных персонажей, одну шкалу отношений и контекстные жизненные события.",
+      },
+    ],
+  });
 }
 
 function seasonForMigration(
@@ -228,7 +270,7 @@ function migrateVersionSix(input: LegacyMatchSave): CareerSave {
       input.life.dayIndex,
     ),
   };
-  return careerSaveSchema.parse({
+  return parseMigratedSave({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football,
@@ -246,7 +288,7 @@ function migrateVersionSix(input: LegacyMatchSave): CareerSave {
 }
 
 function migrateVersionFive(input: LegacyTrainingHealthSave): CareerSave {
-  return careerSaveSchema.parse({
+  return parseMigratedSave({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football: addMatch(input.football, input.meta.worldSeed, input.meta.currentDate, input.life.dayIndex),
@@ -264,7 +306,7 @@ function migrateVersionFive(input: LegacyTrainingHealthSave): CareerSave {
 }
 
 function migrateVersionFour(input: LegacyTeamWorldSave): CareerSave {
-  return careerSaveSchema.parse({
+  return parseMigratedSave({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football: addTraining(input.football, input.character, input.meta.worldSeed, input.meta.currentDate, input.life.dayIndex),
@@ -282,7 +324,7 @@ function migrateVersionFour(input: LegacyTeamWorldSave): CareerSave {
 }
 
 function migrateVersionThree(input: LegacyWeeklyLoopSave): CareerSave {
-  return careerSaveSchema.parse({
+  return parseMigratedSave({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football: enrichFootball(input.football, input.character, input.meta.worldSeed, input.meta.currentDate),
@@ -321,7 +363,7 @@ function migrateVersionTwo(input: LegacyPlayerCreationSave): CareerSave {
 function migrateVersionOne(input: LegacyFoundationSave): CareerSave {
   const setup = createLegacyFootballSetup(input.meta.worldSeed);
   const generated = createFootballCareerState(input.meta.worldSeed, setup);
-  return careerSaveSchema.parse({
+  return parseMigratedSave({
     meta: {
       ...input.meta,
       schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -348,6 +390,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 7) return { save: migrateVersionSeven(input as LegacySeasonSave), migratedFrom: 7 };
   if (schemaVersion === 6) return { save: migrateVersionSix(input as LegacyMatchSave), migratedFrom: 6 };
   if (schemaVersion === 5) return { save: migrateVersionFive(input as LegacyTrainingHealthSave), migratedFrom: 5 };
   if (schemaVersion === 4) return { save: migrateVersionFour(input as LegacyTeamWorldSave), migratedFrom: 4 };

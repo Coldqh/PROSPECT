@@ -7,6 +7,7 @@ import { getTrainingFocus } from "../training/catalog";
 import { resolveTrainingDay } from "../training/resolveTrainingDay";
 import type { TrainingFocusId } from "../training/types";
 import { createInitialMatchState } from "../matches/createMatchState";
+import { advanceRelationshipWorld } from "../relationships/relationshipEvents";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -179,7 +180,7 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
     };
   }
 
-  return {
+  const nextSave: CareerSave = {
     ...save,
     meta: {
       ...save.meta,
@@ -230,5 +231,10 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
           ]
         : []),
     ],
+  };
+
+  return {
+    ...nextSave,
+    relationships: advanceRelationshipWorld(nextSave),
   };
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createInitialLifeState } from "../../../core/life/createInitialLifeState";
 import { createFootballCareerState } from "../career/createFootballCareer";
+import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import type { FootballCareerSetup } from "../career/types";
 import { advanceFootballCareerDay, updateWeeklyPlan } from "./advanceFootballDay";
 import type { CareerSave } from "../../../storage/saves/schema";
@@ -28,7 +29,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "career",
-      schemaVersion: 7,
+      schemaVersion: 8,
       sport: "american-football",
       worldSeed: "simulation-seed",
       createdAt: "2026-07-21T10:00:00.000Z",
@@ -39,6 +40,7 @@ function makeSave(): CareerSave {
     },
     ...generated,
     life: createInitialLifeState(),
+    relationships: createFootballRelationships("simulation-seed", generated.character, generated.football),
     history: [],
   };
 }

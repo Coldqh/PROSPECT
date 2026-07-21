@@ -29,7 +29,8 @@ export type IconName =
   | "trophy"
   | "flame"
   | "menu"
-  | "close";
+  | "close"
+  | "message";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -67,6 +68,7 @@ export function Icon({ name, size = 20, ...props }: IconProps) {
     flame: <path d="M13 3s1 4-2 6c-2 1.4-3 3.2-2 5.2.7 1.4 2 2.1 3.5 1.8 2.4-.5 3.4-3.2 2-5.2 3.5 2.1 4.2 6.2 1.8 8.6A6.4 6.4 0 0 1 5.5 15c-.2-3.6 2.4-6.3 4.5-8.2C11.5 5.5 13 3 13 3Z" />,
     menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+    message: <><path d="M4 5h16v11H8l-4 4V5Z" /><path d="M8 9h8M8 12h5" /></>,
   };
 
   return (

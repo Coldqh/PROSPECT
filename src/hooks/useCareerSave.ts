@@ -13,6 +13,9 @@ interface CareerSaveState {
   updateWeeklyPlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
   updateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   advanceDay(): Promise<void>;
+  startMatch(): Promise<void>;
+  resolveMatchDecision(optionId: string): Promise<void>;
+  resolveRelationshipEvent(optionId: string): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -97,6 +100,49 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+
+  const startMatch = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.startMatch(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось начать матч.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const resolveMatchDecision = useCallback(async (optionId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.resolveMatchDecision(careerId, optionId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось рассчитать игровой эпизод.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const resolveRelationshipEvent = useCallback(async (optionId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.resolveRelationshipEvent(careerId, optionId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить разговор.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -106,5 +152,8 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     updateWeeklyPlan,
     updateTrainingPlan,
     advanceDay,
+    startMatch,
+    resolveMatchDecision,
+    resolveRelationshipEvent,
   };
 }

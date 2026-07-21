@@ -9,6 +9,7 @@ import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
 import { MatchDashboard } from "../components/career/MatchDashboard";
 import { SeasonDashboard } from "../components/career/SeasonDashboard";
+import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -22,7 +23,7 @@ const tabs = [
   { id: "match", label: "Матч", icon: "football" },
   { id: "career", label: "Карьера", icon: "chart" },
   { id: "team", label: "Команда", icon: "team" },
-  { id: "profile", label: "Игрок", icon: "user" },
+  { id: "profile", label: "Жизнь", icon: "user" },
 ] as const satisfies readonly { id: string; label: string; icon: IconName }[];
 
 const teamViews = [
@@ -37,6 +38,7 @@ const rosterViews = [
   { id: "special", label: "Спец." },
 ] as const;
 const profileViews = [
+  { id: "people", label: "Люди" },
   { id: "body", label: "Тело" },
   { id: "mind", label: "Характер" },
   { id: "origin", label: "Дом" },
@@ -81,10 +83,10 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [teamView, setTeamView] = useState<TeamView>("overview");
-  const [profileView, setProfileView] = useState<ProfileView>("body");
+  const [profileView, setProfileView] = useState<ProfileView>("people");
   const [rosterView, setRosterView] = useState<RosterView>("offense");
 
   if (loading) {
@@ -177,6 +179,7 @@ export default function CareerOverviewScreen() {
               onUpdatePlan={updateWeeklyPlan}
               onUpdateTrainingPlan={updateTrainingPlan}
               onAdvanceDay={advanceDay}
+              onResolveRelationshipEvent={resolveRelationshipEvent}
               onOpenMatch={() => setActiveTab("match")}
             />
           )}
@@ -273,7 +276,7 @@ export default function CareerOverviewScreen() {
                         <header><span>{coachRoleLabel(coach.role)}</span><em>{coach.age}</em></header>
                         <h3>{coach.name}</h3>
                         <p>{coach.summary}</p>
-                        <div><small>Развитие <strong>{coach.development}</strong></small><small>Тактика <strong>{coach.tactics}</strong></small><small>Отношение <strong>{coach.relationship}</strong></small></div>
+                        <div><small>Развитие <strong>{coach.development}</strong></small><small>Тактика <strong>{coach.tactics}</strong></small><small>Коммуникация <strong>{coach.communication}</strong></small></div>
                       </article>
                     ))}
                   </div>
@@ -291,10 +294,12 @@ export default function CareerOverviewScreen() {
           {activeTab === "profile" && (
             <div className="compact-section">
               <header className="compact-page-head">
-                <div><span>Player profile</span><h2>Игрок</h2></div>
+                <div><span>Personal life</span><h2>Жизнь</h2></div>
                 <strong className="compact-head-score">{football.position}</strong>
               </header>
               <SectionTabs<ProfileView> tabs={profileViews} active={profileView} onChange={setProfileView} ariaLabel="Разделы профиля" />
+
+              {profileView === "people" && <PeopleDashboard save={save} />}
 
               {profileView === "body" && (
                 <div className="compact-view">

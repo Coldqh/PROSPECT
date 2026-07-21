@@ -8,6 +8,9 @@ import { createSeed } from "../../core/random/createSeed";
 import { createInitialLifeState } from "../../core/life/createInitialLifeState";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../core/life/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
+import { resolveMatchDecision, startMatch } from "../../sports/football/matches/simulateMatch";
+import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
+import { resolveRelationshipEvent } from "../../sports/football/relationships/relationshipEvents";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -106,6 +109,7 @@ export class CareerRepository {
       character: generated.character,
       life: createInitialLifeState(),
       football: generated.football,
+      relationships: createFootballRelationships(worldSeed, generated.character, generated.football),
       history: [
         {
           id: crypto.randomUUID(),
@@ -140,8 +144,30 @@ export class CareerRepository {
     return this.save(applyTrainingPlan(current, focusId, intensity));
   }
 
+
+  async startMatch(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
+    if (current.life.dayIndex !== 5) throw new Error("Match is only available on Saturday");
+    return this.save(startMatch(current));
+  }
+
+  async resolveMatchDecision(careerId: string, optionId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(resolveMatchDecision(current, optionId));
+  }
+
+  async resolveRelationshipEvent(careerId: string, optionId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(resolveRelationshipEvent(current, optionId));
+  }
+
   async advanceDay(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before advancing");
+    if (current.life.dayIndex === 5 && current.football.match.status !== "complete") {
+      throw new Error("Match must be completed before advancing Saturday");
+    }
     return this.save(advanceFootballCareerDay(current));
   }
 

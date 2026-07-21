@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -466,6 +466,99 @@ const lifeSchema = z.object({
   lastOutcome: dayOutcomeSchema.optional(),
 });
 
+
+const relationshipMemorySchema = z.object({
+  id: z.string().min(1),
+  date: gameDateSchema,
+  summary: z.string().min(2),
+  impact: z.number().min(-100).max(100),
+  importance: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+});
+
+const relationshipNpcSchema = z.object({
+  id: z.string().min(1),
+  seed: z.string().min(1),
+  linkedEntityId: z.string().min(1).optional(),
+  name: z.string().min(2),
+  age: z.number().int().min(14).max(90),
+  role: z.enum(["guardian", "head-coach", "position-coach", "rival", "teammate", "counselor", "reporter"]),
+  group: z.enum(["family", "team", "school", "media"]),
+  relationship: z.number().min(-100).max(100),
+  temperament: z.enum(["direct", "reserved", "volatile", "warm", "calculating", "demanding"]),
+  goal: z.string().min(2),
+  fear: z.string().min(2),
+  currentSituation: z.string().min(2),
+  status: z.enum(["steady", "under-pressure", "hopeful", "frustrated", "focused", "concerned"]),
+  memories: z.array(relationshipMemorySchema),
+});
+
+const relationshipEffectSchema = z.object({
+  relationship: z.number().min(-100).max(100),
+  coachTrust: z.number().optional(),
+  confidence: z.number().optional(),
+  stress: z.number().optional(),
+  energy: z.number().optional(),
+  gpa: z.number().optional(),
+  visibility: z.number().optional(),
+  teamMorale: z.number().optional(),
+});
+
+const relationshipEventTypeSchema = z.enum([
+  "coach-accountability",
+  "coach-plan-review",
+  "rival-pressure",
+  "family-academics",
+  "family-check-in",
+  "teammate-film",
+  "counselor-warning",
+  "reporter-spotlight",
+]);
+
+const relationshipEventSchema = z.object({
+  id: z.string().min(1),
+  type: relationshipEventTypeSchema,
+  createdOn: gameDateSchema,
+  title: z.string().min(2),
+  scene: z.string().min(2),
+  context: z.array(z.string().min(2)).min(1),
+  participantIds: z.array(z.string().min(1)).min(1),
+  primaryNpcId: z.string().min(1),
+  options: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(2),
+    detail: z.string().min(2),
+    tone: z.enum(["calm", "firm", "defensive", "open"]),
+    effects: relationshipEffectSchema,
+    memory: z.string().min(2),
+    outcome: z.string().min(2),
+    followUp: z.object({ type: relationshipEventTypeSchema, delayDays: z.number().int().min(1) }).optional(),
+  })).min(2).max(4),
+});
+
+const relationshipsSchema = z.object({
+  moduleVersion: z.literal(1),
+  npcs: z.array(relationshipNpcSchema).min(4),
+  pendingEvent: relationshipEventSchema.optional(),
+  resolvedEvents: z.array(z.object({
+    id: z.string().min(1),
+    type: relationshipEventTypeSchema,
+    title: z.string().min(2),
+    resolvedOn: gameDateSchema,
+    resolvedAtCompletedDay: z.number().int().nonnegative(),
+    primaryNpcId: z.string().min(1),
+    optionId: z.string().min(1),
+    outcome: z.string().min(2),
+    relationshipDelta: z.number().min(-100).max(100),
+  })),
+  queuedEvents: z.array(z.object({
+    id: z.string().min(1),
+    type: relationshipEventTypeSchema,
+    dueCompletedDay: z.number().int().nonnegative(),
+    primaryNpcId: z.string().min(1),
+  })),
+  lastGeneratedCompletedDay: z.number().int().min(-1),
+});
+
 const careerMetaSchema = z.object({
   id: z.string().min(1),
   schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
@@ -491,6 +584,7 @@ export const careerSaveSchema = z.object({
   character: characterSchema,
   life: lifeSchema,
   football: footballSchema,
+  relationships: relationshipsSchema,
   history: z.array(historyEntrySchema),
 });
 

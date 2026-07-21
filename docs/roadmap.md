@@ -10,3 +10,8 @@
 - [ ] Relationships, memory and event chains
 - [ ] College recruiting
 - [ ] First college year
+
+
+## v0.8 — People and memory
+
+Permanent NPCs, one relationship parameter, contextual life events, memory and delayed follow-ups.
