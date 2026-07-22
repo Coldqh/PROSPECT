@@ -14,6 +14,7 @@ import type {
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
 import { createProgramResources } from "./resources";
 import { createTalentPipeline, createTalentProfile } from "./talent";
+import { createEmptyRosterPlan, reviewRosterManagement } from "./rosterManagement";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -139,6 +140,8 @@ function createGeneratedPlayer(
     isHero: false,
     eligibility,
     talent,
+    usagePlan: depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "developmental",
+    positionHistory: [],
   };
 }
 
@@ -195,6 +198,8 @@ function createHeroTeamPlayers(
         isHero: false,
         eligibility: createPlayerEligibility("high-school", player.year === "Senior" ? 18 : player.year === "Junior" ? 17 : player.year === "Sophomore" ? 16 : 15, player.year, seasonYear, random.fork(`eligibility:${player.id}`)),
         talent: createTalentProfile({ level: "high-school", classYear: player.year, overall: player.overall, potential: player.potential, nationalRank: random.integer(90, 1500), isHero: false }, team.stateCode, seasonYear, random.fork(`talent:${player.id}`)),
+        usagePlan: index === 0 ? "starter" : "rotation",
+        positionHistory: [],
       });
     });
   }
@@ -223,6 +228,8 @@ function createHeroTeamPlayers(
     isHero: true,
     eligibility: createPlayerEligibility("high-school", 17, "Senior", seasonYear, random.fork("eligibility:hero")),
     talent: createTalentProfile({ level: "high-school", classYear: "Senior", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, team.stateCode, seasonYear, random.fork("talent:hero")),
+    usagePlan: football.depthChart.rank === 1 ? "starter" : football.depthChart.rank === 2 ? "rotation" : "developmental",
+    positionHistory: [],
   });
   return players;
 }
@@ -255,6 +262,7 @@ function createHighSchoolTeams(football: FootballCareerState): EcosystemTeam[] {
       coachIds: [],
       compliance: createTeamCompliance({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)) }, 0, random.fork("compliance")),
       resources: createProgramResources({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)), offenseStyle: opponent?.offenseStyle ?? random.pick(OFFENSE_STYLES), defenseStyle: opponent?.defenseStyle ?? random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
+      rosterPlan: createEmptyRosterPlan({ level: "high-school", compliance: createTeamCompliance({ level: "high-school", prestige: isHero ? football.school.prestige : standing.rating }, 0, random.fork("plan-compliance")), positionNeeds: createNeeds(random.fork("plan-needs"), "high-school") }, 2026),
       trend: standing.streak >= 2 ? "rising" : standing.streak <= -2 ? "falling" : "stable",
     };
   });
@@ -289,6 +297,7 @@ function createCollegeTeams(football: FootballCareerState): EcosystemTeam[] {
       coachIds: [],
       compliance: createTeamCompliance({ level: "college", prestige: program.prestige }, 0, random.fork("compliance")),
       resources: createProgramResources({ level: "college", prestige: program.prestige, offenseStyle: program.scheme, defenseStyle: random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
+      rosterPlan: createEmptyRosterPlan({ level: "college", compliance: createTeamCompliance({ level: "college", prestige: program.prestige }, 0, random.fork("plan-compliance")), positionNeeds: { ...createNeeds(random.fork("plan-needs"), "college"), [football.position]: program.positionNeed } }, 2026),
       trend: "stable",
     };
   });
@@ -308,7 +317,7 @@ const STATE_CONFERENCE: Record<string, string> = {
   CA: "frontier-pacific", ID: "frontier-pacific", AZ: "frontier-pacific", CO: "frontier-pacific",
 };
 
-export function assignCollegeConferences(teams: EcosystemTeam[]): { teams: EcosystemTeam[]; conferences: EcosystemConference[] } {
+export function assignCollegeConferences<T extends Pick<EcosystemTeam, "id" | "level" | "prestige" | "stateCode">>(teams: T[]): { teams: T[]; conferences: EcosystemConference[] } {
   const collegeTeams = teams.filter((team) => team.level === "college");
   const allocations = new Map<string, string[]>(CONFERENCE_CATALOG.map((item) => [item.id, [] as string[]]));
   const ordered = [...collegeTeams].sort((left, right) => right.prestige - left.prestige || left.id.localeCompare(right.id));
@@ -358,6 +367,9 @@ function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], 
     jucoProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "juco").length,
     walkOnProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "walk-on").length,
     nationallyExposedProspects: players.filter((player) => player.level === "high-school" && player.talent.exposure === "national").length,
+    plannedClassSpots: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.targetClassSize, 0),
+    developmentalPlayers: players.filter((player) => player.usagePlan === "developmental" || player.usagePlan === "redshirt").length,
+    plannedPositionChanges: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.positionChanges.filter((change) => !change.applied).length, 0),
   };
 }
 
@@ -372,8 +384,8 @@ export function createFootballEcosystem(
   const cycle = resolveWorldCycle(currentDate);
   const initialTeams = [...createHighSchoolTeams(football), ...createCollegeTeams(football)];
   const conferenceSetup = assignCollegeConferences(initialTeams);
-  const teams = conferenceSetup.teams;
-  const players: EcosystemPlayer[] = [];
+  let teams = conferenceSetup.teams;
+  let players: EcosystemPlayer[] = [];
   const coaches: EcosystemCoach[] = [];
 
   for (const team of teams) {
@@ -398,10 +410,23 @@ export function createFootballEcosystem(
     coaches.push(headCoach, coordinator);
   }
 
+  const initialPlanning = reviewRosterManagement(
+    teams,
+    players,
+    coaches,
+    constitution,
+    cycle.seasonYear,
+    Math.max(1, football.season.week),
+    new SeededRandom(`${worldSeed}:initial-roster-plans`),
+    { applyOffseasonDecisions: false, reason: "Стартовый аудит состава и трёхлетний прогноз." },
+  );
+  teams = initialPlanning.teams;
+  players = initialPlanning.players;
+
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 5,
+    moduleVersion: 6,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,

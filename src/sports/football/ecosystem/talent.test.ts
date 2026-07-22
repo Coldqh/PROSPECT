@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution } from "./constitution";
 import { createProgramResources } from "./resources";
+import { createEmptyRosterPlan } from "./rosterManagement";
 import { createTalentPipeline, createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
 import type { EcosystemPlayer, EcosystemTeam, FootballEcosystemState } from "./types";
 
@@ -30,10 +31,13 @@ function createTeam(id: string, level: EcosystemTeam["level"], stateCode: string
     coachIds: [],
     trend: "stable" as const,
   };
+  const compliance = createTeamCompliance(base, 0, random.fork("compliance"));
+  const resources = createProgramResources(base, random.fork("resources"), 2026);
   return {
     ...base,
-    compliance: createTeamCompliance(base, 0, random.fork("compliance")),
-    resources: createProgramResources(base, random.fork("resources"), 2026),
+    compliance,
+    resources,
+    rosterPlan: createEmptyRosterPlan({ ...base, compliance }, 2026),
   };
 }
 
@@ -63,6 +67,8 @@ function createSenior(team: EcosystemTeam): EcosystemPlayer {
     previousTeamIds: [],
     isHero: false,
     eligibility: createPlayerEligibility("high-school", 18, "Senior", 2026, random.fork("eligibility")),
+    usagePlan: "starter" as const,
+    positionHistory: [],
   };
   return {
     ...player,
@@ -76,7 +82,7 @@ function createSenior(team: EcosystemTeam): EcosystemPlayer {
 function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: EcosystemPlayer): FootballEcosystemState {
   const talentPipeline = createTalentPipeline([senior], 2026);
   return {
-    moduleVersion: 5,
+    moduleVersion: 6,
     constitution: createWorldConstitution(),
     cycle: { academicYear: 2026, seasonYear: 2026, phase: "winter-evaluation", phaseWeek: 1 },
     lastSimulatedDay: 0,
@@ -106,6 +112,9 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
       jucoProspects: 0,
       walkOnProspects: 0,
       nationallyExposedProspects: 0,
+      plannedClassSpots: college.rosterPlan.targetClassSize,
+      developmentalPlayers: 0,
+      plannedPositionChanges: 0,
     },
     teamHistory: [],
     transactions: [],

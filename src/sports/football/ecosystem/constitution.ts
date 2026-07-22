@@ -243,8 +243,8 @@ export function createTeamCompliance(
 }
 
 export function refreshTeamCompliance(
-  team: EcosystemTeam,
-  players: EcosystemPlayer[],
+  team: Pick<EcosystemTeam, "id" | "level" | "prestige" | "compliance">,
+  players: Array<Pick<EcosystemPlayer, "teamId" | "eligibility">>,
   random: SeededRandom,
   constitution: WorldConstitution,
 ): EcosystemTeamCompliance {
@@ -294,10 +294,11 @@ export function rollEligibilityIntoNextSeason(
   const previous = player.eligibility;
   if (player.level !== "college") return previous;
   const playedSeason = previous.gamesPlayedThisSeason > 0;
+  const assignedRedshirt = player.usagePlan === "redshirt";
   const canRedshirt = previous.model === "legacy-four-in-five"
     && !previous.redshirtUsed
     && previous.gamesPlayedThisSeason <= constitution.legacyRedshirtGameLimit;
-  const redshirtUsed = previous.redshirtUsed || (playedSeason && canRedshirt);
+  const redshirtUsed = previous.redshirtUsed || (canRedshirt && (playedSeason || assignedRedshirt));
   const degreeProgress = clamp(previous.degreeProgress + random.integer(18, 28));
   const completedYear = player.seasonsPlayed + 1;
   const requiredProgress = completedYear >= 4

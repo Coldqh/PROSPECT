@@ -16,7 +16,7 @@
 - [x] World constitution, eligibility and roster compliance
 - [x] Finite program resources and institutional economics
 - [x] Annual talent pipeline and geographic recruiting classes
-- [ ] Multi-year roster-planning AI
+- [x] Multi-year roster-planning AI
 - [ ] Unified recruiting, transfer and coaching labor market
 - [ ] Tactical identities and scheme-driven roster value
 - [ ] National competition, rankings and program reputation
@@ -66,3 +66,15 @@
 - unsigned seniors preserved through JUCO and walk-on routes;
 - independent prospects can develop, commit and enroll later;
 - deterministic migration from schema v15 to v16.
+
+
+## v0.17 — Multi-year roster planning AI
+
+- three-year position-room projections for every active program;
+- projected departures and retention risk;
+- target recruiting-class size constrained by roster and scholarship space;
+- usage plans: starter, rotation, special teams, developmental and redshirt;
+- scholarship awards based on role, performance and available aid;
+- position changes when one room is overloaded and another loses depth;
+- automatic replanning after transfers, enrollment and coaching changes;
+- deterministic migration from schema v16 to v17.

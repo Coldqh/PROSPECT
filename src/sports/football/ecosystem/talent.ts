@@ -356,6 +356,8 @@ function createFreshman(
       academicProjection: clamp(region.academicAccess * 0.58 + random.integer(18, 45)),
       discoveredYear: seasonYear + (exposureValue >= 62 ? 1 : 2),
     },
+    usagePlan: depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "developmental",
+    positionHistory: [],
   };
 }
 
@@ -406,6 +408,8 @@ function enrollIndependent(
       academicProjection: prospect.academicProjection,
       discoveredYear: seasonYear - 1,
     },
+    usagePlan: "developmental",
+    positionHistory: [],
   };
 }
 

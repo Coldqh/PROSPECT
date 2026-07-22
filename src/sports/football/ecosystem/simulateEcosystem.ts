@@ -30,6 +30,7 @@ import {
   resourceRecruitingPower,
   simulateWeeklyResources,
 } from "./resources";
+import { reviewRosterManagement } from "./rosterManagement";
 
 
 interface EcosystemCareerState {
@@ -525,6 +526,8 @@ function chooseCommitment(
         eligible:
           team.compliance.status !== "violation"
           && rosterRoom > 0
+          && (reservations.get(team.id) ?? 0) < Math.max(1, team.rosterPlan.targetClassSize)
+          && team.rosterPlan.positionProjections[player.position].targetAdds > 0
           && recruitingRoom >= recruitingCost
           && (!requiresScholarship || scholarshipRoom > 0),
         score:
@@ -821,6 +824,8 @@ function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, s
     isHero: false,
     eligibility: createPlayerEligibility("college", 18, "Freshman", seasonYear, random.fork("eligibility"), "full"),
     talent: createTalentProfile({ level: "college", classYear: "Freshman", overall, potential: clamp(overall + 12, overall, 96), nationalRank: random.integer(150, 2200), isHero: false }, team.stateCode, seasonYear, random.fork("talent")),
+    usagePlan: "developmental",
+    positionHistory: [],
   };
 }
 
@@ -1189,6 +1194,56 @@ function processOffseason(
   transactions.push(...transferResult.transactions);
   stories.push(...transferResult.stories);
 
+  const rosterManagement = reviewRosterManagement(
+    teams,
+    players,
+    world.coaches,
+    world.constitution,
+    seasonYear + 1,
+    1,
+    random.fork("roster-management"),
+    { applyOffseasonDecisions: true, reason: "Межсезонный аудит после выпусков и трансферного портала." },
+  );
+  teams = rosterManagement.teams;
+  players = rosterManagement.players;
+  for (const [index, draft] of rosterManagement.drafts.entries()) {
+    const related = draft.teamId === save.football.college.signedProgramId || draft.playerId === "hero";
+    stories.push(story(
+      save,
+      day,
+      draft.kind,
+      draft.title,
+      draft.detail,
+      related ? 5 : draft.importance,
+      [draft.teamId],
+      draft.playerId ? [draft.playerId] : [],
+      [],
+      related,
+    ));
+    const transactionKind = draft.kind === "position-change"
+      ? "position-change" as const
+      : draft.kind === "scholarship"
+        ? "scholarship-awarded" as const
+        : draft.kind === "redshirt"
+          ? "redshirt-assigned" as const
+          : undefined;
+    if (transactionKind) {
+      transactions.push({
+        id: `roster:${seasonYear + 1}:${transactionKind}:${draft.playerId ?? draft.teamId}:${index}`,
+        kind: transactionKind,
+        seasonYear: seasonYear + 1,
+        week: save.life.weekNumber,
+        createdOn: save.meta.currentDate,
+        title: draft.title,
+        detail: draft.detail,
+        ...(draft.playerId ? { playerId: draft.playerId } : {}),
+        fromTeamId: draft.teamId,
+        toTeamId: draft.teamId,
+        relatedToHero: related,
+      });
+    }
+  }
+
   const talentFlow = processAnnualTalentFlow(
     { ...world, players, teams },
     players,
@@ -1239,6 +1294,18 @@ function processOffseason(
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
   teams = rebuildTeamRosters(teams, players, carousel.coaches, world.constitution);
+  const finalRosterReview = reviewRosterManagement(
+    teams,
+    players,
+    carousel.coaches,
+    world.constitution,
+    seasonYear + 1,
+    1,
+    random.fork("final-roster-review"),
+    { applyOffseasonDecisions: false, reason: "Новый штаб пересмотрел состав после зачисления класса и тренерской карусели." },
+  );
+  teams = rebuildTeamRosters(finalRosterReview.teams, finalRosterReview.players, carousel.coaches, world.constitution);
+  players = finalRosterReview.players;
   return {
     ...world,
     players,
@@ -1330,6 +1397,9 @@ function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: Ec
     jucoProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "juco").length,
     walkOnProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "walk-on").length,
     nationallyExposedProspects: players.filter((player) => player.level === "high-school" && player.talent.exposure === "national").length,
+    plannedClassSpots: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.targetClassSize, 0),
+    developmentalPlayers: players.filter((player) => player.usagePlan === "developmental" || player.usagePlan === "redshirt").length,
+    plannedPositionChanges: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.positionChanges.filter((change) => !change.applied).length, 0),
   };
 }
 
@@ -1398,6 +1468,31 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       players = depth.players;
       generatedStories.push(...depth.stories);
 
+      const rosterReview = reviewRosterManagement(
+        teams,
+        players,
+        coaches,
+        world.constitution,
+        cycle.seasonYear,
+        cycle.phaseWeek,
+        random.fork("roster-review"),
+        { applyOffseasonDecisions: false, reason: `Недельный аудит: ${cycle.phase}, неделя ${cycle.phaseWeek}.` },
+      );
+      teams = rosterReview.teams;
+      players = rosterReview.players;
+      generatedStories.push(...rosterReview.drafts.map((draft) => story(
+        daySave,
+        day,
+        draft.kind,
+        draft.title,
+        draft.detail,
+        draft.teamId === save.football.college.signedProgramId ? 4 : draft.importance,
+        [draft.teamId],
+        draft.playerId ? [draft.playerId] : [],
+        [],
+        draft.teamId === save.football.college.signedProgramId || draft.playerId === "hero",
+      )));
+
       const resourceUpdate = updateProgramResourcesWeekly(
         teams,
         players,
@@ -1413,7 +1508,9 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         const round = simulateConferenceRound(teams, coaches, world.conferences, daySave, random.fork("conference-round"), day, world.seasonWeek);
         teams = round.teams;
         coaches = round.coaches;
-        players = players.map((player) => player.level === "college" && player.depthRank <= 2 && isPlayerAvailable(player)
+        players = players.map((player) => player.level === "college"
+          && (player.usagePlan === "starter" || player.usagePlan === "rotation" || player.usagePlan === "special-teams")
+          && isPlayerAvailable(player)
           ? { ...player, eligibility: { ...player.eligibility, gamesPlayedThisSeason: player.eligibility.gamesPlayedThisSeason + 1 } }
           : player);
         generatedStories.push(...round.stories);

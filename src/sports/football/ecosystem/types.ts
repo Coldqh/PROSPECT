@@ -14,6 +14,8 @@ export type EcosystemExposureLevel = "hidden" | "local" | "regional" | "national
 export type EcosystemDevelopmentCurve = "early" | "steady" | "late";
 export type EcosystemResourceTier = "local" | "regional" | "power" | "elite";
 export type EcosystemSpendingPriority = "balanced" | "recruiting" | "development" | "medical" | "facilities";
+export type EcosystemRosterStrategy = "contend" | "balanced" | "develop" | "rebuild";
+export type EcosystemUsagePlan = "starter" | "rotation" | "special-teams" | "developmental" | "redshirt";
 export type EcosystemStoryKind =
   | "breakout"
   | "injury"
@@ -35,7 +37,11 @@ export type EcosystemStoryKind =
   | "talent-class"
   | "camp-breakout"
   | "juco-route"
-  | "walk-on-route";
+  | "walk-on-route"
+  | "roster-plan"
+  | "position-change"
+  | "redshirt"
+  | "scholarship";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -49,7 +55,10 @@ export type EcosystemTransactionKind =
   | "nil-commitment"
   | "juco-entry"
   | "walk-on-entry"
-  | "talent-enrolled";
+  | "talent-enrolled"
+  | "position-change"
+  | "scholarship-awarded"
+  | "redshirt-assigned";
 
 export interface EcosystemPositionNeeds {
   QB: number;
@@ -181,6 +190,56 @@ export interface EcosystemProgramResources {
   lastBudgetYear: number;
 }
 
+
+export interface EcosystemPositionProjection {
+  position: FootballPosition;
+  currentPlayers: number;
+  returningNextYear: number;
+  returningInTwoYears: number;
+  projectedDepartures: number;
+  scholarshipPlayers: number;
+  averageOverall: number;
+  bestOverall: number;
+  averagePotential: number;
+  needNow: number;
+  needNextYear: number;
+  targetAdds: number;
+}
+
+export interface EcosystemPositionChangePlan {
+  playerId: string;
+  fromPosition: FootballPosition;
+  toPosition: FootballPosition;
+  reason: string;
+  applied: boolean;
+}
+
+export interface EcosystemScholarshipDecision {
+  playerId: string;
+  previousStatus: "none" | "partial" | "full";
+  nextStatus: "partial" | "full";
+  reason: string;
+}
+
+export interface EcosystemRosterPlan {
+  version: 1;
+  seasonYear: number;
+  reviewedWeek: number;
+  strategy: EcosystemRosterStrategy;
+  planningHorizonYears: 3;
+  targetClassSize: number;
+  availableRosterSpots: number;
+  availableScholarships: number;
+  projectedDepartures: number;
+  retentionRisk: number;
+  redshirtPlayerIds: string[];
+  developmentalPlayerIds: string[];
+  positionChanges: EcosystemPositionChangePlan[];
+  scholarshipDecisions: EcosystemScholarshipDecision[];
+  positionProjections: Record<FootballPosition, EcosystemPositionProjection>;
+  lastReviewReason: string;
+}
+
 export interface EcosystemTeam {
   id: string;
   seed: string;
@@ -206,6 +265,7 @@ export interface EcosystemTeam {
   trend: "rising" | "stable" | "falling";
   compliance: EcosystemTeamCompliance;
   resources: EcosystemProgramResources;
+  rosterPlan: EcosystemRosterPlan;
 }
 
 export interface EcosystemPlayer {
@@ -234,6 +294,8 @@ export interface EcosystemPlayer {
   isHero: boolean;
   eligibility: EcosystemPlayerEligibility;
   talent: EcosystemTalentProfile;
+  usagePlan: EcosystemUsagePlan;
+  positionHistory: FootballPosition[];
 }
 
 export interface EcosystemCoach {
@@ -314,10 +376,13 @@ export interface EcosystemMarketState {
   jucoProspects: number;
   walkOnProspects: number;
   nationallyExposedProspects: number;
+  plannedClassSpots: number;
+  developmentalPlayers: number;
+  plannedPositionChanges: number;
 }
 
 export interface FootballEcosystemState {
-  moduleVersion: 5;
+  moduleVersion: 6;
   constitution: WorldConstitution;
   cycle: WorldCycleState;
   lastSimulatedDay: number;

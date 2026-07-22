@@ -55,6 +55,8 @@ function currentHero(
       transferStatus: "none" as const,
       previousTeamIds: [],
       isHero: true,
+      usagePlan: "developmental" as const,
+      positionHistory: [],
       eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", world.seasonYear, new SeededRandom(`${football.worldSeed}:hero:eligibility`), "full"),
     }),
     name: character.identity.fullName,
@@ -80,6 +82,8 @@ function currentHero(
     isHero: true,
     eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:eligibility:${targetTeamId}`), football.college.entryRoute === "preferred-walk-on" ? "none" : "full"),
     talent: existing?.talent ?? createTalentProfile({ level: "college", classYear: "Freshman", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, world.teams.find((team) => team.id === targetTeamId)?.stateCode ?? football.school.stateCode, Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:talent:${targetTeamId}`)),
+    usagePlan: (football.college.depthRank ?? 3) === 1 ? "starter" : (football.college.depthRank ?? 3) === 2 ? "rotation" : "developmental",
+    positionHistory: existing?.positionHistory ?? [],
   };
 }
 

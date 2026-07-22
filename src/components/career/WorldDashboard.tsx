@@ -16,6 +16,7 @@ const views = [
   { id: "leagues", label: "Лиги" },
   { id: "moves", label: "Движение" },
   { id: "resources", label: "Ресурсы" },
+  { id: "plans", label: "Составы" },
   { id: "talent", label: "Таланты" },
   { id: "history", label: "История" },
 ] as const;
@@ -45,6 +46,10 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "camp-breakout": "Лагерь",
     "juco-route": "JUCO",
     "walk-on-route": "Walk-on",
+    "roster-plan": "План состава",
+    "position-change": "Смена позиции",
+    redshirt: "Redshirt",
+    scholarship: "Стипендия",
   }[kind];
 }
 
@@ -66,7 +71,18 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
     "juco-entry": "JUCO",
     "walk-on-entry": "Walk-on",
     "talent-enrolled": "Набор",
+    "position-change": "Позиция",
+    "scholarship-awarded": "Стипендия",
+    "redshirt-assigned": "Redshirt",
   }[kind];
+}
+
+function rosterStrategyLabel(strategy: EcosystemTeam["rosterPlan"]["strategy"]): string {
+  return { contend: "Победа сейчас", balanced: "Баланс", develop: "Развитие", rebuild: "Перестройка" }[strategy];
+}
+
+function usageCount(team: EcosystemTeam): number {
+  return team.rosterPlan.redshirtPlayerIds.length + team.rosterPlan.developmentalPlayerIds.length;
 }
 
 type WorldDashboardSave = Pick<CareerSave, "world" | "football">;
@@ -102,6 +118,16 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         Number(right.id === heroProgramId) - Number(left.id === heroProgramId)
         || right.resources.financialPressure - left.resources.financialPressure
         || right.resources.annualBudget - left.resources.annualBudget,
+      ),
+    [world.teams, heroProgramId],
+  );
+  const rosterTeams = useMemo(
+    () => world.teams
+      .filter((team) => team.level === "college")
+      .sort((left, right) =>
+        Number(right.id === heroProgramId) - Number(left.id === heroProgramId)
+        || right.rosterPlan.retentionRisk - left.rosterPlan.retentionRisk
+        || right.rosterPlan.targetClassSize - left.rosterPlan.targetClassSize,
       ),
     [world.teams, heroProgramId],
   );
@@ -253,6 +279,43 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
+      {view === "plans" && (
+        <div className="compact-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Мест в классах</small><strong>{world.market.plannedClassSpots}</strong></span>
+            <span><small>Развитие</small><strong>{world.market.developmentalPlayers}</strong></span>
+            <span><small>Смены позиций</small><strong>{world.market.plannedPositionChanges}</strong></span>
+            <span><small>Горизонт</small><strong>3Y</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Многолетний AI состава</small><h3>Штабы планируют будущие дыры</h3>
+            <p>Выпуски, eligibility, удержание, стипендии и глубина позиций формируют набор до того, как место реально освободится.</p>
+          </section>
+
+          <div className="roster-plan-list">
+            {rosterTeams.slice(0, 12).map((team) => {
+              const urgent = Object.values(team.rosterPlan.positionProjections)
+                .sort((left, right) => right.needNextYear - left.needNextYear)[0];
+              return (
+                <button
+                  key={team.id}
+                  type="button"
+                  className={team.id === heroProgramId ? "is-hero" : team.rosterPlan.retentionRisk >= 65 ? "is-risk" : ""}
+                  onClick={() => setSelectedTeam(team)}
+                >
+                  <div><strong>{team.shortName}</strong><small>{rosterStrategyLabel(team.rosterPlan.strategy)}</small></div>
+                  <span><small>Класс</small><strong>{team.rosterPlan.targetClassSize}</strong></span>
+                  <span><small>Уходят</small><strong>{team.rosterPlan.projectedDepartures}</strong></span>
+                  <span><small>Дыра</small><strong>{urgent?.position ?? "—"}</strong></span>
+                  <em>{Math.round(team.rosterPlan.retentionRisk)}</em>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {view === "talent" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
@@ -371,6 +434,34 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               <span><small>Финансовое давление</small><strong>{Math.round(selectedTeam.resources.financialPressure)}</strong></span>
               <span><small>Текущий баланс</small><strong>${selectedTeam.resources.currentBalance.toFixed(1)}M</strong></span>
             </div>
+            <section className="roster-plan-sheet">
+              <header><small>План состава · {selectedTeam.rosterPlan.seasonYear}</small><h3>{rosterStrategyLabel(selectedTeam.rosterPlan.strategy)}</h3><p>{selectedTeam.rosterPlan.lastReviewReason}</p></header>
+              <div className="info-list info-list--compact">
+                <span><small>Целевой класс</small><strong>{selectedTeam.rosterPlan.targetClassSize}</strong></span>
+                <span><small>Свободные места</small><strong>{selectedTeam.rosterPlan.availableRosterSpots}</strong></span>
+                <span><small>Свободные стипендии</small><strong>{selectedTeam.rosterPlan.availableScholarships}</strong></span>
+                <span><small>Ожидаемые уходы</small><strong>{selectedTeam.rosterPlan.projectedDepartures}</strong></span>
+                <span><small>Developmental</small><strong>{usageCount(selectedTeam)}</strong></span>
+                <span><small>Риск удержания</small><strong>{Math.round(selectedTeam.rosterPlan.retentionRisk)}</strong></span>
+              </div>
+              <div className="roster-position-grid">
+                {Object.values(selectedTeam.rosterPlan.positionProjections).map((projection) => (
+                  <article key={projection.position}>
+                    <strong>{projection.position}</strong>
+                    <span><small>Сейчас</small><b>{projection.currentPlayers}</b></span>
+                    <span><small>Вернутся</small><b>{projection.returningNextYear}</b></span>
+                    <span><small>Нужно</small><b>{projection.targetAdds}</b></span>
+                    <em>{Math.round(projection.needNextYear)}</em>
+                  </article>
+                ))}
+              </div>
+              {(selectedTeam.rosterPlan.positionChanges.length > 0 || selectedTeam.rosterPlan.scholarshipDecisions.length > 0) && (
+                <div className="roster-decision-list">
+                  {selectedTeam.rosterPlan.positionChanges.map((change) => <p key={`${change.playerId}:${change.toPosition}`}><strong>{change.fromPosition} → {change.toPosition}</strong>{change.reason}</p>)}
+                  {selectedTeam.rosterPlan.scholarshipDecisions.map((decision) => <p key={decision.playerId}><strong>{decision.previousStatus} → {decision.nextStatus}</strong>{decision.reason}</p>)}
+                </div>
+              )}
+            </section>
           </div>
         )}
       </BottomSheet>

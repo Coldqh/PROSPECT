@@ -42,13 +42,15 @@ describe("football ecosystem", () => {
     expect(left.world.coaches.length).toBeGreaterThan(30);
     expect(left.world.conferences).toHaveLength(4);
     expect(left.world.players.some((player) => player.isHero)).toBe(true);
-    expect(left.world.moduleVersion).toBe(5);
+    expect(left.world.moduleVersion).toBe(6);
     expect(left.world.constitution.collegeRosterLimit).toBe(105);
     expect(left.world.teams.every((team) => team.compliance.estimatedRosterSize <= team.compliance.rosterLimit)).toBe(true);
     expect(left.world.players.every((player) => Boolean(player.eligibility.model))).toBe(true);
     expect(left.world.teams.every((team) => team.resources.annualBudget > 0)).toBe(true);
     expect(left.world.teams.filter((team) => team.level === "college").every((team) => team.resources.nilCapacity >= 0)).toBe(true);
     expect(left.world.market.totalRecruitingBudget).toBeGreaterThan(0);
+    expect(left.world.teams.every((team) => team.rosterPlan.planningHorizonYears === 3)).toBe(true);
+    expect(left.world.market.plannedClassSpots).toBeGreaterThan(0);
     expect(left.world.talentPipeline.regions.length).toBeGreaterThanOrEqual(8);
     expect(left.world.players.every((player) => Boolean(player.talent.regionId))).toBe(true);
   });
