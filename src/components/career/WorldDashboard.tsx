@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
 import type { FootballCareerState } from "../../sports/football/career/types";
-import type { FootballEcosystemState } from "../../sports/football/ecosystem/types";
-import type { EcosystemStory } from "../../sports/football/ecosystem/types";
+import type {
+  EcosystemConference,
+  EcosystemStory,
+  EcosystemTransaction,
+  FootballEcosystemState,
+} from "../../sports/football/ecosystem/types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { SectionTabs } from "../ui/SectionTabs";
 
 const views = [
   { id: "pulse", label: "Пульс" },
-  { id: "players", label: "Игроки" },
-  { id: "programs", label: "Команды" },
-  { id: "coaches", label: "Тренеры" },
+  { id: "leagues", label: "Лиги" },
+  { id: "moves", label: "Движение" },
+  { id: "history", label: "История" },
 ] as const;
 
 type WorldView = (typeof views)[number]["id"];
@@ -25,65 +29,86 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "coach-move": "Штаб",
     upset: "Результат",
     "market-shift": "Рынок",
+    "conference-race": "Гонка",
+    championship: "Титул",
+    transfer: "Трансфер",
+    graduation: "Выпуск",
+    enrollment: "Набор",
   }[kind];
 }
 
-function trajectoryLabel(value: "surging" | "steady" | "slipping"): string {
-  return value === "surging" ? "Растёт" : value === "slipping" ? "Сдаёт" : "Стабильно";
+function phaseLabel(phase: FootballEcosystemState["phase"]): string {
+  return phase === "regular-season" ? "Регулярный сезон" : phase === "postseason" ? "Финалы конференций" : "Межсезонье";
 }
 
-function coachStatusLabel(value: "secure" | "watched" | "hot-seat"): string {
-  return value === "secure" ? "Стабилен" : value === "watched" ? "Под наблюдением" : "На грани";
+function transactionLabel(kind: EcosystemTransaction["kind"]): string {
+  return {
+    "portal-entry": "Портал",
+    transfer: "Переход",
+    "coach-fired": "Увольнение",
+    "coach-hired": "Назначение",
+    graduation: "Выпуск",
+    "recruit-enrolled": "Зачисление",
+  }[kind];
 }
 
-interface WorldDashboardSave { world: FootballEcosystemState; football: FootballCareerState }
+interface WorldDashboardSave {
+  world: FootballEcosystemState;
+  football: FootballCareerState;
+}
 
 export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   const [view, setView] = useState<WorldView>("pulse");
   const [selectedStory, setSelectedStory] = useState<EcosystemStory>();
+  const [selectedConference, setSelectedConference] = useState<EcosystemConference>();
   const { world, football } = save;
 
   const stories = useMemo(
-    () => [...world.stories].sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.importance - left.importance).slice(0, 18),
+    () => [...world.stories]
+      .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.importance - left.importance)
+      .slice(0, 18),
     [world.stories],
   );
-  const samePositionPlayers = useMemo(
-    () => world.players
-      .filter((player) => player.level === "high-school" && player.classYear === "Senior" && player.position === football.position)
-      .sort((left, right) => left.nationalRank - right.nationalRank)
-      .slice(0, 14),
-    [world.players, football.position],
+  const transactions = useMemo(
+    () => [...world.transactions]
+      .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.seasonYear - left.seasonYear || right.week - left.week)
+      .slice(0, 18),
+    [world.transactions],
   );
-  const collegeTeams = useMemo(
-    () => world.teams
-      .filter((team) => team.level === "college")
-      .sort((left, right) => right.positionNeeds[football.position] - left.positionNeeds[football.position] || right.prestige - left.prestige)
-      .slice(0, 12),
-    [world.teams, football.position],
+  const historyYears = useMemo(
+    () => [...new Set(world.teamHistory.map((record) => record.seasonYear))].sort((left, right) => right - left),
+    [world.teamHistory],
   );
-  const coaches = useMemo(
-    () => world.coaches
-      .filter((coach) => coach.role === "head-coach")
-      .sort((left, right) => left.jobSecurity - right.jobSecurity)
-      .slice(0, 12),
-    [world.coaches],
-  );
+  const heroProgramId = football.college.signedProgramId;
+
+  function conferenceStandings(conference: EcosystemConference) {
+    return conference.teamIds
+      .map((id) => world.teams.find((team) => team.id === id))
+      .filter((team): team is NonNullable<typeof team> => Boolean(team))
+      .sort((left, right) => right.conferenceWins - left.conferenceWins || left.conferenceLosses - right.conferenceLosses || right.rating - left.rating);
+  }
 
   return (
     <div className="compact-section world-dashboard">
       <header className="compact-page-head world-head">
         <div><span>Autonomous football world</span><h2>Экосистема</h2></div>
-        <strong className="compact-head-score">W{world.currentWeek}</strong>
+        <strong className="compact-head-score">{world.seasonYear}</strong>
       </header>
 
       <SectionTabs<WorldView> tabs={views} active={view} onChange={setView} ariaLabel="Разделы спортивного мира" />
 
       {view === "pulse" && (
         <div className="compact-view world-pulse">
-          <section className="world-market-strip">
+          <section className="world-cycle-card">
+            <div><small>{phaseLabel(world.phase)}</small><h3>Неделя {world.seasonWeek}</h3></div>
+            <span>{world.conferences.length} конференции</span>
+          </section>
+
+          <section className="world-market-strip world-market-strip--four">
             <span><small>Коммиты</small><strong>{world.market.committedPlayers}</strong></span>
-            <span><small>Активный рынок</small><strong>{world.market.activeRecruitments}</strong></span>
+            <span><small>Портал</small><strong>{world.market.portalPlayers}</strong></span>
             <span><small>Горячие штабы</small><strong>{world.market.coachingHotSeats}</strong></span>
+            <span><small>Сезонов в истории</small><strong>{historyYears.length}</strong></span>
           </section>
 
           <section className="world-digest-card">
@@ -99,72 +124,85 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
                 <em>{item.importance}</em>
               </button>
             ))}
-            {stories.length === 0 && <div className="compact-note"><Icon name="clock" /><p>Сезон только начался. Первые реальные изменения появятся после нескольких игровых дней.</p></div>}
+            {stories.length === 0 && <div className="compact-note"><Icon name="clock" /><p>Мир только запущен. Первые изменения появятся после игровых недель.</p></div>}
           </div>
         </div>
       )}
 
-      {view === "players" && (
+      {view === "leagues" && (
         <div className="compact-view">
           <section className="world-context-card">
-            <small>Твоя позиция</small><h3>{football.position}: рынок выпускников</h3>
-            <p>Эти игроки конкурируют за те же предложения и места в будущих depth chart.</p>
+            <small>Реальные соревнования</small><h3>Команды играют друг против друга</h3>
+            <p>Победа одной программы означает поражение другой. Таблицы, давление и титулы строятся из этих матчей.</p>
           </section>
-          <div className="world-player-list">
-            {samePositionPlayers.map((player) => {
-              const team = world.teams.find((item) => item.id === player.teamId);
-              const committed = player.committedTeamId ? world.teams.find((item) => item.id === player.committedTeamId) : undefined;
+          <div className="conference-grid">
+            {world.conferences.map((conference) => {
+              const standings = conferenceStandings(conference);
+              const leader = standings[0];
+              const champion = conference.champions.at(-1);
+              const championTeam = champion ? world.teams.find((team) => team.id === champion.teamId) : undefined;
               return (
-                <article key={player.id}>
-                  <span>#{player.nationalRank}</span>
-                  <div><strong>{player.name}</strong><small>{team?.shortName ?? "HS"} · OVR {Math.round(player.overall)} · {trajectoryLabel(player.trajectory)}</small></div>
-                  <em>{committed ? committed.shortName : player.recruitingStage === "offered" ? "OFFERS" : player.recruitingStage.toUpperCase()}</em>
-                </article>
+                <button key={conference.id} type="button" onClick={() => setSelectedConference(conference)}>
+                  <header><span>{conference.shortName}</span><em>{conference.region}</em></header>
+                  <h3>{conference.name}</h3>
+                  <div className="conference-leader">
+                    <small>{world.phase === "offseason" ? "Последний чемпион" : "Лидер"}</small>
+                    <strong>{world.phase === "offseason" ? championTeam?.shortName ?? "—" : leader?.shortName ?? "—"}</strong>
+                    <span>{leader ? `${leader.conferenceWins}–${leader.conferenceLosses}` : ""}</span>
+                  </div>
+                  <footer><span>{conference.teamIds.length} программ</span><strong>AVG {Math.round(conference.prestige)}</strong></footer>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {view === "programs" && (
+      {view === "moves" && (
         <div className="compact-view">
           <section className="world-context-card">
-            <small>Колледж-футбол</small><h3>Кому реально нужен {football.position}</h3>
-            <p>Потребности меняются из-за травм, коммитов других игроков, результатов и решений штаба.</p>
+            <small>Трансферы и штабы</small><h3>Места никогда не закреплены навсегда</h3>
+            <p>Игроки уходят из глубоких позиционных комнат, координаторы получают повышения, а увольнения ломают старые обещания.</p>
           </section>
-          <div className="world-team-grid">
-            {collegeTeams.map((team) => {
-              const headCoach = world.coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
-              const heroProgram = football.recruitment.programs.find((program) => program.id === team.id);
-              return (
-                <article key={team.id}>
-                  <header><span>{team.shortName}</span><strong>{team.wins}–{team.losses}</strong></header>
-                  <h3>{team.name}</h3>
-                  <div><small>Нужда {football.position}</small><strong>{Math.round(team.positionNeeds[football.position])}</strong></div>
-                  <footer><span>{heroProgram ? `Интерес ${Math.round(heroProgram.interest)}` : `Рейтинг ${Math.round(team.rating)}`}</span><em className={headCoach?.status === "hot-seat" ? "is-danger" : ""}>{headCoach ? coachStatusLabel(headCoach.status) : "Штаб"}</em></footer>
-                </article>
-              );
-            })}
+          <div className="world-transaction-list">
+            {transactions.map((transaction) => (
+              <article key={transaction.id} className={transaction.relatedToHero ? "is-relevant" : ""}>
+                <span>{transactionLabel(transaction.kind)}</span>
+                <div><strong>{transaction.title}</strong><small>{transaction.detail}</small></div>
+                <em>{transaction.seasonYear}</em>
+              </article>
+            ))}
+            {transactions.length === 0 && <div className="compact-note"><Icon name="swap" /><p>Первые переходы и назначения происходят в межсезонье.</p></div>}
           </div>
         </div>
       )}
 
-      {view === "coaches" && (
+      {view === "history" && (
         <div className="compact-view">
           <section className="world-context-card">
-            <small>Рынок тренеров</small><h3>Штабы тоже борются за работу</h3>
-            <p>Увольнение меняет схемы, рекрутинг, обещания и развитие уже набранных игроков.</p>
+            <small>Непрерывная история</small><h3>Сезоны не исчезают после финала</h3>
+            <p>Составы, тренеры и престиж меняются, но каждый итог остаётся в истории мира.</p>
           </section>
-          <div className="world-coach-list">
-            {coaches.map((coach) => {
-              const team = world.teams.find((item) => item.id === coach.teamId);
+          <div className="world-history-list">
+            {historyYears.map((year) => {
+              const records = world.teamHistory.filter((record) => record.seasonYear === year);
+              const champions = records.filter((record) => record.conferenceChampion);
+              const heroRecord = heroProgramId ? records.find((record) => record.teamId === heroProgramId) : undefined;
               return (
-                <article key={coach.id} className={coach.status === "hot-seat" ? "is-danger" : ""}>
-                  <div><small>{team?.shortName ?? "TEAM"}</small><strong>{coach.name}</strong><span>{coach.philosophy}</span></div>
-                  <aside><em>{coachStatusLabel(coach.status)}</em><strong>{Math.round(coach.jobSecurity)}</strong></aside>
+                <article key={year}>
+                  <header><strong>{year}</strong><span>{records.length} программ</span></header>
+                  <div>
+                    {champions.slice(0, 4).map((record) => {
+                      const team = world.teams.find((item) => item.id === record.teamId);
+                      const conference = world.conferences.find((item) => item.id === record.conferenceId);
+                      return <span key={record.id}><small>{conference?.shortName}</small><strong>{team?.shortName ?? record.teamId}</strong></span>;
+                    })}
+                  </div>
+                  {heroRecord && <footer>Твоя программа: {heroRecord.wins}–{heroRecord.losses}, место #{heroRecord.finish}</footer>}
                 </article>
               );
             })}
+            {historyYears.length === 0 && <div className="compact-note"><Icon name="history" /><p>Первый сезон ещё не архивирован. История появится после межсезонья.</p></div>}
           </div>
         </div>
       )}
@@ -182,6 +220,25 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               <span><small>Неделя</small><strong>{selectedStory.week}</strong></span>
               <span><small>Связь с карьерой</small><strong>{selectedStory.relatedToHero ? "Прямая" : "Косвенная"}</strong></span>
             </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet
+        open={Boolean(selectedConference)}
+        title={selectedConference?.name ?? "Конференция"}
+        {...(selectedConference ? { eyebrow: `${selectedConference.shortName} · ${selectedConference.region}` } : {})}
+        onClose={() => setSelectedConference(undefined)}
+      >
+        {selectedConference && (
+          <div className="conference-sheet">
+            {conferenceStandings(selectedConference).map((team, index) => (
+              <article key={team.id} className={team.id === heroProgramId ? "is-hero" : ""}>
+                <span>{index + 1}</span>
+                <div><strong>{team.name}</strong><small>OVR {Math.round(team.rating)} · {team.trend}</small></div>
+                <em>{team.conferenceWins}–{team.conferenceLosses}</em>
+              </article>
+            ))}
           </div>
         )}
       </BottomSheet>

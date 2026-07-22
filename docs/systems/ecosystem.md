@@ -60,3 +60,33 @@ The world state creates the events. The interface only reports them.
 - обновлённый рейтинг попадает в расписание и используется матчевым движком;
 - коммиты других рекрутов уменьшают потребность колледжа и повышают конкуренцию;
 - смена тренера снижает надёжность обещаний и ясность будущей роли.
+
+## Continuity layer — version 0.13
+
+The ecosystem no longer resets after a single recruiting cycle.
+
+### Conferences and coherent competition
+
+The 24 college programs are divided into four persistent fictional conferences. Programs now play actual opponents from their own conference. Every recorded win belongs to one team and every recorded loss belongs to another. Conference standings, postseason champions and final program records are archived by season.
+
+### Roster movement
+
+At the end of a season:
+
+- graduating seniors leave their programs;
+- committed recruits enroll and occupy real roster places;
+- buried college players may enter the transfer portal;
+- transfer destinations are selected from programs with a positional need and available depth-chart space;
+- incoming and outgoing movement changes team strength and future recruiting demand.
+
+### Coaching carousel
+
+A fired head coach is no longer replaced by a renamed copy. Existing coaches can move between programs, inherit a new roster and change the stability of both organizations. Their career record, tenure and previous employers persist across seasons.
+
+### Persistent history
+
+The world stores compact season records rather than full play-by-play data. Each record contains final standings, conference finish, rating, championship status and head coach. Transactions preserve graduations, enrollments, transfers, firings and hires.
+
+### Hero integration
+
+When the hero reports to college, the same ecosystem entity is removed from the high-school roster and inserted into the selected college roster. The hero then competes inside the same position room as background players. Future graduations, transfers, injuries and coaching changes affect the hero through the shared world state.

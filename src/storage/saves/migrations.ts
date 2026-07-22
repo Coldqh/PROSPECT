@@ -10,6 +10,7 @@ import { createFootballRelationships } from "../../sports/football/relationships
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
+import { upgradeFootballEcosystemV1, type LegacyFootballEcosystemStateV1 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -69,6 +70,16 @@ interface LegacyRecruitingSave {
 }
 
 type LegacyVersionTenFootball = Omit<FootballCareerState, "college">;
+
+interface LegacyEcosystemSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 12 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV1;
+  history: HistoryEntry[];
+}
 
 interface LegacyCollegeTransitionSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 11 };
@@ -247,6 +258,24 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionTwelve(input: LegacyEcosystemSave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV1(input.world, input.character, input.football, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v13`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Экосистема получила непрерывную историю",
+        description: "Колледжи объединены в конференции, сезоны архивируются, игроки переходят, а тренеры реально меняют работу.",
+      },
+    ],
+  });
 }
 
 function migrateVersionEleven(input: LegacyCollegeTransitionSave): CareerSave {
@@ -616,6 +645,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 12) return { save: migrateVersionTwelve(input as LegacyEcosystemSave), migratedFrom: 12 };
   if (schemaVersion === 11) return { save: migrateVersionEleven(input as LegacyCollegeTransitionSave), migratedFrom: 11 };
   if (schemaVersion === 10) return { save: migrateVersionTen(input as LegacyDecisionSave), migratedFrom: 10 };
   if (schemaVersion === 9) return { save: migrateVersionNine(input as LegacyRecruitingSave), migratedFrom: 9 };

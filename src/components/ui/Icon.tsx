@@ -30,7 +30,9 @@ export type IconName =
   | "flame"
   | "menu"
   | "close"
-  | "message";
+  | "message"
+  | "swap"
+  | "history";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -69,6 +71,8 @@ export function Icon({ name, size = 20, ...props }: IconProps) {
     menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
     close: <><path d="m6 6 12 12M18 6 6 18" /></>,
     message: <><path d="M4 5h16v11H8l-4 4V5Z" /><path d="M8 9h8M8 12h5" /></>,
+    swap: <><path d="m7 7-4 4 4 4" /><path d="M3 11h14a4 4 0 0 1 4 4v1" /><path d="m17 17 4-4-4-4" /><path d="M21 13H7a4 4 0 0 1-4-4V8" /></>,
+    history: <><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M12 7v5l3 2" /></>,
   };
 
   return (

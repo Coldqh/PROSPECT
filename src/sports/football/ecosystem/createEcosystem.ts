@@ -6,6 +6,7 @@ import type {
   EcosystemCoach,
   EcosystemLevel,
   EcosystemPlayer,
+  EcosystemConference,
   EcosystemPositionNeeds,
   EcosystemTeam,
   FootballEcosystemState,
@@ -84,6 +85,10 @@ function createCoach(
     jobSecurity,
     status: jobSecurity < 35 ? "hot-seat" : jobSecurity < 55 ? "watched" : "secure",
     philosophy: random.pick(PHILOSOPHIES),
+    tenureYears: random.integer(0, role === "head-coach" ? 9 : 5),
+    careerWins: random.integer(level === "college" ? 12 : 4, level === "college" ? 118 : 54),
+    careerLosses: random.integer(level === "college" ? 8 : 3, level === "college" ? 82 : 42),
+    previousTeamIds: [],
   };
 }
 
@@ -120,6 +125,11 @@ function createGeneratedPlayer(
     recruitingStage: team.level === "high-school" && classYear === "Senior"
       ? random.pick(["tracked", "tracked", "offered", "unranked"] as const)
       : "unranked",
+    eligibilityYears: team.level === "college" ? Math.max(1, 4 - CLASS_YEARS.indexOf(classYear)) : 4,
+    seasonsPlayed: team.level === "college" ? CLASS_YEARS.indexOf(classYear) : 0,
+    transferStatus: "none",
+    previousTeamIds: [],
+    isHero: false,
   };
 }
 
@@ -168,9 +178,38 @@ function createHeroTeamPlayers(
         trajectory: player.coachStanding >= 72 ? "surging" : player.coachStanding <= 42 ? "slipping" : "steady",
         nationalRank: random.integer(90, 1500),
         recruitingStage: player.year === "Senior" ? random.pick(["tracked", "offered", "unranked"] as const) : "unranked",
+        eligibilityYears: 4,
+        seasonsPlayed: 0,
+        transferStatus: "none",
+        previousTeamIds: [],
+        isHero: false,
       });
     });
   }
+  players.push({
+    id: "hero",
+    seed: `${team.seed}:hero`,
+    name: "PLAYER",
+    teamId: team.id,
+    level: "high-school",
+    age: 17,
+    classYear: "Senior",
+    position: football.position,
+    overall: football.ratings.overall,
+    potential: Math.max(football.ratings.overall, football.ratings.overall + 8),
+    health: football.training.body.readiness,
+    form: football.depthChart.coachTrust,
+    status: football.depthChart.rank === 1 ? "starter" : football.depthChart.rank === 2 ? "rotation" : "backup",
+    depthRank: football.depthChart.rank,
+    trajectory: football.depthChart.evaluation.trend === "rising" ? "surging" : football.depthChart.evaluation.trend === "falling" ? "slipping" : "steady",
+    nationalRank: 9999,
+    recruitingStage: football.recruitment.offers > 0 ? "offered" : football.recruitment.interestedPrograms > 0 ? "tracked" : "unranked",
+    eligibilityYears: 4,
+    seasonsPlayed: 0,
+    transferStatus: "none",
+    previousTeamIds: [],
+    isHero: true,
+  });
   return players;
 }
 
@@ -191,8 +230,11 @@ function createHighSchoolTeams(football: FootballCareerState): EcosystemTeam[] {
       expectation: clamp(standing.rating + random.integer(-7, 10)),
       wins: standing.wins,
       losses: standing.losses,
+      conferenceWins: 0,
+      conferenceLosses: 0,
       streak: standing.streak,
       offenseStyle: opponent?.offenseStyle ?? random.pick(OFFENSE_STYLES),
+      championships: 0,
       defenseStyle: opponent?.defenseStyle ?? random.pick(DEFENSE_STYLES),
       positionNeeds: createNeeds(random.fork("needs"), "high-school"),
       rosterIds: [],
@@ -215,10 +257,13 @@ function createCollegeTeams(football: FootballCareerState): EcosystemTeam[] {
       prestige: program.prestige,
       rating: clamp(program.prestige * 0.5 + program.conferenceLevel * 0.28 + program.facilities * 0.12 + random.integer(-6, 6)),
       expectation: clamp(program.prestige + random.integer(-5, 12)),
-      wins: random.integer(0, 2),
-      losses: random.integer(0, 2),
+      wins: 0,
+      losses: 0,
+      conferenceWins: 0,
+      conferenceLosses: 0,
       streak: 0,
       offenseStyle: program.scheme,
+      championships: 0,
       defenseStyle: random.pick(DEFENSE_STYLES),
       positionNeeds: {
         ...createNeeds(random.fork("needs"), "college"),
@@ -231,6 +276,53 @@ function createCollegeTeams(football: FootballCareerState): EcosystemTeam[] {
   });
 }
 
+const CONFERENCE_CATALOG = [
+  { id: "atlantic-crown", name: "Atlantic Crown Conference", shortName: "ACC", region: "Atlantic" },
+  { id: "great-lakes-union", name: "Great Lakes Union", shortName: "GLU", region: "Great Lakes" },
+  { id: "heartland-athletic", name: "Heartland Athletic Conference", shortName: "HAC", region: "Heartland" },
+  { id: "frontier-pacific", name: "Frontier Pacific League", shortName: "FPL", region: "Frontier" },
+] as const;
+
+const STATE_CONFERENCE: Record<string, string> = {
+  FL: "atlantic-crown", NC: "atlantic-crown", VA: "atlantic-crown", PA: "atlantic-crown", NY: "atlantic-crown",
+  WI: "great-lakes-union", OH: "great-lakes-union", IN: "great-lakes-union", MI: "great-lakes-union",
+  KS: "heartland-athletic", NE: "heartland-athletic", TX: "heartland-athletic", TN: "heartland-athletic", MO: "heartland-athletic",
+  CA: "frontier-pacific", ID: "frontier-pacific", AZ: "frontier-pacific", CO: "frontier-pacific",
+};
+
+export function assignCollegeConferences(teams: EcosystemTeam[]): { teams: EcosystemTeam[]; conferences: EcosystemConference[] } {
+  const collegeTeams = teams.filter((team) => team.level === "college");
+  const allocations = new Map<string, string[]>(CONFERENCE_CATALOG.map((item) => [item.id, [] as string[]]));
+  const ordered = [...collegeTeams].sort((left, right) => right.prestige - left.prestige || left.id.localeCompare(right.id));
+  for (const team of ordered) {
+    const preferred = STATE_CONFERENCE[team.stateCode] ?? CONFERENCE_CATALOG[0].id;
+    const preferredMembers = allocations.get(preferred) ?? [];
+    const target = preferredMembers.length < 6
+      ? preferred
+      : [...allocations.entries()].sort((left, right) => left[1].length - right[1].length)[0]?.[0] ?? preferred;
+    allocations.get(target)?.push(team.id);
+  }
+  const conferences: EcosystemConference[] = CONFERENCE_CATALOG.map((item) => {
+    const teamIds = allocations.get(item.id) ?? [];
+    const members = collegeTeams.filter((team) => teamIds.includes(team.id));
+    return {
+      ...item,
+      prestige: clamp(members.reduce((sum, team) => sum + team.prestige, 0) / Math.max(1, members.length)),
+      teamIds,
+      champions: [],
+    };
+  });
+  const conferenceByTeam = new Map(conferences.flatMap((conference) => conference.teamIds.map((teamId) => [teamId, conference.id] as const)));
+  return {
+    teams: teams.map((team) => {
+      if (team.level !== "college") return team;
+      const conferenceId = conferenceByTeam.get(team.id);
+      return conferenceId ? { ...team, conferenceId } : team;
+    }),
+    conferences,
+  };
+}
+
 function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[]) {
   const seniors = players.filter((player) => player.level === "high-school" && player.classYear === "Senior");
   return {
@@ -238,6 +330,8 @@ function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[]) 
     activeRecruitments: seniors.filter((player) => player.recruitingStage === "tracked" || player.recruitingStage === "offered").length,
     committedPlayers: seniors.filter((player) => player.recruitingStage === "committed").length,
     coachingHotSeats: coaches.filter((coach) => coach.status === "hot-seat").length,
+    portalPlayers: players.filter((player) => player.transferStatus === "portal").length,
+    coachOpenings: 0,
   };
 }
 
@@ -248,7 +342,9 @@ export function createFootballEcosystem(
   currentDate: GameDate,
   completedDays = 0,
 ): FootballEcosystemState {
-  const teams = [...createHighSchoolTeams(football), ...createCollegeTeams(football)];
+  const initialTeams = [...createHighSchoolTeams(football), ...createCollegeTeams(football)];
+  const conferenceSetup = assignCollegeConferences(initialTeams);
+  const teams = conferenceSetup.teams;
   const players: EcosystemPlayer[] = [];
   const coaches: EcosystemCoach[] = [];
 
@@ -256,7 +352,7 @@ export function createFootballEcosystem(
     const random = new SeededRandom(`${worldSeed}:ecosystem:${team.id}`);
     const isHeroTeam = team.id === football.school.id;
     const teamPlayers = isHeroTeam
-      ? createHeroTeamPlayers(team, football, random.fork("players"))
+      ? createHeroTeamPlayers(team, football, random.fork("players")).map((player) => player.isHero ? { ...player, name: character.identity.fullName, age: character.identity.age, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: football.ratings.overall >= 82 ? 120 : football.ratings.overall >= 74 ? 420 : 1100 } : player)
       : createTeamPlayers(team, random.fork("players"));
     const headCoach = createCoach(
       team.id,
@@ -274,10 +370,15 @@ export function createFootballEcosystem(
 
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   return {
-    moduleVersion: 1,
+    moduleVersion: 2,
     lastSimulatedDay: completedDays,
     currentWeek: Math.max(1, football.season.week),
     lastUpdatedOn: currentDate,
+    seasonYear: currentDate.year,
+    seasonWeek: Math.max(1, Math.min(10, football.season.week)),
+    phase: "regular-season",
+    lastOffseasonYear: currentDate.year - 1,
+    conferences: conferenceSetup.conferences,
     teams,
     players,
     coaches,
@@ -288,5 +389,7 @@ export function createFootballEcosystem(
       `${players.filter((player) => player.level === "high-school" && player.classYear === "Senior").length} выпускников конкурируют за предложения.`,
     ],
     market: calculateMarket(players, coaches),
+    teamHistory: [],
+    transactions: [],
   };
 }

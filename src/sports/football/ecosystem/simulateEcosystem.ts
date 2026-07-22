@@ -8,9 +8,12 @@ import { evaluateDepthChart } from "../team/evaluateDepthChart";
 import type { FootballRosterPlayer } from "../team/types";
 import type {
   EcosystemCoach,
+  EcosystemConference,
   EcosystemPlayer,
   EcosystemStory,
   EcosystemTeam,
+  EcosystemTeamSeasonRecord,
+  EcosystemTransaction,
   FootballEcosystemState,
 } from "./types";
 
@@ -449,6 +452,493 @@ function simulateRecruitingMarket(
   return { players: nextPlayers, teams: nextTeams, stories };
 }
 
+
+const PORTAL_FIRST_NAMES = ["Avery", "Cam", "Darius", "Eli", "Isaiah", "Jalen", "Malik", "Noah", "Trey", "Xavier"] as const;
+const PORTAL_LAST_NAMES = ["Banks", "Coleman", "Davis", "Fields", "Grant", "Harris", "Moore", "Reed", "Turner", "Walker"] as const;
+const POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
+
+function conferencePairs(teamIds: string[], round: number): Array<[string, string]> {
+  const ids = [...teamIds].sort();
+  if (ids.length % 2 === 1) ids.push("");
+  if (ids.length < 2) return [];
+  const fixed = ids[0] ?? "";
+  const rotating = ids.slice(1);
+  for (let index = 0; index < round % Math.max(1, rotating.length); index += 1) {
+    const moved = rotating.pop();
+    if (moved !== undefined) rotating.unshift(moved);
+  }
+  const arranged = [fixed, ...rotating];
+  const pairs: Array<[string, string]> = [];
+  for (let index = 0; index < arranged.length / 2; index += 1) {
+    const left = arranged[index];
+    const right = arranged[arranged.length - 1 - index];
+    if (left && right) pairs.push([left, right]);
+  }
+  return pairs;
+}
+
+function gameScore(team: EcosystemTeam, opponent: EcosystemTeam, random: SeededRandom): number {
+  const trend = team.trend === "rising" ? 3 : team.trend === "falling" ? -3 : 0;
+  const matchup = (team.rating - opponent.rating) * 0.22;
+  return Math.max(6, Math.min(52, Math.round(24 + trend + matchup + random.integer(-11, 12))));
+}
+
+function simulateConferenceRound(
+  teams: EcosystemTeam[],
+  coaches: EcosystemCoach[],
+  conferences: EcosystemConference[],
+  save: EcosystemCareerState,
+  random: SeededRandom,
+  day: number,
+  seasonWeek: number,
+): { teams: EcosystemTeam[]; coaches: EcosystemCoach[]; stories: EcosystemStory[] } {
+  const stories: EcosystemStory[] = [];
+  const teamMap = new Map(teams.map((team) => [team.id, { ...team }]));
+  const coachMap = new Map(coaches.map((coach) => [coach.id, { ...coach }]));
+  for (const conference of conferences) {
+    for (const [leftId, rightId] of conferencePairs(conference.teamIds, seasonWeek - 1)) {
+      const left = teamMap.get(leftId);
+      const right = teamMap.get(rightId);
+      if (!left || !right) continue;
+      const matchRandom = random.fork(`${conference.id}:${leftId}:${rightId}`);
+      let leftScore = gameScore(left, right, matchRandom.fork("left"));
+      let rightScore = gameScore(right, left, matchRandom.fork("right"));
+      if (leftScore === rightScore) leftScore += matchRandom.chance(0.5) ? 3 : -3;
+      const leftWon = leftScore > rightScore;
+      const winner = leftWon ? left : right;
+      const loser = leftWon ? right : left;
+      const applyResult = (team: EcosystemTeam, won: boolean): EcosystemTeam => ({
+        ...team,
+        wins: team.wins + (won ? 1 : 0),
+        losses: team.losses + (won ? 0 : 1),
+        conferenceWins: team.conferenceWins + (won ? 1 : 0),
+        conferenceLosses: team.conferenceLosses + (won ? 0 : 1),
+        streak: won ? Math.max(1, team.streak + 1) : Math.min(-1, team.streak - 1),
+        trend: won && team.streak >= 0 ? "rising" : !won && team.streak <= 0 ? "falling" : "stable",
+      });
+      teamMap.set(left.id, applyResult(left, leftWon));
+      teamMap.set(right.id, applyResult(right, !leftWon));
+      for (const team of [left, right]) {
+        const coach = coaches.find((item) => item.teamId === team.id && item.role === "head-coach");
+        if (!coach) continue;
+        const next = coachMap.get(coach.id) ?? coach;
+        const won = team.id === winner.id;
+        coachMap.set(coach.id, { ...next, careerWins: next.careerWins + (won ? 1 : 0), careerLosses: next.careerLosses + (won ? 0 : 1) });
+      }
+      const upset = winner.rating + 7 < loser.rating;
+      if (upset) {
+        stories.push(story(
+          save,
+          day,
+          "upset",
+          `${winner.shortName} сорвал прогноз`,
+          `${winner.name} обыграл ${loser.name} ${leftWon ? `${leftScore}:${rightScore}` : `${rightScore}:${leftScore}`}. Результат меняет гонку ${conference.shortName}.`,
+          4,
+          [winner.id, loser.id],
+          [],
+          winner.coachIds,
+          save.football.recruitment.programs.some((program) => program.id === winner.id || program.id === loser.id),
+        ));
+      }
+    }
+  }
+  const nextTeams = [...teamMap.values()];
+  const nextCoaches = [...coachMap.values()].map((coach) => {
+    if (coach.role !== "head-coach") return coach;
+    const team = teamMap.get(coach.teamId);
+    if (!team || team.level !== "college") return coach;
+    const games = Math.max(1, team.wins + team.losses);
+    const rate = team.wins / games;
+    const expected = team.expectation / 125;
+    const security = clamp(coach.jobSecurity + (rate - expected) * 14 + random.fork(`security:${coach.id}`).integer(-2, 2));
+    const status: EcosystemCoach["status"] = security < 35 ? "hot-seat" : security < 55 ? "watched" : "secure";
+    if (status === "hot-seat" && coach.status !== "hot-seat") {
+      stories.push(story(
+        save,
+        day,
+        "coach-pressure",
+        `${coach.name} оказался на грани`,
+        `${team.name} отстаёт от ожиданий. Рекруты и действующие игроки ждут решения руководства до конца сезона.`,
+        4,
+        [team.id],
+        [],
+        [coach.id],
+        save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 30),
+      ));
+    }
+    return { ...coach, jobSecurity: security, pressure: clamp(100 - security + team.losses * 2), status };
+  });
+  return { teams: nextTeams, coaches: nextCoaches, stories };
+}
+
+function conferenceOrder(conference: EcosystemConference, teams: EcosystemTeam[]): EcosystemTeam[] {
+  return conference.teamIds
+    .map((id) => teams.find((team) => team.id === id))
+    .filter((team): team is EcosystemTeam => Boolean(team))
+    .sort((left, right) => right.conferenceWins - left.conferenceWins || left.conferenceLosses - right.conferenceLosses || right.rating - left.rating);
+}
+
+function simulateConferenceChampionships(
+  teams: EcosystemTeam[],
+  conferences: EcosystemConference[],
+  coaches: EcosystemCoach[],
+  save: EcosystemCareerState,
+  random: SeededRandom,
+  day: number,
+  seasonYear: number,
+): { teams: EcosystemTeam[]; conferences: EcosystemConference[]; coaches: EcosystemCoach[]; stories: EcosystemStory[] } {
+  const teamMap = new Map(teams.map((team) => [team.id, { ...team }]));
+  const coachMap = new Map(coaches.map((coach) => [coach.id, { ...coach }]));
+  const stories: EcosystemStory[] = [];
+  const nextConferences = conferences.map((conference) => {
+    const finalists = conferenceOrder(conference, teams).slice(0, 2);
+    const first = finalists[0];
+    const second = finalists[1];
+    if (!first || !second) return conference;
+    const finalRandom = random.fork(conference.id);
+    const firstScore = gameScore(first, second, finalRandom.fork("first"));
+    let secondScore = gameScore(second, first, finalRandom.fork("second"));
+    if (firstScore === secondScore) secondScore += 3;
+    const champion = firstScore > secondScore ? first : second;
+    const runnerUp = champion.id === first.id ? second : first;
+    const currentChampion = teamMap.get(champion.id) ?? champion;
+    teamMap.set(champion.id, { ...currentChampion, wins: currentChampion.wins + 1, championships: currentChampion.championships + 1 });
+    const currentRunner = teamMap.get(runnerUp.id) ?? runnerUp;
+    teamMap.set(runnerUp.id, { ...currentRunner, losses: currentRunner.losses + 1 });
+    const coach = coaches.find((item) => item.teamId === champion.id && item.role === "head-coach");
+    if (coach) {
+      const nextCoach = coachMap.get(coach.id) ?? coach;
+      coachMap.set(coach.id, { ...nextCoach, careerWins: nextCoach.careerWins + 1, reputation: clamp(nextCoach.reputation + 3), jobSecurity: clamp(nextCoach.jobSecurity + 10), status: "secure" });
+    }
+    stories.push(story(
+      save,
+      day,
+      "championship",
+      `${champion.shortName} выиграл ${conference.shortName}`,
+      `${champion.name} победил ${runnerUp.name} и забрал титул сезона ${seasonYear}. Результат изменит престиж, набор и тренерский рынок.`,
+      5,
+      [champion.id, runnerUp.id],
+      [],
+      coach ? [coach.id] : [],
+      save.football.recruitment.programs.some((program) => program.id === champion.id || program.id === runnerUp.id),
+    ));
+    return { ...conference, champions: [...conference.champions, { seasonYear, teamId: champion.id }].slice(-12) };
+  });
+  return { teams: [...teamMap.values()], conferences: nextConferences, coaches: [...coachMap.values()], stories };
+}
+
+function nextClassYear(value: EcosystemPlayer["classYear"]): EcosystemPlayer["classYear"] | undefined {
+  return value === "Freshman" ? "Sophomore" : value === "Sophomore" ? "Junior" : value === "Junior" ? "Senior" : undefined;
+}
+
+function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, seasonYear: number, slot: number, random: SeededRandom): EcosystemPlayer {
+  const overall = clamp(team.rating - 13 + random.integer(-7, 8), 45, 88);
+  return {
+    id: `${team.id}:incoming:${seasonYear}:${position}:${slot}`,
+    seed: `${team.seed}:incoming:${seasonYear}:${position}:${slot}`,
+    name: `${random.pick(PORTAL_FIRST_NAMES)} ${random.pick(PORTAL_LAST_NAMES)}`,
+    teamId: team.id,
+    level: "college",
+    age: 18,
+    classYear: "Freshman",
+    position,
+    overall,
+    potential: clamp(overall + random.integer(5, 18), overall, 96),
+    health: clamp(90 + random.integer(-8, 9)),
+    form: clamp(54 + random.integer(-9, 13)),
+    status: "backup",
+    depthRank: 3,
+    trajectory: "steady",
+    nationalRank: random.integer(150, 2200),
+    recruitingStage: "committed",
+    committedTeamId: team.id,
+    eligibilityYears: 4,
+    seasonsPlayed: 0,
+    transferStatus: "none",
+    previousTeamIds: [],
+    isHero: false,
+  };
+}
+
+function rebuildTeamRosters(teams: EcosystemTeam[], players: EcosystemPlayer[], coaches: EcosystemCoach[]): EcosystemTeam[] {
+  return teams.map((team) => ({
+    ...team,
+    rosterIds: players.filter((player) => player.teamId === team.id).map((player) => player.id),
+    coachIds: coaches.filter((coach) => coach.teamId === team.id).map((coach) => coach.id),
+  }));
+}
+
+function processTransfers(
+  players: EcosystemPlayer[],
+  teams: EcosystemTeam[],
+  save: EcosystemCareerState,
+  random: SeededRandom,
+  day: number,
+  seasonYear: number,
+): { players: EcosystemPlayer[]; transactions: EcosystemTransaction[]; stories: EcosystemStory[] } {
+  const transactions: EcosystemTransaction[] = [];
+  const stories: EcosystemStory[] = [];
+  const collegeTeams = teams.filter((team) => team.level === "college");
+  let moves = 0;
+  const next = players.map((player) => {
+    if (moves >= 10 || player.level !== "college" || player.isHero || player.eligibilityYears <= 1 || player.depthRank < 3) return player;
+    const source = teams.find((team) => team.id === player.teamId);
+    const coach = save.world.coaches.find((item) => item.teamId === player.teamId && item.role === "head-coach");
+    const desire = 0.08 + Math.max(0, 55 - player.form) * 0.003 + (coach?.status === "hot-seat" ? 0.12 : 0);
+    const playerRandom = random.fork(player.id);
+    if (!playerRandom.chance(desire)) return player;
+    const target = collegeTeams
+      .filter((team) => team.id !== player.teamId)
+      .map((team) => ({ team, score: team.positionNeeds[player.position] * 0.58 + (100 - team.rating) * 0.12 + team.prestige * 0.18 + playerRandom.integer(-8, 8) }))
+      .sort((left, right) => right.score - left.score)[0]?.team;
+    if (!target) return player;
+    moves += 1;
+    const related = player.position === save.football.position && (target.id === save.football.college.signedProgramId || source?.id === save.football.college.signedProgramId);
+    const detail = `${player.name}, ${player.position}, ушёл из ${source?.shortName ?? "программы"} в ${target.shortName}. Причина — ограниченная роль и более свободная позиционная комната.`;
+    transactions.push({
+      id: `portal:${seasonYear}:${player.id}`,
+      kind: "portal-entry",
+      seasonYear,
+      week: save.life.weekNumber,
+      createdOn: save.meta.currentDate,
+      title: `${player.name} вошёл в трансферный портал`,
+      detail: `${player.name} отказался от текущего места в depth chart ${source?.shortName ?? "программы"} и открыл рекрутинг заново.`,
+      playerId: player.id,
+      fromTeamId: player.teamId,
+      relatedToHero: related,
+    });
+    const transaction: EcosystemTransaction = {
+      id: `transfer:${seasonYear}:${player.id}:${target.id}`,
+      kind: "transfer",
+      seasonYear,
+      week: save.life.weekNumber,
+      createdOn: save.meta.currentDate,
+      title: `${player.name} перешёл в ${target.shortName}`,
+      detail,
+      playerId: player.id,
+      fromTeamId: player.teamId,
+      toTeamId: target.id,
+      relatedToHero: related,
+    };
+    transactions.push(transaction);
+    stories.push(story(save, day, "transfer", transaction.title, detail, related ? 5 : player.overall >= 78 ? 4 : 2, [player.teamId, target.id], [player.id], [], related));
+    return {
+      ...player,
+      teamId: target.id,
+      previousTeamIds: [...player.previousTeamIds, player.teamId].slice(-6),
+      transferStatus: "transferred" as const,
+      depthRank: 3,
+      status: "backup" as const,
+      form: clamp(player.form + 4),
+    };
+  });
+  return { players: next, transactions, stories };
+}
+
+function processCoachCarousel(
+  teams: EcosystemTeam[],
+  coaches: EcosystemCoach[],
+  save: EcosystemCareerState,
+  random: SeededRandom,
+  seasonYear: number,
+): { coaches: EcosystemCoach[]; transactions: EcosystemTransaction[]; stories: EcosystemStory[] } {
+  const transactions: EcosystemTransaction[] = [];
+  const stories: EcosystemStory[] = [];
+  let next = [...coaches];
+  const openings = teams
+    .filter((team) => team.level === "college")
+    .filter((team) => {
+      const coach = next.find((item) => item.teamId === team.id && item.role === "head-coach");
+      return Boolean(coach && coach.status === "hot-seat" && team.losses >= 6);
+    })
+    .sort((left, right) => right.prestige - left.prestige)
+    .slice(0, 3);
+  for (const team of openings) {
+    const fired = next.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
+    if (!fired) continue;
+    next = next.filter((coach) => coach.id !== fired.id);
+    const firedDetail = `${team.name} уволил ${fired.name} после сезона ${team.wins}–${team.losses}. Его рекрутинговые обещания потеряли силу.`;
+    transactions.push({
+      id: `coach-fired:${seasonYear}:${fired.id}`,
+      kind: "coach-fired",
+      seasonYear,
+      week: save.life.weekNumber,
+      createdOn: save.meta.currentDate,
+      title: `${team.shortName} открыл вакансию`,
+      detail: firedDetail,
+      coachId: fired.id,
+      fromTeamId: team.id,
+      relatedToHero: team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35),
+    });
+    const candidate = [...next]
+      .filter((coach) => coach.teamId !== team.id)
+      .map((coach) => {
+        const candidateTeam = teams.find((item) => item.id === coach.teamId);
+        const promotion = coach.role === "coordinator" ? 10 : 0;
+        const upward = candidateTeam && candidateTeam.prestige < team.prestige ? 7 : 0;
+        return { coach, score: coach.reputation * 0.36 + coach.development * 0.27 + coach.recruiting * 0.2 + promotion + upward + random.fork(`${team.id}:${coach.id}`).integer(-7, 7) };
+      })
+      .sort((left, right) => right.score - left.score)[0]?.coach;
+    if (!candidate) continue;
+    const oldTeamId = candidate.teamId;
+    next = next.map((coach) => coach.id === candidate.id ? {
+      ...coach,
+      teamId: team.id,
+      role: "head-coach" as const,
+      previousTeamIds: [...coach.previousTeamIds, oldTeamId].slice(-8),
+      tenureYears: 0,
+      jobSecurity: 68,
+      pressure: 24,
+      status: "secure" as const,
+      reputation: clamp(coach.reputation + (candidate.role === "coordinator" ? 3 : 1)),
+    } : coach);
+    const replacementRandom = random.fork(`replacement:${oldTeamId}:${seasonYear}`);
+    const replacement: EcosystemCoach = {
+      id: `${oldTeamId}:replacement:${seasonYear}:${candidate.role}`,
+      seed: `${oldTeamId}:replacement:${seasonYear}:${candidate.role}`,
+      name: `Coach ${replacementRandom.integer(100, 999)}`,
+      teamId: oldTeamId,
+      role: candidate.role,
+      age: replacementRandom.integer(31, 61),
+      reputation: clamp((teams.find((item) => item.id === oldTeamId)?.prestige ?? 60) + replacementRandom.integer(-14, 8)),
+      development: clamp(58 + replacementRandom.integer(-12, 18)),
+      recruiting: clamp(56 + replacementRandom.integer(-12, 18)),
+      pressure: 28,
+      jobSecurity: 66,
+      status: "secure",
+      philosophy: "Новый штаб перестраивает роли и требования",
+      tenureYears: 0,
+      careerWins: 0,
+      careerLosses: 0,
+      previousTeamIds: [],
+    };
+    next.push(replacement);
+    const hired = next.find((coach) => coach.id === candidate.id);
+    if (!hired) continue;
+    const related = team.id === save.football.college.signedProgramId || oldTeamId === save.football.college.signedProgramId;
+    const detail = `${hired.name} покинул ${teams.find((item) => item.id === oldTeamId)?.shortName ?? "прежнюю программу"} и возглавил ${team.name}. Схема, роли и набор будут пересмотрены.`;
+    transactions.push({
+      id: `coach-hired:${seasonYear}:${hired.id}:${team.id}`,
+      kind: "coach-hired",
+      seasonYear,
+      week: save.life.weekNumber,
+      createdOn: save.meta.currentDate,
+      title: `${team.shortName} нанял ${hired.name}`,
+      detail,
+      coachId: hired.id,
+      fromTeamId: oldTeamId,
+      toTeamId: team.id,
+      relatedToHero: related,
+    });
+    stories.push(story(save, save.life.completedDays, "coach-move", `${team.shortName} сменил направление`, detail, related ? 5 : 4, [oldTeamId, team.id], [], [hired.id], related));
+  }
+  return { coaches: next, transactions, stories };
+}
+
+function archiveSeason(teams: EcosystemTeam[], conferences: EcosystemConference[], coaches: EcosystemCoach[], seasonYear: number): EcosystemTeamSeasonRecord[] {
+  return conferences.flatMap((conference) => conferenceOrder(conference, teams).map((team, index) => {
+    const headCoach = coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
+    return {
+      id: `${seasonYear}:${team.id}`,
+      seasonYear,
+      teamId: team.id,
+      conferenceId: conference.id,
+      wins: team.wins,
+      losses: team.losses,
+      conferenceWins: team.conferenceWins,
+      conferenceLosses: team.conferenceLosses,
+      finalRating: team.rating,
+      finish: index + 1,
+      conferenceChampion: conference.champions.some((champion) => champion.seasonYear === seasonYear && champion.teamId === team.id),
+      ...(headCoach ? { headCoachId: headCoach.id } : {}),
+    };
+  }));
+}
+
+function processOffseason(
+  world: FootballEcosystemState,
+  save: EcosystemCareerState,
+  random: SeededRandom,
+  day: number,
+): FootballEcosystemState {
+  const seasonYear = world.seasonYear;
+  const transactions: EcosystemTransaction[] = [];
+  const stories: EcosystemStory[] = [];
+  const archived = archiveSeason(world.teams, world.conferences, world.coaches, seasonYear);
+  let players: EcosystemPlayer[] = [];
+  for (const player of world.players) {
+    if (player.isHero) {
+      players.push(player);
+      continue;
+    }
+    if (player.level === "college") {
+      const nextYear = nextClassYear(player.classYear);
+      if (!nextYear || player.eligibilityYears <= 1) {
+        const detail = `${player.name}, ${player.position}, завершил университетскую карьеру в ${world.teams.find((team) => team.id === player.teamId)?.shortName ?? "программе"}.`;
+        transactions.push({ id: `graduation:${seasonYear}:${player.id}`, kind: "graduation", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} выпустился`, detail, playerId: player.id, fromTeamId: player.teamId, relatedToHero: player.teamId === save.football.college.signedProgramId && player.position === save.football.position });
+        continue;
+      }
+      players.push({ ...player, age: Math.min(24, player.age + 1), classYear: nextYear, eligibilityYears: player.eligibilityYears - 1, seasonsPlayed: player.seasonsPlayed + 1, transferStatus: "none" });
+      continue;
+    }
+    if (player.classYear === "Senior" && player.committedTeamId) {
+      const target = world.teams.find((team) => team.id === player.committedTeamId);
+      if (target) {
+        const enrolled = { ...player, teamId: target.id, level: "college" as const, age: 18, classYear: "Freshman" as const, eligibilityYears: 4, seasonsPlayed: 0, depthRank: 3, status: "backup" as const, transferStatus: "none" as const, previousTeamIds: [...player.previousTeamIds, player.teamId].slice(-6) };
+        players.push(enrolled);
+        const detail = `${player.name}, ${player.position}, прибыл в ${target.name} и занял место в новой позиционной комнате.`;
+        transactions.push({ id: `enroll:${seasonYear}:${player.id}:${target.id}`, kind: "recruit-enrolled", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} зачислен в ${target.shortName}`, detail, playerId: player.id, fromTeamId: player.teamId, toTeamId: target.id, relatedToHero: target.id === save.football.college.signedProgramId && player.position === save.football.position });
+        continue;
+      }
+    }
+    const nextYear = nextClassYear(player.classYear);
+    if (nextYear) players.push({ ...player, age: Math.min(19, player.age + 1), classYear: nextYear, recruitingStage: nextYear === "Senior" ? "tracked" : "unranked" });
+  }
+  const transferResult = processTransfers(players, world.teams, save, random.fork("transfers"), day, seasonYear);
+  players = transferResult.players;
+  transactions.push(...transferResult.transactions);
+  stories.push(...transferResult.stories);
+  let teams = world.teams;
+  for (const team of teams.filter((item) => item.level === "college")) {
+    for (const position of POSITIONS) {
+      const room = players.filter((player) => player.teamId === team.id && player.position === position);
+      if (room.length < 2) {
+        const missing = 2 - room.length;
+        for (let index = 0; index < missing; index += 1) players.push(createIncomingPlayer(team, position, seasonYear + 1, index, random.fork(`${team.id}:${position}:${index}`)));
+      }
+    }
+  }
+  const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
+  transactions.push(...carousel.transactions);
+  stories.push(...carousel.stories);
+  teams = rebuildTeamRosters(teams, players, carousel.coaches);
+  return {
+    ...world,
+    players,
+    coaches: carousel.coaches,
+    teams,
+    stories: [...world.stories, ...stories].slice(-120),
+    transactions: [...world.transactions, ...transactions].slice(-160),
+    teamHistory: [...world.teamHistory, ...archived].slice(-240),
+    lastOffseasonYear: seasonYear,
+    seasonWeek: 13,
+    market: { ...market(players, carousel.coaches), coachOpenings: 0 },
+  };
+}
+
+function resetForNewSeason(world: FootballEcosystemState): FootballEcosystemState {
+  const nextYear = world.seasonYear + 1;
+  return {
+    ...world,
+    seasonYear: nextYear,
+    seasonWeek: 1,
+    phase: "regular-season",
+    teams: world.teams.map((team) => team.level === "college" ? { ...team, wins: 0, losses: 0, conferenceWins: 0, conferenceLosses: 0, streak: 0, trend: "stable" } : team),
+    players: world.players.map((player) => ({ ...player, transferStatus: "none" })),
+    coaches: world.coaches.map((coach) => ({ ...coach, age: Math.min(80, coach.age + 1), tenureYears: coach.tenureYears + 1 })),
+  };
+}
+
 function updateHeroPrograms(
   programs: RecruitingProgram[],
   teams: EcosystemTeam[],
@@ -487,6 +977,8 @@ function market(players: EcosystemPlayer[], coaches: EcosystemCoach[]) {
     activeRecruitments: seniors.filter((player) => player.recruitingStage === "tracked" || player.recruitingStage === "offered").length,
     committedPlayers,
     coachingHotSeats: coaches.filter((coach) => coach.status === "hot-seat").length,
+    portalPlayers: players.filter((player) => player.transferStatus === "portal").length,
+    coachOpenings: 0,
   };
 }
 
@@ -523,15 +1015,34 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       players = depth.players;
       generatedStories.push(...depth.stories);
 
-      const teamWeek = simulateCollegeTeams(teams, coaches, save, random.fork("teams"), day);
-      teams = teamWeek.teams;
-      coaches = teamWeek.coaches;
-      generatedStories.push(...teamWeek.stories);
-
-      const recruiting = simulateRecruitingMarket(players, teams, save, random.fork("market"), day);
-      players = recruiting.players;
-      teams = recalculateTeamStrength(recruiting.teams, players);
-      generatedStories.push(...recruiting.stories);
+      if (world.phase === "regular-season") {
+        const round = simulateConferenceRound(teams, coaches, world.conferences, save, random.fork("conference-round"), day, world.seasonWeek);
+        teams = round.teams;
+        coaches = round.coaches;
+        generatedStories.push(...round.stories);
+        const recruiting = simulateRecruitingMarket(players, teams, save, random.fork("market"), day);
+        players = recruiting.players;
+        teams = recalculateTeamStrength(recruiting.teams, players);
+        generatedStories.push(...recruiting.stories);
+        world = { ...world, seasonWeek: world.seasonWeek >= 10 ? 11 : world.seasonWeek + 1, phase: world.seasonWeek >= 10 ? "postseason" : "regular-season" };
+      } else if (world.phase === "postseason") {
+        const finals = simulateConferenceChampionships(teams, world.conferences, coaches, save, random.fork("championships"), day, world.seasonYear);
+        teams = finals.teams;
+        coaches = finals.coaches;
+        world = { ...world, conferences: finals.conferences, phase: "offseason", seasonWeek: 12 };
+        generatedStories.push(...finals.stories);
+      } else if (world.lastOffseasonYear < world.seasonYear) {
+        const offseasonWorld = processOffseason({ ...world, teams, players, coaches }, save, random.fork("offseason"), day);
+        teams = offseasonWorld.teams;
+        players = offseasonWorld.players;
+        coaches = offseasonWorld.coaches;
+        world = offseasonWorld;
+      } else {
+        world = resetForNewSeason({ ...world, teams, players, coaches });
+        teams = world.teams;
+        players = world.players;
+        coaches = world.coaches;
+      }
     }
 
     world = {
@@ -557,7 +1068,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     save.meta.currentDate,
   );
   const stories = [...world.stories, ...generatedStories].slice(-90);
-  world = { ...world, stories, digest: buildDigest(generatedStories, world) };
+  world = { ...world, stories, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
   const important = generatedStories.filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
 
   return {

@@ -1,6 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
+import { placeHeroInCollegeEcosystem } from "../ecosystem/heroIntegration";
 import type { RelationshipNpc } from "../../../core/relationships/types";
 import type { ProjectedCollegeRole, RecruitingProgram } from "../recruiting/types";
 import type {
@@ -298,7 +299,7 @@ export function reportToCollege(save: CareerSave): CareerSave {
     arrivalDate,
   };
 
-  return {
+  const transitioned: CareerSave = {
     ...save,
     meta: {
       ...save.meta,
@@ -375,6 +376,16 @@ export function reportToCollege(save: CareerSave): CareerSave {
         description: `${summary} Стартовое место в позиционной комнате: #${hero.depthRank}. ${assessment.summary}`,
       },
     ],
+  };
+  return {
+    ...transitioned,
+    world: placeHeroInCollegeEcosystem(
+      transitioned.world,
+      transitioned.character,
+      transitioned.football,
+      program.id,
+      arrivalDate,
+    ),
   };
 }
 
