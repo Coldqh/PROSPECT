@@ -88,10 +88,12 @@ export interface RecruitingProgram {
 
 export interface RecruitingCommitment {
   programId: string;
-  status: "verbal";
+  status: "verbal" | "signed";
   committedWeek: number;
   committedDate: GameDate;
   confidence: number;
+  signedDate?: GameDate | undefined;
+  entryRoute?: "scholarship" | "preferred-walk-on" | undefined;
 }
 
 export interface RecruitingActivity {
@@ -99,7 +101,7 @@ export interface RecruitingActivity {
   week: number;
   programId?: string | undefined;
   date: GameDate;
-  kind: "evaluation" | "contact" | "action" | "offer" | "cooling" | "conversation" | "visit" | "commitment" | "expiration";
+  kind: "evaluation" | "contact" | "action" | "offer" | "cooling" | "conversation" | "visit" | "commitment" | "signing" | "expiration";
   title: string;
   detail: string;
 }

@@ -10,6 +10,7 @@ import { TodayDashboard } from "../components/career/TodayDashboard";
 import { MatchDashboard } from "../components/career/MatchDashboard";
 import { CareerDashboard } from "../components/career/CareerDashboard";
 import { PeopleDashboard } from "../components/career/PeopleDashboard";
+import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -83,7 +84,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("people");
@@ -106,6 +107,32 @@ export default function CareerOverviewScreen() {
   }
 
   const { character, football } = save;
+
+  if (save.meta.phase === "college-orientation") {
+    return (
+      <ScreenShell
+        narrow
+        header={
+          <AppHeader
+            compact
+            action={
+              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
+                <Icon name="menu" />
+              </button>
+            }
+          />
+        }
+      >
+        <CollegeOrientationDashboard
+          save={save}
+          mutating={mutating}
+          {...(actionError ? { actionError } : {})}
+          onSetPriority={setCollegeOnboardingPriority}
+        />
+      </ScreenShell>
+    );
+  }
+
   const initials = `${character.identity.firstName[0] ?? "P"}${character.identity.lastName[0] ?? "R"}`;
   const positionRivals = football.roster
     .filter((player) => player.position === football.position)
@@ -195,7 +222,7 @@ export default function CareerOverviewScreen() {
           )}
 
           {activeTab === "career" && (
-            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} />
+            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} onSignCollegeAgreement={signCollegeAgreement} onReportToCollege={reportToCollege} />
           )}
 
           {activeTab === "team" && (

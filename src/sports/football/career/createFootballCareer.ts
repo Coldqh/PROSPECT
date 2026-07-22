@@ -22,6 +22,7 @@ import { createInitialTrainingState } from "../training/createTrainingState";
 import { createInitialMatchState } from "../matches/createMatchState";
 import { generateHighSchoolSeason } from "../season/generateSeason";
 import { createRecruitingState } from "../recruiting/createRecruitingState";
+import { createInitialCollegeState } from "../college/createCollegeState";
 
 const FIRST_NAMES = ["Cameron", "Jaylen", "Marcus", "Darius", "Devin", "Malik", "Jordan", "Tyler"] as const;
 const LAST_NAMES = ["Hayes", "Carter", "Brooks", "Reed", "Mitchell", "Coleman", "Ward", "Foster"] as const;
@@ -272,6 +273,7 @@ export function createFootballCareerState(
     },
     season,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
   };
 
   football = {

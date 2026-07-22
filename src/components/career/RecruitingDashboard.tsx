@@ -166,8 +166,8 @@ export function RecruitingDashboard({
           {committedProgram ? (
             <section className="recruiting-commitment-card">
               <span><Icon name="check" /></span>
-              <div><small>УСТНЫЙ КОММИТ</small><h3>{committedProgram.shortName}</h3><p>Неделя {recruitment.commitment?.committedWeek} · уверенность {Math.round(recruitment.commitment?.confidence ?? 0)}</p></div>
-              <button type="button" disabled={mutating} onClick={() => void withdraw()}>Отозвать</button>
+              <div><small>{recruitment.commitment?.status === "signed" ? "СОГЛАШЕНИЕ ПОДПИСАНО" : "УСТНЫЙ КОММИТ"}</small><h3>{committedProgram.shortName}</h3><p>Неделя {recruitment.commitment?.committedWeek} · уверенность {Math.round(recruitment.commitment?.confidence ?? 0)}</p></div>
+              {recruitment.commitment?.status === "verbal" && <button type="button" disabled={mutating} onClick={() => void withdraw()}>Отозвать</button>}
             </section>
           ) : (
             <section className="recruiting-command-card">

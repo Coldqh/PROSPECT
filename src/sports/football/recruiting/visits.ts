@@ -362,6 +362,7 @@ export function withdrawCollegeCommitment(save: CareerSave): CareerSave {
   const state = save.football.recruitment;
   const commitment = state.commitment;
   if (!commitment) throw new Error("No commitment to withdraw");
+  if (commitment.status === "signed") throw new Error("A signed agreement cannot be withdrawn through verbal recruiting");
   const program = state.programs.find((candidate) => candidate.id === commitment.programId);
   if (!program) throw new Error("Committed program is missing");
   const programs = state.programs.map((candidate) =>

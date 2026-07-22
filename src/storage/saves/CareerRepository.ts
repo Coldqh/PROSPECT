@@ -14,6 +14,8 @@ import { resolveRelationshipEvent } from "../../sports/football/relationships/re
 import { performRecruitingAction } from "../../sports/football/recruiting/updateRecruiting";
 import { commitToCollege, withdrawCollegeCommitment } from "../../sports/football/recruiting/visits";
 import type { RecruitingActionId } from "../../sports/football/recruiting/types";
+import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../../sports/football/college/types";
+import { reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "../../sports/football/college/transition";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -41,7 +43,9 @@ function toIndexRecord(save: CareerSave): CareerIndexRecord {
     revision: save.meta.revision,
     position: save.football.position,
     jerseyNumber: save.football.jerseyNumber,
-    schoolName: save.football.school.name,
+    schoolName: save.football.college.status === "orientation" && save.football.college.program
+      ? save.football.college.program.name
+      : save.football.school.name,
     stateCode: save.character.origin.stateCode,
     overall: save.football.ratings.overall,
     potentialBand: save.football.ratings.potentialBand,
@@ -134,6 +138,7 @@ export class CareerRepository {
     intensity: TrainingIntensity,
   ): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.meta.phase === "college-orientation") throw new Error("Weekly planning unlocks after college orientation");
     return this.save(applyWeeklyPlan(current, templateId, intensity));
   }
 
@@ -144,12 +149,14 @@ export class CareerRepository {
     intensity: TrainingIntensity,
   ): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.meta.phase === "college-orientation") throw new Error("Training planning unlocks after college orientation");
     return this.save(applyTrainingPlan(current, focusId, intensity));
   }
 
 
   async startMatch(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.meta.phase === "college-orientation") throw new Error("College daily cycle is not active during orientation");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
     if (current.life.dayIndex !== 5) throw new Error("Match is only available on Saturday");
     return this.save(startMatch(current));
@@ -180,8 +187,25 @@ export class CareerRepository {
     return this.save(withdrawCollegeCommitment(current));
   }
 
+
+  async signCollegeAgreement(careerId: string, programId: string, route: CollegeEntryRoute): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(signCollegeAgreement(current, programId, route));
+  }
+
+  async reportToCollege(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(reportToCollege(current));
+  }
+
+  async setCollegeOnboardingPriority(careerId: string, priority: CollegeOnboardingPriority): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(setCollegeOnboardingPriority(current, priority));
+  }
+
   async advanceDay(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.meta.phase === "college-orientation") throw new Error("College daily cycle is not active during orientation");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before advancing");
     if (current.life.dayIndex === 5 && current.football.match.status !== "complete") {
       throw new Error("Match must be completed before advancing Saturday");

@@ -8,6 +8,7 @@ import { createInitialMatchState } from "../../sports/football/matches/createMat
 import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
+import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -32,7 +33,7 @@ interface LegacyRecruitment {
   regionalRankLabel: string;
 }
 
-type LegacyRecruitingFootball = Omit<FootballCareerState, "moduleVersion" | "recruitment"> & {
+type LegacyRecruitingFootball = Omit<FootballCareerState, "moduleVersion" | "recruitment" | "college"> & {
   moduleVersion: 6;
   recruitment: LegacyRecruitment;
 };
@@ -52,7 +53,7 @@ type LegacyRecruitingV1State = Omit<
   programs: LegacyRecruitingV1Program[];
 };
 
-type LegacyRecruitingV1Football = Omit<FootballCareerState, "moduleVersion" | "recruitment"> & {
+type LegacyRecruitingV1Football = Omit<FootballCareerState, "moduleVersion" | "recruitment" | "college"> & {
   moduleVersion: 7;
   recruitment: LegacyRecruitingV1State;
 };
@@ -62,6 +63,17 @@ interface LegacyRecruitingSave {
   character: CareerSave["character"];
   life: CareerSave["life"];
   football: LegacyRecruitingV1Football;
+  relationships: CareerSave["relationships"];
+  history: HistoryEntry[];
+}
+
+type LegacyVersionTenFootball = Omit<FootballCareerState, "college">;
+
+interface LegacyDecisionSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 10; phase: "high-school-preseason" };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyVersionTenFootball;
   relationships: CareerSave["relationships"];
   history: HistoryEntry[];
 }
@@ -83,19 +95,19 @@ interface LegacyFoundationSave {
 
 type LegacyFootball = Omit<
   FootballCareerState,
-  "moduleVersion" | "staff" | "roster" | "teamDynamics" | "training" | "match" | "depthChart" | "recruitment"
+  "moduleVersion" | "staff" | "roster" | "teamDynamics" | "training" | "match" | "depthChart" | "recruitment" | "college"
 > & {
   moduleVersion: 2;
   recruitment: LegacyRecruitment;
   depthChart: Omit<FootballCareerState["depthChart"], "evaluation" | "lastDecision">;
 };
 
-type LegacyTeamFootball = Omit<FootballCareerState, "moduleVersion" | "training" | "match" | "recruitment"> & {
+type LegacyTeamFootball = Omit<FootballCareerState, "moduleVersion" | "training" | "match" | "recruitment" | "college"> & {
   moduleVersion: 3;
   recruitment: LegacyRecruitment;
 };
 
-type LegacyTrainingFootball = Omit<FootballCareerState, "moduleVersion" | "match" | "recruitment"> & {
+type LegacyTrainingFootball = Omit<FootballCareerState, "moduleVersion" | "match" | "recruitment" | "college"> & {
   moduleVersion: 4;
   recruitment: LegacyRecruitment;
 };
@@ -131,7 +143,7 @@ interface LegacyTrainingHealthSave {
   history: HistoryEntry[];
 }
 
-type LegacyMatchFootball = Omit<FootballCareerState, "moduleVersion" | "season" | "recruitment"> & {
+type LegacyMatchFootball = Omit<FootballCareerState, "moduleVersion" | "season" | "recruitment" | "college"> & {
   moduleVersion: 5;
   recruitment: LegacyRecruitment;
   season: {
@@ -194,6 +206,7 @@ function addRecruitingToFootball(
     ...football,
     moduleVersion: 8 as const,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
   };
   return {
     ...base,
@@ -218,11 +231,30 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
   };
 }
 
+function migrateVersionTen(input: LegacyDecisionSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football: { ...input.football, college: createInitialCollegeState() },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v11`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Переход в колледж подготовлен",
+        description: "Карьера получила формальное подписание, выпускное межсезонье и первый день университетской программы.",
+      },
+    ],
+  });
+}
+
 function migrateVersionNine(input: LegacyRecruitingSave): CareerSave {
   const football: FootballCareerState = {
     ...input.football,
     moduleVersion: 8,
     recruitment: upgradeRecruitingVersionOne(input.football.recruitment),
+    college: createInitialCollegeState(),
   };
   return parseMigratedSave({
     ...input,
@@ -311,6 +343,7 @@ function enrichFootball(
     ...football,
     moduleVersion: 8,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
     school: {
       ...football.school,
       primaryColor: "#d7192d",
@@ -381,6 +414,7 @@ function addTraining(
     ...football,
     moduleVersion: 8,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
     season,
     training: createInitialTrainingState(worldSeed, football.position, character, football.ratings),
     match: createInitialMatchState(worldSeed, football.position, season, currentDate, dayIndex),
@@ -400,6 +434,7 @@ function addMatch(
     ...football,
     moduleVersion: 8,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
     season,
     match: createInitialMatchState(worldSeed, football.position, season, currentDate, dayIndex),
   };
@@ -412,6 +447,7 @@ function migrateVersionSix(input: LegacyMatchSave): CareerSave {
     ...input.football,
     moduleVersion: 8,
     recruitment: undefined as never,
+    college: createInitialCollegeState(),
     season,
     match: createInitialMatchState(
       input.meta.worldSeed,
@@ -545,6 +581,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 10) return { save: migrateVersionTen(input as LegacyDecisionSave), migratedFrom: 10 };
   if (schemaVersion === 9) return { save: migrateVersionNine(input as LegacyRecruitingSave), migratedFrom: 9 };
   if (schemaVersion === 8) return { save: migrateVersionEight(input as LegacyRelationshipsSave), migratedFrom: 8 };
   if (schemaVersion === 7) return { save: migrateVersionSeven(input as LegacySeasonSave), migratedFrom: 7 };

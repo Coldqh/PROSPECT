@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types";
 import type { TrainingFocusId } from "../sports/football/training/types";
 import type { RecruitingActionId } from "../sports/football/recruiting/types";
+import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../sports/football/college/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -20,6 +21,9 @@ interface CareerSaveState {
   performRecruitingAction(programId: string, actionId: RecruitingActionId): Promise<void>;
   commitToCollege(programId: string): Promise<void>;
   withdrawCollegeCommitment(): Promise<void>;
+  signCollegeAgreement(programId: string, route: CollegeEntryRoute): Promise<void>;
+  reportToCollege(): Promise<void>;
+  setCollegeOnboardingPriority(priority: CollegeOnboardingPriority): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -189,6 +193,48 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const signCollegeAgreement = useCallback(async (programId: string, route: CollegeEntryRoute) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.signCollegeAgreement(careerId, programId, route));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось оформить итоговый выбор колледжа.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const reportToCollege = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.reportToCollege(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить школьный этап.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const setCollegeOnboardingPriority = useCallback(async (priority: CollegeOnboardingPriority) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.setCollegeOnboardingPriority(careerId, priority));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось сохранить приоритет первого года.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -204,5 +250,8 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     performRecruitingAction,
     commitToCollege,
     withdrawCollegeCommitment,
+    signCollegeAgreement,
+    reportToCollege,
+    setCollegeOnboardingPriority,
   };
 }

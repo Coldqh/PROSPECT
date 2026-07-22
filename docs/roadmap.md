@@ -7,21 +7,20 @@
 - [x] Training, development and health
 - [x] Offensive and defensive match decisions
 - [x] Full high-school regular season
-- [ ] Relationships, memory and event chains
-- [ ] College recruiting
-- [ ] First college year
+- [x] Relationships, memory and contextual events
+- [x] Realistic college recruiting
+- [x] Official visits, offers and verbal commitment
+- [x] Formal signing and college arrival
+- [ ] Freshman camp, redshirt and college depth-chart battle
+- [ ] Full college season
+- [ ] Professional draft route
 
+## v0.11 — High school to college
 
-## v0.8 — People and memory
-
-Permanent NPCs, one relationship parameter, contextual life events, memory and delayed follow-ups.
-
-## v0.9 — College recruiting
-
-- 24 seeded fictional college programs;
-- independent interest and scouting confidence;
-- film, competition, health, academics and coach recommendation;
-- position need and college depth-chart competition;
-- two recruiting actions per week;
-- contacts, priority status and conditional scholarship offers;
-- compact mobile recruiting dashboard.
+- formal scholarship or preferred walk-on signing after the season;
+- no artificial rescue offer when no legitimate option exists;
+- graduate semester and offseason simulation;
+- seeded college position room;
+- comparison between recruiting promises and actual role;
+- college orientation and a locked first-year priority;
+- automatic migration from schema v10 to v11.

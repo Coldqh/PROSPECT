@@ -1804,3 +1804,91 @@ body::after {
   .recruiting-visits-list > button { min-height: 58px; }
   .recruiting-compare-sheet article > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+/* v0.11 — final college decision and freshman arrival */
+.decision-day-view { display: grid; gap: 8px; }
+.decision-command-card { min-height: 82px; padding: 12px 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(239,51,64,.38); border-radius: 16px; background: linear-gradient(145deg,rgba(201,28,43,.12),transparent 68%),var(--surface); }
+.decision-command-card small, .decision-final-summary small { color: #cf747c; font-size: 8px; letter-spacing: .11em; }
+.decision-command-card h3 { margin: 4px 0 3px; font-size: 14px; }
+.decision-command-card p { margin: 0; color: var(--muted); font-size: 9px; }
+.decision-command-card > span { min-width: 42px; color: #ef4352; font-size: 30px; font-weight: 900; text-align: center; }
+.decision-options-list { display: grid; gap: 7px; }
+.decision-options-list > article { overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+.decision-option-main { min-height: 66px; padding: 8px 10px; display: grid; grid-template-columns: 36px minmax(0,1fr) 30px; align-items: center; gap: 8px; }
+.decision-option-main > span { width: 36px; height: 40px; display: grid; place-items: center; border-radius: 10px 10px 10px 4px; color: #fff; background: linear-gradient(145deg,#b91928,#4a0b12); font-size: 9px; font-weight: 900; }
+.decision-option-main > div { min-width: 0; }
+.decision-option-main small { color: #be6d74; font-size: 8px; text-transform: uppercase; }
+.decision-option-main strong { display: block; margin-top: 2px; font-size: 11px; }
+.decision-option-main p { margin: 3px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 9px; }
+.decision-option-main em { color: #ef4d5b; font-size: 15px; font-style: normal; font-weight: 900; }
+.decision-option-meta { padding: 0 10px 8px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
+.decision-option-meta span { padding: 5px 6px; border-radius: 8px; color: var(--muted); background: rgba(255,255,255,.025); font-size: 8px; }
+.decision-option-meta b { float: right; color: var(--text); }
+.decision-options-list > article > button { width: 100%; min-height: 34px; border: 0; border-top: 1px solid var(--line); color: #f3dfe1; background: rgba(201,28,43,.13); font-size: 9px; font-weight: 800; cursor: pointer; }
+.decision-options-list > article > button:disabled { color: #7e7274; background: rgba(255,255,255,.025); cursor: not-allowed; }
+.decision-no-options { min-height: 105px; padding: 14px; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 11px; border: 1px dashed rgba(255,255,255,.12); border-radius: 15px; background: rgba(255,255,255,.015); }
+.decision-no-options svg { color: #9f6268; }
+.decision-no-options strong { font-size: 11px; }
+.decision-no-options p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.decision-signed-card { min-height: 92px; padding: 13px; display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 11px; border: 1px solid rgba(239,51,64,.54); border-radius: 17px; background: linear-gradient(145deg,rgba(214,29,44,.18),rgba(214,29,44,.025)),#09090b; }
+.decision-signed-card > span { width: 42px; height: 44px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: #bd1b29; }
+.decision-signed-card small { color: #ef8991; font-size: 8px; letter-spacing: .1em; }
+.decision-signed-card h3 { margin: 3px 0; font-size: 17px; }
+.decision-signed-card p { margin: 0; color: var(--muted); font-size: 9px; }
+.decision-final-summary { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.decision-final-summary strong { display: block; margin-top: 5px; font-size: 12px; }
+.decision-final-summary p { margin: 6px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+
+.college-orientation-shell { display: grid; gap: 9px; }
+.college-compact-head { min-height: 118px; padding: 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border: 1px solid rgba(239,51,64,.38); border-radius: 19px; background: linear-gradient(150deg,rgba(199,27,42,.18),transparent 58%),repeating-linear-gradient(120deg,rgba(255,255,255,.018) 0 1px,transparent 1px 15px),#09090b; }
+.college-compact-head > div { min-width: 0; }
+.college-compact-head small { color: #cf737c; font-size: 8px; letter-spacing: .1em; }
+.college-compact-head h1 { margin: 5px 0 4px; font-size: clamp(27px,8vw,40px); letter-spacing: -.055em; }
+.college-compact-head p { margin: 0; color: var(--muted); font-size: 9px; }
+.college-compact-head > span { min-width: 54px; padding: 8px; display: grid; justify-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: rgba(0,0,0,.34); }
+.college-compact-head > span small { color: var(--muted); }
+.college-compact-head > span strong { color: #ef4352; font-size: 25px; }
+.college-arrival-view { display: grid; gap: 7px; }
+.college-role-verdict { min-height: 105px; padding: 12px 13px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.college-role-verdict small { color: #be6971; font-size: 8px; letter-spacing: .09em; }
+.college-role-verdict h3 { margin: 4px 0 0; font-size: 15px; }
+.college-role-verdict > span { color: #ef4d5b; font-size: 29px; font-weight: 900; }
+.college-role-verdict p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.college-role-verdict.is-kept { border-color: rgba(239,51,64,.42); box-shadow: inset 3px 0 0 #d82938; }
+.college-role-verdict.is-misleading { border-color: rgba(255,255,255,.14); background: linear-gradient(145deg,rgba(239,51,64,.06),transparent),#08080a; }
+.college-priority-card { padding: 11px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+.college-priority-card > small { color: #bd6971; font-size: 8px; letter-spacing: .09em; }
+.college-priority-card > h3 { margin: 4px 0 8px; font-size: 13px; }
+.college-priority-card > div { display: grid; gap: 5px; }
+.college-priority-card button { min-height: 53px; padding: 8px 9px; display: grid; grid-template-columns: 29px minmax(0,1fr); align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 11px; text-align: left; color: var(--text); background: rgba(255,255,255,.018); cursor: pointer; }
+.college-priority-card button.is-active { border-color: rgba(239,51,64,.52); background: rgba(201,28,43,.09); box-shadow: inset 3px 0 0 #d72a38; }
+.college-priority-card button svg { color: #e54b58; }
+.college-priority-card button strong { display: block; font-size: 10px; }
+.college-priority-card button small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; line-height: 1.35; }
+.college-program-card { min-height: 91px; padding: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(239,51,64,.32); border-radius: 16px; background: linear-gradient(145deg,rgba(201,28,43,.1),transparent),var(--surface); }
+.college-program-card small { color: #c06b73; font-size: 8px; letter-spacing: .08em; }
+.college-program-card h3 { margin: 4px 0; font-size: 15px; }
+.college-program-card p { margin: 0; color: var(--muted); font-size: 9px; }
+.college-program-card > strong { color: #ef4352; font-size: 27px; }
+.college-program-grid, .college-transition-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.college-program-grid article, .college-transition-grid article { min-height: 61px; padding: 9px; display: grid; align-content: center; gap: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.college-program-grid small, .college-transition-grid small { color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.college-program-grid strong, .college-transition-grid strong { font-size: 15px; }
+.college-room-list { display: grid; gap: 5px; }
+.college-room-list > article { min-height: 55px; padding: 7px 9px; display: grid; grid-template-columns: 27px minmax(0,1fr) 28px; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.college-room-list > article.is-hero { border-color: rgba(239,51,64,.55); background: rgba(201,28,43,.07); box-shadow: inset 3px 0 0 #d72a38; }
+.college-room-list > article > span { width: 27px; height: 29px; display: grid; place-items: center; border-radius: 8px; color: #d98c92; background: rgba(239,51,64,.08); font-size: 10px; font-weight: 900; }
+.college-room-list strong { font-size: 10px; }
+.college-room-list small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+.college-room-list em { color: #ef4d5b; font-size: 12px; font-style: normal; font-weight: 900; }
+.college-offseason-card, .college-high-school-summary { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.college-offseason-card small, .college-high-school-summary small { color: #bd6971; font-size: 8px; letter-spacing: .09em; }
+.college-offseason-card h3 { margin: 4px 0; color: #ef4352; font-size: 25px; }
+.college-offseason-card p, .college-high-school-summary p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.college-high-school-summary strong { display: block; margin-top: 4px; font-size: 20px; }
+
+@media (max-width: 430px) {
+  .college-compact-head { min-height: 105px; padding: 13px; }
+  .college-priority-card button { min-height: 49px; }
+  .decision-option-main { min-height: 60px; }
+}
