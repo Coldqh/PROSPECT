@@ -11,6 +11,7 @@ import { MatchDashboard } from "../components/career/MatchDashboard";
 import { CareerDashboard } from "../components/career/CareerDashboard";
 import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
+import { WorldDashboard } from "../components/career/WorldDashboard";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -22,6 +23,7 @@ import { useCareerSave } from "../hooks/useCareerSave";
 const tabs = [
   { id: "today", label: "Сегодня", icon: "home" },
   { id: "match", label: "Матч", icon: "football" },
+  { id: "world", label: "Мир", icon: "pulse" },
   { id: "career", label: "Карьера", icon: "chart" },
   { id: "team", label: "Команда", icon: "team" },
   { id: "profile", label: "Жизнь", icon: "user" },
@@ -220,6 +222,8 @@ export default function CareerOverviewScreen() {
               onResolveDecision={resolveMatchDecision}
             />
           )}
+
+          {activeTab === "world" && <WorldDashboard save={save} />}
 
           {activeTab === "career" && (
             <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} onSignCollegeAgreement={signCollegeAgreement} onReportToCollege={reportToCollege} />

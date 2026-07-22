@@ -3,6 +3,7 @@ import { createInitialLifeState } from "../../../core/life/createInitialLifeStat
 import type { CareerSave } from "../../../storage/saves/schema";
 import { createFootballCareerState, createLegacyFootballSetup } from "../career/createFootballCareer";
 import { createFootballRelationships } from "./createFootballRelationships";
+import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import { advanceRelationshipWorld, resolveRelationshipEvent } from "./relationshipEvents";
 
 function makeSave(): CareerSave {
@@ -11,7 +12,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "relationship-career",
-      schemaVersion: 11,
+      schemaVersion: 12,
       sport: "american-football",
       worldSeed,
       createdAt: "2026-07-21T10:00:00.000Z",
@@ -23,6 +24,7 @@ function makeSave(): CareerSave {
     ...generated,
     life: { ...createInitialLifeState(), completedDays: 1, dayIndex: 1 },
     relationships: createFootballRelationships(worldSeed, generated.character, generated.football),
+    world: createFootballEcosystem(worldSeed, generated.character, generated.football, { year: 2026, month: 8, day: 18 }, 1),
     history: [],
   };
 }

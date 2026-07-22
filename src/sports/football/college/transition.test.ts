@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createInitialLifeState } from "../../../core/life/createInitialLifeState";
 import { createFootballCareerState, createLegacyFootballSetup } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
+import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { collegeDecisionPrograms, reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "./transition";
 
@@ -35,7 +36,7 @@ function completedCareer(): CareerSave {
   return {
     meta: {
       id: "career-college-test",
-      schemaVersion: 11,
+      schemaVersion: 12,
       sport: "american-football",
       worldSeed,
       createdAt: "2026-08-17T00:00:00.000Z",
@@ -48,6 +49,7 @@ function completedCareer(): CareerSave {
     life: createInitialLifeState(),
     football,
     relationships: createFootballRelationships(worldSeed, generated.character, football),
+    world: createFootballEcosystem(worldSeed, generated.character, football, { year: 2026, month: 10, day: 12 }),
     history: [],
   };
 }

@@ -11,6 +11,7 @@
 - [x] Realistic college recruiting
 - [x] Official visits, offers and verbal commitment
 - [x] Formal signing and college arrival
+- [x] Autonomous football ecosystem core
 - [ ] Freshman camp, redshirt and college depth-chart battle
 - [ ] Full college season
 - [ ] Professional draft route
@@ -24,3 +25,13 @@
 - comparison between recruiting promises and actual role;
 - college orientation and a locked first-year priority;
 - automatic migration from schema v10 to v11.
+
+## v0.12 — Ecosystem core
+
+- autonomous regional and college teams;
+- persistent background players and coaches;
+- weekly development, injuries, depth changes and commitments;
+- coaching pressure and staff turnover;
+- recruiting needs changed by other players;
+- compact World view that reports state changes instead of inventing news;
+- automatic migration from schema v11 to v12.

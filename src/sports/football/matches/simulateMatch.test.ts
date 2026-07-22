@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createInitialLifeState } from "../../../core/life/createInitialLifeState";
 import { createFootballCareerState } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
+import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import type { FootballCareerSetup } from "../career/types";
 import { careerSaveSchema, type CareerSave } from "../../../storage/saves/schema";
 import { resolveMatchDecision, startMatch } from "./simulateMatch";
@@ -31,7 +32,7 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
   return {
     meta: {
       id: `career-${position}`,
-      schemaVersion: 11,
+      schemaVersion: 12,
       sport: "american-football",
       worldSeed: `match-${position}`,
       createdAt: "2026-07-21T10:00:00.000Z",
@@ -43,6 +44,7 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
     ...generated,
     life,
     relationships: createFootballRelationships(`match-${position}`, generated.character, generated.football),
+    world: createFootballEcosystem(`match-${position}`, generated.character, generated.football, { year: 2026, month: 8, day: 22 }),
     history: [],
   };
 }

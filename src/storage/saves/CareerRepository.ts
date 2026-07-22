@@ -10,6 +10,7 @@ import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../core/life/ty
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import { resolveMatchDecision, startMatch } from "../../sports/football/matches/simulateMatch";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
+import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { resolveRelationshipEvent } from "../../sports/football/relationships/relationshipEvents";
 import { performRecruitingAction } from "../../sports/football/recruiting/updateRecruiting";
 import { commitToCollege, withdrawCollegeCommitment } from "../../sports/football/recruiting/visits";
@@ -117,6 +118,7 @@ export class CareerRepository {
       life: createInitialLifeState(),
       football: generated.football,
       relationships: createFootballRelationships(worldSeed, generated.character, generated.football),
+      world: createFootballEcosystem(worldSeed, generated.character, generated.football, { year: 2026, month: 8, day: 17 }),
       history: [
         {
           id: crypto.randomUUID(),

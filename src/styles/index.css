@@ -331,7 +331,7 @@ body::after {
 .creator-subsection__head span { color: var(--accent); font-size: 8px; letter-spacing: .15em; }
 .creator-subsection__head strong { font-size: 12px; }
 
-.position-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 16px 16px 16px 5px; overflow: hidden; }
+.position-tabs { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--line); border-radius: 16px 16px 16px 5px; overflow: hidden; }
 .position-tabs button { min-width: 0; min-height: 66px; padding: 8px; border: 0; border-right: 1px solid var(--line); color: var(--muted); background: var(--surface-2); cursor: pointer; display: grid; place-items: center; align-content: center; gap: 3px; }
 .position-tabs button:last-child { border-right: 0; }
 .position-tabs button strong { color: var(--text); font-size: 17px; }
@@ -833,7 +833,7 @@ body::after {
   .command-grid { grid-template-columns: 1fr; }
   .strategy-panel, .execution-panel { min-height: 0; }
   .day-report { grid-template-columns: 120px 1fr; }
-  .delta-board { grid-column: 1 / -1; grid-template-columns: repeat(5, 1fr); border-left: 0; border-top: 1px solid var(--line); }
+  .delta-board { grid-column: 1 / -1; grid-template-columns: repeat(6, 1fr); border-left: 0; border-top: 1px solid var(--line); }
   .delta-board span { border-bottom: 0; }
 }
 
@@ -1369,7 +1369,7 @@ body::after {
 }
 
 /* PATCH 06 — MATCH ENGINE + VERSION CONTROL */
-.career-nav { grid-template-columns: repeat(5, 1fr); }
+.career-nav { grid-template-columns: repeat(6, 1fr); }
 .version-chip { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; display: inline-flex; align-items: center; gap: 7px; color: #9298a1; background: #111216; font-size: 9px; font-weight: 900; letter-spacing: .08em; cursor: pointer; }
 .version-chip i { width: 6px; height: 6px; border-radius: 50%; background: #59606a; }
 .version-chip.has-update { color: #fff; border-color: rgba(231,34,52,.5); background: rgba(231,34,52,.12); }
@@ -1464,7 +1464,7 @@ body::after {
 @media (max-width: 720px) {
   .app-header__right { gap: 6px; }
   .version-chip { min-height: 30px; padding: 0 8px; font-size: 8px; }
-  .career-nav { grid-template-columns: repeat(5, 1fr); }
+  .career-nav { grid-template-columns: repeat(6, 1fr); }
   .match-section { min-height: calc(100dvh - 166px); }
   .match-scoreboard { min-height: 78px; }
   .match-scoreboard strong { font-size: 27px; }
@@ -1891,4 +1891,70 @@ body::after {
   .college-compact-head { min-height: 105px; padding: 13px; }
   .college-priority-card button { min-height: 49px; }
   .decision-option-main { min-height: 60px; }
+}
+
+
+/* Ecosystem core */
+.world-dashboard { min-height: 560px; }
+.world-head { margin-bottom: 12px; }
+.world-market-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.world-market-strip span { min-width: 0; padding: 13px 11px; border: 1px solid var(--line); border-radius: 15px; display: grid; gap: 5px; background: linear-gradient(160deg, rgba(239,51,64,.08), rgba(255,255,255,.015)); }
+.world-market-strip small { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.world-market-strip strong { font-size: 22px; letter-spacing: -.05em; }
+.world-digest-card { padding: 16px; border: 1px solid rgba(239,51,64,.22); border-radius: 18px; background: radial-gradient(circle at 90% 0, rgba(239,51,64,.12), transparent 45%), var(--surface); }
+.world-digest-card header { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.world-digest-card header svg { color: #ef3340; }
+.world-digest-card small { color: #ef3340; font-size: 8px; text-transform: uppercase; letter-spacing: .12em; }
+.world-digest-card h3 { margin: 3px 0 0; font-size: 16px; }
+.world-digest-card p { margin: 0; padding: 9px 0; border-top: 1px solid var(--line); color: #c7c9cd; font-size: 11px; line-height: 1.45; }
+.world-story-list { display: grid; gap: 7px; }
+.world-story-list > button { width: 100%; min-height: 67px; padding: 10px; border: 1px solid var(--line); border-radius: 15px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; color: var(--text); background: var(--surface); text-align: left; cursor: pointer; }
+.world-story-list > button.is-relevant { border-color: rgba(239,51,64,.3); box-shadow: inset 3px 0 #ef3340; }
+.world-story-list > button div { min-width: 0; display: grid; gap: 4px; }
+.world-story-list > button strong { font-size: 12px; }
+.world-story-list > button small { color: var(--muted); font-size: 9px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.world-story-list > button em { width: 25px; height: 25px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: #7e111c; font-style: normal; font-size: 10px; font-weight: 900; }
+.world-story-kind { max-width: 68px; padding: 6px 7px; border-radius: 9px; color: #d8dade; background: rgba(255,255,255,.05); font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.world-story-kind--injury, .world-story-kind--coach-move, .world-story-kind--coach-pressure { color: #ffadb5; background: rgba(239,51,64,.12); }
+.world-story-kind--commitment, .world-story-kind--breakout { color: #fff; background: rgba(239,51,64,.25); }
+.world-context-card { padding: 15px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); }
+.world-context-card small { color: #ef3340; font-size: 8px; text-transform: uppercase; letter-spacing: .12em; }
+.world-context-card h3 { margin: 5px 0 5px; font-size: 17px; }
+.world-context-card p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.world-player-list, .world-coach-list { display: grid; gap: 7px; }
+.world-player-list article { min-height: 57px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 14px; display: grid; grid-template-columns: 48px minmax(0,1fr) auto; align-items: center; gap: 9px; background: var(--surface); }
+.world-player-list article > span { color: #ef3340; font-size: 11px; font-weight: 900; }
+.world-player-list article div { min-width: 0; display: grid; gap: 3px; }
+.world-player-list article strong { font-size: 11px; }
+.world-player-list article small { color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-player-list article em { padding: 5px 7px; border-radius: 8px; color: #dedfe2; background: rgba(255,255,255,.05); font-size: 7px; font-style: normal; font-weight: 900; }
+.world-team-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.world-team-grid article { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 15px; display: grid; gap: 8px; background: var(--surface); }
+.world-team-grid header, .world-team-grid footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.world-team-grid header span { color: #ef3340; font-size: 9px; font-weight: 900; }
+.world-team-grid header strong { font-size: 10px; }
+.world-team-grid h3 { margin: 0; min-height: 28px; font-size: 12px; line-height: 1.2; }
+.world-team-grid article > div { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
+.world-team-grid article > div small { color: var(--muted); font-size: 8px; }
+.world-team-grid article > div strong { font-size: 20px; }
+.world-team-grid footer { padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 7px; }
+.world-team-grid footer em { font-style: normal; }
+.world-team-grid footer em.is-danger { color: #ff6b78; }
+.world-coach-list article { padding: 11px 12px; border: 1px solid var(--line); border-radius: 15px; display: flex; justify-content: space-between; gap: 12px; background: var(--surface); }
+.world-coach-list article.is-danger { border-color: rgba(239,51,64,.35); }
+.world-coach-list article > div { min-width: 0; display: grid; gap: 3px; }
+.world-coach-list article small { color: #ef3340; font-size: 8px; font-weight: 900; }
+.world-coach-list article strong { font-size: 12px; }
+.world-coach-list article span { color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-coach-list aside { flex: 0 0 auto; display: grid; justify-items: end; gap: 4px; }
+.world-coach-list aside em { color: var(--muted); font-size: 7px; font-style: normal; }
+.world-coach-list article.is-danger aside em { color: #ff6b78; }
+.world-coach-list aside strong { font-size: 18px; }
+.world-story-sheet p { margin-top: 0; color: #d2d4d8; line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .world-dashboard { min-height: auto; }
+  .career-nav button { font-size: 6.5px; }
+  .career-nav button svg { width: 17px; height: 17px; }
+  .world-team-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }

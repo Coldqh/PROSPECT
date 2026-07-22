@@ -9,6 +9,7 @@ import type { TrainingFocusId } from "../training/types";
 import { createInitialMatchState } from "../matches/createMatchState";
 import { advanceRelationshipWorld } from "../relationships/relationshipEvents";
 import { advanceRecruitingWorld } from "../recruiting/visits";
+import { advanceFootballEcosystem } from "../ecosystem/simulateEcosystem";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -238,5 +239,5 @@ export function advanceFootballCareerDay(save: CareerSave): CareerSave {
     ...nextSave,
     relationships: advanceRelationshipWorld(nextSave),
   };
-  return advanceRecruitingWorld(withRelationships);
+  return advanceFootballEcosystem(advanceRecruitingWorld(withRelationships));
 }

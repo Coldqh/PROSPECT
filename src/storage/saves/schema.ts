@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 11;
+export const CURRENT_SCHEMA_VERSION = 12;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -711,6 +711,96 @@ const relationshipsSchema = z.object({
   lastGeneratedCompletedDay: z.number().int().min(-1),
 });
 
+const ecosystemPositionNeedsSchema = z.object({
+  QB: z.number().min(0).max(100),
+  RB: z.number().min(0).max(100),
+  WR: z.number().min(0).max(100),
+  LB: z.number().min(0).max(100),
+  CB: z.number().min(0).max(100),
+});
+
+const footballEcosystemSchema = z.object({
+  moduleVersion: z.literal(1),
+  lastSimulatedDay: z.number().int().nonnegative(),
+  currentWeek: z.number().int().min(1),
+  lastUpdatedOn: gameDateSchema,
+  teams: z.array(z.object({
+    id: z.string().min(1),
+    seed: z.string().min(1),
+    name: z.string().min(2),
+    shortName: z.string().min(1),
+    level: z.enum(["high-school", "college"]),
+    stateCode: z.string().length(2),
+    prestige: z.number().min(0).max(100),
+    rating: z.number().min(0).max(100),
+    expectation: z.number().min(0).max(100),
+    wins: z.number().int().nonnegative(),
+    losses: z.number().int().nonnegative(),
+    streak: z.number().int(),
+    offenseStyle: z.string().min(2),
+    defenseStyle: z.string().min(2),
+    positionNeeds: ecosystemPositionNeedsSchema,
+    rosterIds: z.array(z.string().min(1)),
+    coachIds: z.array(z.string().min(1)),
+    trend: z.enum(["rising", "stable", "falling"]),
+  })).min(10),
+  players: z.array(z.object({
+    id: z.string().min(1),
+    seed: z.string().min(1),
+    name: z.string().min(2),
+    teamId: z.string().min(1),
+    level: z.enum(["high-school", "college"]),
+    age: z.number().int().min(14).max(24),
+    classYear: z.enum(["Freshman", "Sophomore", "Junior", "Senior"]),
+    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    overall: z.number().min(0).max(100),
+    potential: z.number().min(0).max(100),
+    health: z.number().min(0).max(100),
+    form: z.number().min(0).max(100),
+    status: z.enum(["starter", "rotation", "backup", "injured"]),
+    depthRank: z.number().int().min(1),
+    trajectory: z.enum(["surging", "steady", "slipping"]),
+    nationalRank: z.number().int().min(1),
+    recruitingStage: z.enum(["unranked", "tracked", "offered", "committed"]),
+    committedTeamId: z.string().min(1).optional(),
+  })).min(40),
+  coaches: z.array(z.object({
+    id: z.string().min(1),
+    seed: z.string().min(1),
+    name: z.string().min(2),
+    teamId: z.string().min(1),
+    role: z.enum(["head-coach", "coordinator"]),
+    age: z.number().int().min(25).max(80),
+    reputation: z.number().min(0).max(100),
+    development: z.number().min(0).max(100),
+    recruiting: z.number().min(0).max(100),
+    pressure: z.number().min(0).max(100),
+    jobSecurity: z.number().min(0).max(100),
+    status: z.enum(["secure", "watched", "hot-seat"]),
+    philosophy: z.string().min(2),
+  })).min(10),
+  stories: z.array(z.object({
+    id: z.string().min(1),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift"]),
+    createdOn: gameDateSchema,
+    week: z.number().int().min(1),
+    title: z.string().min(2),
+    detail: z.string().min(2),
+    importance: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+    teamIds: z.array(z.string().min(1)),
+    playerIds: z.array(z.string().min(1)),
+    coachIds: z.array(z.string().min(1)),
+    relatedToHero: z.boolean(),
+  })),
+  digest: z.array(z.string().min(2)).max(6),
+  market: z.object({
+    openScholarships: z.number().int().nonnegative(),
+    activeRecruitments: z.number().int().nonnegative(),
+    committedPlayers: z.number().int().nonnegative(),
+    coachingHotSeats: z.number().int().nonnegative(),
+  }),
+});
+
 const careerMetaSchema = z.object({
   id: z.string().min(1),
   schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
@@ -737,6 +827,7 @@ export const careerSaveSchema = z.object({
   life: lifeSchema,
   football: footballSchema,
   relationships: relationshipsSchema,
+  world: footballEcosystemSchema,
   history: z.array(historyEntrySchema),
 });
 

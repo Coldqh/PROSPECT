@@ -9,6 +9,7 @@ import { generateHighSchoolSeason } from "../../sports/football/season/generateS
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
+import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -68,6 +69,15 @@ interface LegacyRecruitingSave {
 }
 
 type LegacyVersionTenFootball = Omit<FootballCareerState, "college">;
+
+interface LegacyCollegeTransitionSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 11 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  history: HistoryEntry[];
+}
 
 interface LegacyDecisionSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 10; phase: "high-school-preseason" };
@@ -190,10 +200,18 @@ function parseMigratedSave(input: {
   football: FootballCareerState;
   history: HistoryEntry[];
   relationships?: CareerSave["relationships"];
+  world?: CareerSave["world"];
 }): CareerSave {
   return careerSaveSchema.parse({
     ...input,
     relationships: input.relationships ?? createFootballRelationships(input.meta.worldSeed, input.character, input.football),
+    world: input.world ?? createFootballEcosystem(
+      input.meta.worldSeed,
+      input.character,
+      input.football,
+      input.meta.currentDate,
+      input.life.completedDays,
+    ),
   });
 }
 
@@ -229,6 +247,23 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionEleven(input: LegacyCollegeTransitionSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v12`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Спортивный мир запущен",
+        description: "Карьера получила автономные команды, игроков, тренеров, рекрутинговый рынок и независимую историю мира.",
+      },
+    ],
+  });
 }
 
 function migrateVersionTen(input: LegacyDecisionSave): CareerSave {
@@ -581,6 +616,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 11) return { save: migrateVersionEleven(input as LegacyCollegeTransitionSave), migratedFrom: 11 };
   if (schemaVersion === 10) return { save: migrateVersionTen(input as LegacyDecisionSave), migratedFrom: 10 };
   if (schemaVersion === 9) return { save: migrateVersionNine(input as LegacyRecruitingSave), migratedFrom: 9 };
   if (schemaVersion === 8) return { save: migrateVersionEight(input as LegacyRelationshipsSave), migratedFrom: 8 };
