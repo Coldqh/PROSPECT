@@ -16,6 +16,7 @@ import type {
   EcosystemTransaction,
   FootballEcosystemState,
 } from "./types";
+import { addGameDays, advanceAcademicWeek, createPlayerEligibility, isPlayerAvailable, refreshTeamCompliance, resolveWorldCycle, rollEligibilityIntoNextSeason } from "./constitution";
 
 
 interface EcosystemCareerState {
@@ -141,12 +142,16 @@ function updatePlayersDaily(
       }
     }
 
-    if (day % 7 === 0 && status !== "injured") {
-      const developmentRoom = Math.max(0, player.potential - overall);
-      const development = developmentRoom > 0
-        ? (playerRandom.next() * 0.45 + (team?.rating ?? 60) * 0.0015) * Math.min(1, developmentRoom / 18)
-        : 0;
-      overall = clamp(overall + development, 40, 99);
+    let eligibility = player.eligibility;
+    if (day % 7 === 0) {
+      eligibility = advanceAcademicWeek(player, team, save.world.seasonWeek, save.world.seasonYear, playerRandom.fork("academics"), save.world.constitution);
+      if (status !== "injured" && eligibility.athleticallyEligible) {
+        const developmentRoom = Math.max(0, player.potential - overall);
+        const development = developmentRoom > 0
+          ? (playerRandom.next() * 0.45 + (team?.rating ?? 60) * 0.0015) * Math.min(1, developmentRoom / 18)
+          : 0;
+        overall = clamp(overall + development, 40, 99);
+      }
     }
 
     const trajectory: EcosystemPlayer["trajectory"] = form >= 72 ? "surging" : form <= 42 ? "slipping" : "steady";
@@ -157,6 +162,7 @@ function updatePlayersDaily(
       overall,
       status,
       trajectory,
+      eligibility,
     };
   });
   return { players: nextPlayers, stories };
@@ -175,15 +181,15 @@ function reorderDepthCharts(
       const room = next
         .filter((player) => player.teamId === teamId && player.position === position)
         .sort((left, right) => {
-          const leftScore = left.status === "injured" ? -100 : left.overall * 0.62 + left.form * 0.28 + left.health * 0.1;
-          const rightScore = right.status === "injured" ? -100 : right.overall * 0.62 + right.form * 0.28 + right.health * 0.1;
+          const leftScore = !isPlayerAvailable(left) ? -100 : left.overall * 0.62 + left.form * 0.28 + left.health * 0.1;
+          const rightScore = !isPlayerAvailable(right) ? -100 : right.overall * 0.62 + right.form * 0.28 + right.health * 0.1;
           return rightScore - leftScore;
         });
       room.forEach((player, index) => {
         const original = next.find((item) => item.id === player.id);
         if (!original) return;
         const nextRank = index + 1;
-        const changed = original.depthRank !== nextRank && original.status !== "injured";
+        const changed = original.depthRank !== nextRank && isPlayerAvailable(original);
         const targetIndex = next.findIndex((item) => item.id === player.id);
         next[targetIndex] = {
           ...original,
@@ -223,7 +229,7 @@ function recalculateTeamStrength(
     const rotation = roster.filter((player) => player.depthRank <= 2);
     const lineup = starters.length >= 3 ? starters : rotation;
     const lineupStrength = lineup.reduce((total, player) => {
-      const availability = player.status === "injured" ? 0.72 : 1;
+      const availability = isPlayerAvailable(player) ? 1 : 0.62;
       return total + (player.overall * 0.68 + player.form * 0.2 + player.health * 0.12) * availability;
     }, 0) / Math.max(1, lineup.length);
     const depthStrength = rotation.reduce((total, player) => total + player.overall, 0) / Math.max(1, rotation.length);
@@ -233,7 +239,7 @@ function recalculateTeamStrength(
       const room = roster.filter((player) => player.position === position);
       if (room.length === 0) continue;
       const best = Math.max(...room.map((player) => player.overall));
-      const healthyDepth = room.filter((player) => player.status !== "injured").length;
+      const healthyDepth = room.filter(isPlayerAvailable).length;
       const departing = room.filter((player) => player.classYear === "Senior").length;
       const structuralNeed = clamp((82 - best) * 1.35 + Math.max(0, 2 - healthyDepth) * 13 + departing * 6, 8, 96);
       positionNeeds[position] = clamp(positionNeeds[position] * 0.58 + structuralNeed * 0.42, 8, 96);
@@ -387,14 +393,22 @@ function simulateCollegeTeams(
 function chooseCommitment(
   player: EcosystemPlayer,
   collegeTeams: EcosystemTeam[],
+  reservations: ReadonlyMap<string, number>,
   random: SeededRandom,
 ): EcosystemTeam | undefined {
   const candidates = collegeTeams
-    .map((team) => ({
-      team,
-      score: team.prestige * 0.35 + team.positionNeeds[player.position] * 0.38 + team.rating * 0.18 + random.integer(-10, 10),
-    }))
-    .filter((candidate) => candidate.team.positionNeeds[player.position] >= 30)
+    .map((team) => {
+      const reserved = reservations.get(team.id) ?? 0;
+      const rosterRoom = team.compliance.rosterLimit - team.compliance.estimatedRosterSize - reserved;
+      const scholarshipRoom = team.compliance.fundedScholarships - team.compliance.scholarshipsUsed - reserved;
+      const requiresScholarship = player.overall >= 65 || player.nationalRank <= 900;
+      return {
+        team,
+        eligible: team.compliance.status !== "violation" && rosterRoom > 0 && (!requiresScholarship || scholarshipRoom > 0),
+        score: team.prestige * 0.35 + team.positionNeeds[player.position] * 0.38 + team.rating * 0.18 + Math.max(0, scholarshipRoom) * 0.12 + random.integer(-10, 10),
+      };
+    })
+    .filter((candidate) => candidate.eligible && candidate.team.positionNeeds[player.position] >= 30)
     .sort((left, right) => right.score - left.score);
   return candidates[0]?.team;
 }
@@ -410,6 +424,7 @@ function simulateRecruitingMarket(
   const collegeTeams = teams.filter((team) => team.level === "college");
   const newCommitments: Array<{ playerId: string; teamId: string; position: FootballPosition }> = [];
   let commitments = 0;
+  const reservations = new Map<string, number>();
   const nextPlayers = players.map((player) => {
     if (
       commitments >= 5 ||
@@ -421,9 +436,10 @@ function simulateRecruitingMarket(
     const playerRandom = random.fork(player.id);
     const urgency = player.recruitingStage === "offered" ? 0.24 : player.recruitingStage === "tracked" ? 0.1 : 0.025;
     if (!playerRandom.chance(urgency)) return player;
-    const target = chooseCommitment(player, collegeTeams, playerRandom);
+    const target = chooseCommitment(player, collegeTeams, reservations, playerRandom);
     if (!target) return player;
     commitments += 1;
+    reservations.set(target.id, (reservations.get(target.id) ?? 0) + 1);
     newCommitments.push({ playerId: player.id, teamId: target.id, position: player.position });
     const related = player.position === save.football.position && save.football.recruitment.programs.some((program) => program.id === target.id && program.interest >= 25);
     stories.push(story(
@@ -447,7 +463,16 @@ function simulateRecruitingMarket(
     if (incoming.length === 0) return team;
     const needs = { ...team.positionNeeds };
     for (const item of incoming) needs[item.position] = clamp(needs[item.position] - 8);
-    return { ...team, positionNeeds: needs };
+    const scholarshipAdds = incoming.filter((item) => (players.find((player) => player.id === item.playerId)?.overall ?? 0) >= 65).length;
+    return {
+      ...team,
+      positionNeeds: needs,
+      compliance: {
+        ...team.compliance,
+        estimatedRosterSize: Math.min(team.compliance.rosterLimit, team.compliance.estimatedRosterSize + incoming.length),
+        scholarshipsUsed: Math.min(team.compliance.fundedScholarships, team.compliance.scholarshipsUsed + scholarshipAdds),
+      },
+    };
   });
   return { players: nextPlayers, teams: nextTeams, stories };
 }
@@ -657,14 +682,16 @@ function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, s
     transferStatus: "none",
     previousTeamIds: [],
     isHero: false,
+    eligibility: createPlayerEligibility("college", 18, "Freshman", seasonYear, random.fork("eligibility"), "full"),
   };
 }
 
-function rebuildTeamRosters(teams: EcosystemTeam[], players: EcosystemPlayer[], coaches: EcosystemCoach[]): EcosystemTeam[] {
+function rebuildTeamRosters(teams: EcosystemTeam[], players: EcosystemPlayer[], coaches: EcosystemCoach[], constitution: FootballEcosystemState["constitution"]): EcosystemTeam[] {
   return teams.map((team) => ({
     ...team,
     rosterIds: players.filter((player) => player.teamId === team.id).map((player) => player.id),
     coachIds: coaches.filter((coach) => coach.teamId === team.id).map((coach) => coach.id),
+    compliance: refreshTeamCompliance(team, players, new SeededRandom(`${team.seed}:compliance:${players.length}`), constitution),
   }));
 }
 
@@ -688,7 +715,7 @@ function processTransfers(
     const playerRandom = random.fork(player.id);
     if (!playerRandom.chance(desire)) return player;
     const target = collegeTeams
-      .filter((team) => team.id !== player.teamId)
+      .filter((team) => team.id !== player.teamId && team.compliance.status !== "violation" && team.compliance.estimatedRosterSize < team.compliance.rosterLimit)
       .map((team) => ({ team, score: team.positionNeeds[player.position] * 0.58 + (100 - team.rating) * 0.12 + team.prestige * 0.18 + playerRandom.integer(-8, 8) }))
       .sort((left, right) => right.score - left.score)[0]?.team;
     if (!target) return player;
@@ -868,23 +895,39 @@ function processOffseason(
   let players: EcosystemPlayer[] = [];
   for (const player of world.players) {
     if (player.isHero) {
-      players.push(player);
+      if (player.level === "college") {
+        const nextEligibility = rollEligibilityIntoNextSeason(player, seasonYear + 1, random.fork(`eligibility:${player.id}`), world.constitution);
+        const nextYear = nextClassYear(player.classYear) ?? "Senior";
+        players.push({
+          ...player,
+          age: Math.min(24, player.age + 1),
+          classYear: nextYear,
+          eligibilityYears: Math.max(0, player.eligibilityYears - 1),
+          seasonsPlayed: player.seasonsPlayed + 1,
+          transferStatus: "none",
+          eligibility: nextEligibility,
+        });
+      } else {
+        players.push(player);
+      }
       continue;
     }
     if (player.level === "college") {
-      const nextYear = nextClassYear(player.classYear);
-      if (!nextYear || player.eligibilityYears <= 1) {
-        const detail = `${player.name}, ${player.position}, завершил университетскую карьеру в ${world.teams.find((team) => team.id === player.teamId)?.shortName ?? "программе"}.`;
-        transactions.push({ id: `graduation:${seasonYear}:${player.id}`, kind: "graduation", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} выпустился`, detail, playerId: player.id, fromTeamId: player.teamId, relatedToHero: player.teamId === save.football.college.signedProgramId && player.position === save.football.position });
+      const nextYear = nextClassYear(player.classYear) ?? "Senior";
+      const nextEligibility = rollEligibilityIntoNextSeason(player, seasonYear + 1, random.fork(`eligibility:${player.id}`), world.constitution);
+      if (!nextEligibility.athleticallyEligible) {
+        const detail = `${player.name}, ${player.position}, завершил университетскую карьеру в ${world.teams.find((team) => team.id === player.teamId)?.shortName ?? "программе"}: окно eligibility закрыто.`;
+        transactions.push({ id: `graduation:${seasonYear}:${player.id}`, kind: "graduation", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} завершил eligibility`, detail, playerId: player.id, fromTeamId: player.teamId, relatedToHero: player.teamId === save.football.college.signedProgramId && player.position === save.football.position });
         continue;
       }
-      players.push({ ...player, age: Math.min(24, player.age + 1), classYear: nextYear, eligibilityYears: player.eligibilityYears - 1, seasonsPlayed: player.seasonsPlayed + 1, transferStatus: "none" });
+      const consumedSeason = player.eligibility.model === "age-based-five-year" || player.eligibility.gamesPlayedThisSeason > world.constitution.legacyRedshirtGameLimit;
+      players.push({ ...player, age: Math.min(24, player.age + 1), classYear: nextYear, eligibilityYears: Math.max(0, player.eligibilityYears - (consumedSeason ? 1 : 0)), seasonsPlayed: player.seasonsPlayed + (consumedSeason ? 1 : 0), transferStatus: "none", eligibility: nextEligibility });
       continue;
     }
     if (player.classYear === "Senior" && player.committedTeamId) {
       const target = world.teams.find((team) => team.id === player.committedTeamId);
       if (target) {
-        const enrolled = { ...player, teamId: target.id, level: "college" as const, age: 18, classYear: "Freshman" as const, eligibilityYears: 4, seasonsPlayed: 0, depthRank: 3, status: "backup" as const, transferStatus: "none" as const, previousTeamIds: [...player.previousTeamIds, player.teamId].slice(-6) };
+        const enrolled = { ...player, teamId: target.id, level: "college" as const, age: 18, classYear: "Freshman" as const, eligibilityYears: 5, seasonsPlayed: 0, depthRank: 3, status: "backup" as const, transferStatus: "none" as const, previousTeamIds: [...player.previousTeamIds, player.teamId].slice(-6), eligibility: createPlayerEligibility("college", 18, "Freshman", seasonYear + 1, random.fork(`enrollment:${player.id}`), "full") };
         players.push(enrolled);
         const detail = `${player.name}, ${player.position}, прибыл в ${target.name} и занял место в новой позиционной комнате.`;
         transactions.push({ id: `enroll:${seasonYear}:${player.id}:${target.id}`, kind: "recruit-enrolled", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} зачислен в ${target.shortName}`, detail, playerId: player.id, fromTeamId: player.teamId, toTeamId: target.id, relatedToHero: target.id === save.football.college.signedProgramId && player.position === save.football.position });
@@ -911,7 +954,7 @@ function processOffseason(
   const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
-  teams = rebuildTeamRosters(teams, players, carousel.coaches);
+  teams = rebuildTeamRosters(teams, players, carousel.coaches, world.constitution);
   return {
     ...world,
     players,
@@ -922,19 +965,18 @@ function processOffseason(
     teamHistory: [...world.teamHistory, ...archived].slice(-240),
     lastOffseasonYear: seasonYear,
     seasonWeek: 13,
-    market: { ...market(players, carousel.coaches), coachOpenings: 0 },
+    market: { ...market(players, carousel.coaches, teams), coachOpenings: 0 },
   };
 }
 
-function resetForNewSeason(world: FootballEcosystemState): FootballEcosystemState {
-  const nextYear = world.seasonYear + 1;
+function resetForNewSeason(world: FootballEcosystemState, nextYear: number): FootballEcosystemState {
   return {
     ...world,
     seasonYear: nextYear,
     seasonWeek: 1,
     phase: "regular-season",
     teams: world.teams.map((team) => team.level === "college" ? { ...team, wins: 0, losses: 0, conferenceWins: 0, conferenceLosses: 0, streak: 0, trend: "stable" } : team),
-    players: world.players.map((player) => ({ ...player, transferStatus: "none" })),
+    players: world.players.map((player) => ({ ...player, transferStatus: "none", eligibility: { ...player.eligibility, gamesPlayedThisSeason: 0 } })),
     coaches: world.coaches.map((coach) => ({ ...coach, age: Math.min(80, coach.age + 1), tenureYears: coach.tenureYears + 1 })),
   };
 }
@@ -969,11 +1011,11 @@ function updateHeroPrograms(
   });
 }
 
-function market(players: EcosystemPlayer[], coaches: EcosystemCoach[]) {
+function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[]) {
   const seniors = players.filter((player) => player.level === "high-school" && player.classYear === "Senior");
   const committedPlayers = seniors.filter((player) => player.recruitingStage === "committed").length;
   return {
-    openScholarships: Math.max(0, 240 - committedPlayers),
+    openScholarships: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + Math.max(0, team.compliance.fundedScholarships - team.compliance.scholarshipsUsed), 0),
     activeRecruitments: seniors.filter((player) => player.recruitingStage === "tracked" || player.recruitingStage === "offered").length,
     committedPlayers,
     coachingHotSeats: coaches.filter((coach) => coach.status === "hot-seat").length,
@@ -1001,44 +1043,59 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   let programs = save.football.recruitment.programs;
   const generatedStories: EcosystemStory[] = [];
   const targetDay = save.life.completedDays;
+  const startDay = world.lastSimulatedDay;
+  const startDate = world.lastUpdatedOn;
 
-  for (let day = world.lastSimulatedDay + 1; day <= targetDay; day += 1) {
+  for (let day = startDay + 1; day <= targetDay; day += 1) {
+    const simulatedDate = addGameDays(startDate, day - startDay);
+    const cycle = resolveWorldCycle(simulatedDate);
     const random = new SeededRandom(`${save.meta.worldSeed}:ecosystem-day:${day}`);
-    let teams = syncHeroSeasonTeams(world.teams, save);
-    const dailyPlayers = updatePlayersDaily(world.players, teams, save, random.fork("players"), day);
+    const daySave: EcosystemCareerState = {
+      ...save,
+      meta: { ...save.meta, currentDate: simulatedDate },
+      world,
+    };
+    let teams = syncHeroSeasonTeams(world.teams, daySave);
+    const dailyPlayers = updatePlayersDaily(world.players, teams, daySave, random.fork("players"), day);
     let players = dailyPlayers.players;
     generatedStories.push(...dailyPlayers.stories);
     let coaches = world.coaches;
 
     if (day % 7 === 0) {
-      const depth = reorderDepthCharts(players, save, day);
+      const depth = reorderDepthCharts(players, daySave, day);
       players = depth.players;
       generatedStories.push(...depth.stories);
 
-      if (world.phase === "regular-season") {
-        const round = simulateConferenceRound(teams, coaches, world.conferences, save, random.fork("conference-round"), day, world.seasonWeek);
+      if (cycle.phase === "regular-season" && world.seasonYear === cycle.seasonYear && world.seasonWeek <= 10) {
+        const round = simulateConferenceRound(teams, coaches, world.conferences, daySave, random.fork("conference-round"), day, world.seasonWeek);
         teams = round.teams;
         coaches = round.coaches;
+        players = players.map((player) => player.level === "college" && player.depthRank <= 2 && isPlayerAvailable(player)
+          ? { ...player, eligibility: { ...player.eligibility, gamesPlayedThisSeason: player.eligibility.gamesPlayedThisSeason + 1 } }
+          : player);
         generatedStories.push(...round.stories);
-        const recruiting = simulateRecruitingMarket(players, teams, save, random.fork("market"), day);
+        const recruiting = simulateRecruitingMarket(players, teams, daySave, random.fork("market"), day);
         players = recruiting.players;
         teams = recalculateTeamStrength(recruiting.teams, players);
         generatedStories.push(...recruiting.stories);
-        world = { ...world, seasonWeek: world.seasonWeek >= 10 ? 11 : world.seasonWeek + 1, phase: world.seasonWeek >= 10 ? "postseason" : "regular-season" };
-      } else if (world.phase === "postseason") {
-        const finals = simulateConferenceChampionships(teams, world.conferences, coaches, save, random.fork("championships"), day, world.seasonYear);
-        teams = finals.teams;
-        coaches = finals.coaches;
-        world = { ...world, conferences: finals.conferences, phase: "offseason", seasonWeek: 12 };
-        generatedStories.push(...finals.stories);
-      } else if (world.lastOffseasonYear < world.seasonYear) {
-        const offseasonWorld = processOffseason({ ...world, teams, players, coaches }, save, random.fork("offseason"), day);
+        world = { ...world, seasonWeek: Math.min(11, world.seasonWeek + 1), phase: world.seasonWeek >= 10 ? "postseason" : "regular-season" };
+      } else if (cycle.phase === "postseason" && world.phase !== "offseason") {
+        const alreadyCrowned = world.conferences.every((conference) => conference.champions.some((champion) => champion.seasonYear === cycle.seasonYear));
+        if (!alreadyCrowned) {
+          const finals = simulateConferenceChampionships(teams, world.conferences, coaches, daySave, random.fork("championships"), day, cycle.seasonYear);
+          teams = finals.teams;
+          coaches = finals.coaches;
+          world = { ...world, conferences: finals.conferences, phase: "offseason", seasonWeek: 12 };
+          generatedStories.push(...finals.stories);
+        }
+      } else if (cycle.phase === "winter-evaluation" && world.lastOffseasonYear < cycle.seasonYear) {
+        const offseasonWorld = processOffseason({ ...world, teams, players, coaches }, daySave, random.fork("offseason"), day);
         teams = offseasonWorld.teams;
         players = offseasonWorld.players;
         coaches = offseasonWorld.coaches;
         world = offseasonWorld;
-      } else {
-        world = resetForNewSeason({ ...world, teams, players, coaches });
+      } else if (cycle.phase === "preseason" && world.seasonYear < cycle.seasonYear) {
+        world = resetForNewSeason({ ...world, teams, players, coaches }, cycle.seasonYear);
         teams = world.teams;
         players = world.players;
         coaches = world.coaches;
@@ -1049,11 +1106,12 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       ...world,
       lastSimulatedDay: day,
       currentWeek: save.life.weekNumber,
-      lastUpdatedOn: save.meta.currentDate,
+      lastUpdatedOn: simulatedDate,
+      cycle,
       teams,
       players,
       coaches,
-      market: market(players, coaches),
+      market: market(players, coaches, teams),
     };
   }
 

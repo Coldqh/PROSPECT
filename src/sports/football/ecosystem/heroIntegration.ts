@@ -6,6 +6,8 @@ import type {
   EcosystemTeamSeasonRecord,
   FootballEcosystemState,
 } from "./types";
+import { createPlayerEligibility, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
+import { SeededRandom } from "../../../core/random/SeededRandom";
 
 function archiveCurrentSeason(world: FootballEcosystemState): EcosystemTeamSeasonRecord[] {
   return world.conferences.flatMap((conference) => {
@@ -47,11 +49,12 @@ function currentHero(
       name: character.identity.fullName,
       nationalRank: 9999,
       recruitingStage: "committed" as const,
-      eligibilityYears: 4,
+      eligibilityYears: 5,
       seasonsPlayed: 0,
       transferStatus: "none" as const,
       previousTeamIds: [],
       isHero: true,
+      eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", world.seasonYear, new SeededRandom(`${football.worldSeed}:hero:eligibility`), "full"),
     }),
     name: character.identity.fullName,
     teamId: targetTeamId,
@@ -67,13 +70,14 @@ function currentHero(
     depthRank: football.college.depthRank ?? 3,
     trajectory: "steady",
     committedTeamId: targetTeamId,
-    eligibilityYears: 4,
+    eligibilityYears: 5,
     seasonsPlayed: 0,
     transferStatus: "none",
     previousTeamIds: existing && existing.teamId !== targetTeamId
       ? [...existing.previousTeamIds, existing.teamId].slice(-6)
       : existing?.previousTeamIds ?? [],
     isHero: true,
+    eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:eligibility:${targetTeamId}`), football.college.entryRoute === "preferred-walk-on" ? "none" : "full"),
   };
 }
 
@@ -104,7 +108,11 @@ export function placeHeroInCollegeEcosystem(
       trend: "stable" as const,
     };
   });
-  const target = teams.find((team) => team.id === targetTeamId);
+  const compliantTeams = teams.map((team) => ({
+    ...team,
+    compliance: refreshTeamCompliance(team, players, new SeededRandom(`${team.seed}:hero-arrival:${arrivalDate.year}`), world.constitution),
+  }));
+  const target = compliantTeams.find((team) => team.id === targetTeamId);
   const transactionId = `hero-enrolled:${arrivalDate.year}:${targetTeamId}`;
   const alreadyRecorded = world.transactions.some((transaction) => transaction.id === transactionId);
   const enrollmentTransaction = {
@@ -123,11 +131,12 @@ export function placeHeroInCollegeEcosystem(
   return {
     ...world,
     lastUpdatedOn: arrivalDate,
+    cycle: resolveWorldCycle(arrivalDate),
     seasonYear: advancedYear ? arrivalDate.year : world.seasonYear,
     seasonWeek: advancedYear ? 1 : world.seasonWeek,
     phase: advancedYear ? "regular-season" : world.phase,
     lastOffseasonYear: advancedYear ? arrivalDate.year - 1 : world.lastOffseasonYear,
-    teams,
+    teams: compliantTeams,
     players,
     teamHistory: history,
     transactions: alreadyRecorded

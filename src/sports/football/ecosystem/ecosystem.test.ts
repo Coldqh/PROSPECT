@@ -42,6 +42,10 @@ describe("football ecosystem", () => {
     expect(left.world.coaches.length).toBeGreaterThan(30);
     expect(left.world.conferences).toHaveLength(4);
     expect(left.world.players.some((player) => player.isHero)).toBe(true);
+    expect(left.world.moduleVersion).toBe(3);
+    expect(left.world.constitution.collegeRosterLimit).toBe(105);
+    expect(left.world.teams.every((team) => team.compliance.estimatedRosterSize <= team.compliance.rosterLimit)).toBe(true);
+    expect(left.world.players.every((player) => Boolean(player.eligibility.model))).toBe(true);
   });
 
   it("advances the market and synchronizes college needs with hero recruiting", () => {
@@ -89,11 +93,12 @@ describe("football ecosystem", () => {
     const base = createSave("ecosystem-rollover");
     const result = advanceFootballEcosystem({
       ...base,
-      life: { ...base.life, completedDays: 91, weekNumber: 14, dayIndex: 0 },
+      life: { ...base.life, completedDays: 140, weekNumber: 21, dayIndex: 0 },
       meta: { ...base.meta, currentDate: { year: 2027, month: 1, day: 4 } },
     });
-    expect(result.world.seasonYear).toBe(2027);
-    expect(result.world.phase).toBe("regular-season");
+    expect(result.world.seasonYear).toBe(2026);
+    expect(result.world.phase).toBe("offseason");
+    expect(result.world.cycle.phase).toBe("winter-evaluation");
     expect(result.world.teamHistory.length).toBeGreaterThan(20);
     expect(result.world.transactions.some((transaction) => transaction.kind === "graduation")).toBe(true);
     expect(result.world.conferences.some((conference) => conference.champions.length > 0)).toBe(true);

@@ -1,5 +1,6 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
+import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -77,6 +78,7 @@ export interface EcosystemTeam {
   rosterIds: string[];
   coachIds: string[];
   trend: "rising" | "stable" | "falling";
+  compliance: EcosystemTeamCompliance;
 }
 
 export interface EcosystemPlayer {
@@ -103,6 +105,7 @@ export interface EcosystemPlayer {
   transferStatus: EcosystemTransferStatus;
   previousTeamIds: string[];
   isHero: boolean;
+  eligibility: EcosystemPlayerEligibility;
 }
 
 export interface EcosystemCoach {
@@ -179,7 +182,9 @@ export interface EcosystemMarketState {
 }
 
 export interface FootballEcosystemState {
-  moduleVersion: 2;
+  moduleVersion: 3;
+  constitution: WorldConstitution;
+  cycle: WorldCycleState;
   lastSimulatedDay: number;
   currentWeek: number;
   lastUpdatedOn: GameDate;

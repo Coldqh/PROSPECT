@@ -352,6 +352,29 @@ describe("migrateCareerSave", () => {
     expect(result.save.world.coaches.length).toBeGreaterThan(30);
   });
 
+  it("migrates version thirteen continuity saves into the world constitution", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const legacyWorld = {
+      ...current.world,
+      moduleVersion: 2 as const,
+      teams: current.world.teams.map(({ compliance: _compliance, ...team }) => team),
+      players: current.world.players.map(({ eligibility: _eligibility, ...player }) => player),
+    };
+    const { constitution: _constitution, cycle: _cycle, ...legacyWorldWithoutRules } = legacyWorld;
+    const versionThirteen = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 13 as const },
+      world: legacyWorldWithoutRules,
+    };
+    const result = migrateCareerSave(versionThirteen);
+    expect(result.migratedFrom).toBe(13);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(3);
+    expect(result.save.world.constitution.collegeRosterLimit).toBe(105);
+    expect(result.save.world.players.every((player) => player.eligibility.athleticallyEligible !== undefined)).toBe(true);
+    expect(result.save.world.teams.every((team) => team.compliance.rosterLimit > 0)).toBe(true);
+  });
+
   it("produces the same migrated athlete for the same seed", () => {
     expect(migrateCareerSave(legacySave).save.character).toEqual(migrateCareerSave(legacySave).save.character);
   });

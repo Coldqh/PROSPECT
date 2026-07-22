@@ -8,6 +8,8 @@ import type {
   EcosystemTeam,
   FootballEcosystemState,
 } from "./types";
+import { createPlayerEligibility, createTeamCompliance, createWorldConstitution, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
+import { SeededRandom } from "../../../core/random/SeededRandom";
 
 type LegacyTeam = Omit<
   EcosystemTeam,
@@ -23,6 +25,18 @@ type LegacyCoach = Omit<
   EcosystemCoach,
   "tenureYears" | "careerWins" | "careerLosses" | "previousTeamIds"
 >;
+
+type LegacyV2Team = Omit<EcosystemTeam, "compliance">;
+type LegacyV2Player = Omit<EcosystemPlayer, "eligibility">;
+
+export interface LegacyFootballEcosystemStateV2 extends Omit<
+  FootballEcosystemState,
+  "moduleVersion" | "constitution" | "cycle" | "teams" | "players"
+> {
+  moduleVersion: 2;
+  teams: LegacyV2Team[];
+  players: LegacyV2Player[];
+}
 
 export interface LegacyFootballEcosystemStateV1 {
   moduleVersion: 1;
@@ -43,6 +57,10 @@ export interface LegacyFootballEcosystemStateV1 {
 }
 
 const CLASS_INDEX = { Freshman: 0, Sophomore: 1, Junior: 2, Senior: 3 } as const;
+
+function currentSeasonYear(football: FootballCareerState): number {
+  return football.college.arrivalDate?.year ?? football.season.year;
+}
 
 function heroPlayer(
   character: CharacterState,
@@ -78,6 +96,7 @@ function heroPlayer(
     transferStatus: "none",
     previousTeamIds: football.college.status === "orientation" ? [football.school.id] : [],
     isHero: true,
+    eligibility: createPlayerEligibility(football.college.status === "orientation" ? "college" : "high-school", character.identity.age, football.college.status === "orientation" ? "Freshman" : "Senior", currentSeasonYear(football), new SeededRandom(`${football.worldSeed}:hero:eligibility`), football.college.entryRoute === "preferred-walk-on" ? "none" : "full"),
   };
 }
 
@@ -92,6 +111,7 @@ export function upgradeFootballEcosystemV1(
     conferenceWins: 0,
     conferenceLosses: 0,
     championships: 0,
+    compliance: createTeamCompliance(team, team.rosterIds.length, new SeededRandom(`${team.seed}:compliance:v14`)),
   }));
   const conferenceSetup = assignCollegeConferences(teams);
   const players: EcosystemPlayer[] = input.players
@@ -103,6 +123,7 @@ export function upgradeFootballEcosystemV1(
       transferStatus: "none",
       previousTeamIds: [],
       isHero: false,
+      eligibility: createPlayerEligibility(player.level, player.age, player.classYear, currentDate.year, new SeededRandom(`${player.seed}:eligibility:v14`)),
     }));
   players.push(heroPlayer(character, football));
   const coaches: EcosystemCoach[] = input.coaches.map((coach) => ({
@@ -123,8 +144,15 @@ export function upgradeFootballEcosystemV1(
     }
     return team;
   });
+  const constitution = createWorldConstitution();
+  const compliantTeams = updatedTeams.map((team) => ({
+    ...team,
+    compliance: refreshTeamCompliance(team, players, new SeededRandom(`${team.seed}:compliance:upgrade`), constitution),
+  }));
   return {
-    moduleVersion: 2,
+    moduleVersion: 3,
+    constitution,
+    cycle: resolveWorldCycle(currentDate),
     lastSimulatedDay: input.lastSimulatedDay,
     currentWeek: input.currentWeek,
     lastUpdatedOn: input.lastUpdatedOn,
@@ -133,7 +161,7 @@ export function upgradeFootballEcosystemV1(
     phase: "regular-season",
     lastOffseasonYear: currentDate.year - 1,
     conferences: conferenceSetup.conferences,
-    teams: updatedTeams,
+    teams: compliantTeams,
     players,
     coaches,
     stories: input.stories,
@@ -145,5 +173,42 @@ export function upgradeFootballEcosystemV1(
     },
     teamHistory: [],
     transactions: [],
+  };
+}
+
+
+export function upgradeFootballEcosystemV2(
+  input: LegacyFootballEcosystemStateV2,
+  currentDate: GameDate,
+): FootballEcosystemState {
+  const constitution = createWorldConstitution();
+  const players: EcosystemPlayer[] = input.players.map((player) => ({
+    ...player,
+    eligibility: createPlayerEligibility(
+      player.level,
+      player.age,
+      player.classYear,
+      input.seasonYear,
+      new SeededRandom(`${player.seed}:eligibility:v14`),
+      player.level === "college" && player.recruitingStage === "committed" ? "full" : undefined,
+    ),
+  }));
+  const teams: EcosystemTeam[] = input.teams.map((team) => {
+    const withCompliance: EcosystemTeam = {
+      ...team,
+      compliance: createTeamCompliance(team, team.rosterIds.length, new SeededRandom(`${team.seed}:compliance:v14`), constitution),
+    };
+    return {
+      ...withCompliance,
+      compliance: refreshTeamCompliance(withCompliance, players, new SeededRandom(`${team.seed}:compliance:final:v14`), constitution),
+    };
+  });
+  return {
+    ...input,
+    moduleVersion: 3,
+    constitution,
+    cycle: resolveWorldCycle(currentDate),
+    teams,
+    players,
   };
 }

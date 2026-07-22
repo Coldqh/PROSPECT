@@ -10,7 +10,7 @@ import { createFootballRelationships } from "../../sports/football/relationships
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
-import { upgradeFootballEcosystemV1, type LegacyFootballEcosystemStateV1 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -78,6 +78,16 @@ interface LegacyEcosystemSave {
   football: FootballCareerState;
   relationships: CareerSave["relationships"];
   world: LegacyFootballEcosystemStateV1;
+  history: HistoryEntry[];
+}
+
+interface LegacyContinuitySave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 13 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV2;
   history: HistoryEntry[];
 }
 
@@ -258,6 +268,24 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionThirteen(input: LegacyContinuitySave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV2(input.world, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v14`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Правила мира унифицированы",
+        description: "Карьера получила единый календарь, eligibility, академический допуск и реальные лимиты составов и стипендий.",
+      },
+    ],
+  });
 }
 
 function migrateVersionTwelve(input: LegacyEcosystemSave): CareerSave {
@@ -645,6 +673,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 13) return { save: migrateVersionThirteen(input as LegacyContinuitySave), migratedFrom: 13 };
   if (schemaVersion === 12) return { save: migrateVersionTwelve(input as LegacyEcosystemSave), migratedFrom: 12 };
   if (schemaVersion === 11) return { save: migrateVersionEleven(input as LegacyCollegeTransitionSave), migratedFrom: 11 };
   if (schemaVersion === 10) return { save: migrateVersionTen(input as LegacyDecisionSave), migratedFrom: 10 };

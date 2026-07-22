@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 13;
+export const CURRENT_SCHEMA_VERSION = 14;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -719,8 +719,68 @@ const ecosystemPositionNeedsSchema = z.object({
   CB: z.number().min(0).max(100),
 });
 
+const worldConstitutionSchema = z.object({
+  version: z.literal(1),
+  modernEligibilityStartYear: z.number().int().min(2020).max(2200),
+  ageBasedEligibilityYears: z.number().int().min(1).max(10),
+  legacyCompetitionSeasons: z.number().int().min(1).max(10),
+  legacyEligibilityWindowYears: z.number().int().min(1).max(10),
+  legacyRedshirtGameLimit: z.number().int().min(0).max(20),
+  collegeRosterLimit: z.number().int().min(1).max(200),
+  collegeScholarshipLimit: z.number().int().min(0).max(200),
+  minimumTermCredits: z.number().min(0).max(30),
+  degreeProgressBenchmarks: z.object({
+    endOfYearTwo: z.number().min(0).max(100),
+    endOfYearThree: z.number().min(0).max(100),
+    endOfYearFour: z.number().min(0).max(100),
+  }),
+  simulationOrder: z.tuple([
+    z.literal("calendar"),
+    z.literal("eligibility"),
+    z.literal("rosters"),
+    z.literal("teams"),
+    z.literal("competition"),
+    z.literal("recruiting"),
+    z.literal("movement"),
+    z.literal("history"),
+  ]),
+});
+
+const worldCycleSchema = z.object({
+  academicYear: z.number().int().min(2020).max(2200),
+  seasonYear: z.number().int().min(2020).max(2200),
+  phase: z.enum(["summer-recruiting", "preseason", "regular-season", "postseason", "winter-evaluation", "spring-development"]),
+  phaseWeek: z.number().int().min(1).max(30),
+});
+
+const ecosystemTeamComplianceSchema = z.object({
+  rosterLimit: z.number().int().min(1).max(200),
+  scholarshipLimit: z.number().int().min(0).max(200),
+  fundedScholarships: z.number().int().min(0).max(200),
+  estimatedRosterSize: z.number().int().min(0).max(200),
+  scholarshipsUsed: z.number().int().min(0).max(200),
+  academicSupport: z.number().min(0).max(100),
+  status: z.enum(["clear", "warning", "violation"]),
+});
+
+const ecosystemPlayerEligibilitySchema = z.object({
+  model: z.enum(["high-school", "legacy-four-in-five", "age-based-five-year"]),
+  initialEnrollmentYear: z.number().int().min(2020).max(2200),
+  windowStartYear: z.number().int().min(2020).max(2200),
+  windowEndYear: z.number().int().min(2020).max(2200),
+  athleticallyEligible: z.boolean(),
+  academicStanding: z.enum(["good", "warning", "ineligible"]),
+  termCredits: z.number().min(0).max(30),
+  degreeProgress: z.number().min(0).max(100),
+  gamesPlayedThisSeason: z.number().int().min(0).max(30),
+  redshirtUsed: z.boolean(),
+  scholarshipStatus: z.enum(["none", "partial", "full"]),
+});
+
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(2),
+  moduleVersion: z.literal(3),
+  constitution: worldConstitutionSchema,
+  cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
   currentWeek: z.number().int().min(1),
   lastUpdatedOn: gameDateSchema,
@@ -760,6 +820,7 @@ const footballEcosystemSchema = z.object({
     rosterIds: z.array(z.string().min(1)),
     coachIds: z.array(z.string().min(1)),
     trend: z.enum(["rising", "stable", "falling"]),
+    compliance: ecosystemTeamComplianceSchema,
   })).min(10),
   players: z.array(z.object({
     id: z.string().min(1),
@@ -785,6 +846,7 @@ const footballEcosystemSchema = z.object({
     transferStatus: z.enum(["none", "portal", "transferred"]),
     previousTeamIds: z.array(z.string().min(1)),
     isHero: z.boolean(),
+    eligibility: ecosystemPlayerEligibilitySchema,
   })).min(40),
   coaches: z.array(z.object({
     id: z.string().min(1),
