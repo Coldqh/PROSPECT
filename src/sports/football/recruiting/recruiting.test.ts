@@ -4,7 +4,7 @@ import { createFootballRelationships } from "../relationships/createFootballRela
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import { createFootballCareerState } from "../career/createFootballCareer";
 import type { FootballCareerSetup } from "../career/types";
-import type { CareerSave } from "../../../storage/saves/schema";
+import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { performRecruitingAction } from "./updateRecruiting";
 import { advanceRecruitingWorld, commitToCollege, withdrawCollegeCommitment } from "./visits";
 import { addGameDays } from "../../../core/calendar/types";
@@ -32,7 +32,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "recruiting-career",
-      schemaVersion: 12,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       sport: "american-football",
       worldSeed: "recruiting-seed",
       createdAt: "2026-07-21T10:00:00.000Z",

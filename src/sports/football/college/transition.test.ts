@@ -3,7 +3,7 @@ import { createInitialLifeState } from "../../../core/life/createInitialLifeStat
 import { createFootballCareerState, createLegacyFootballSetup } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
-import type { CareerSave } from "../../../storage/saves/schema";
+import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { collegeDecisionPrograms, reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "./transition";
 
 function completedCareer(): CareerSave {
@@ -36,7 +36,7 @@ function completedCareer(): CareerSave {
   return {
     meta: {
       id: "career-college-test",
-      schemaVersion: 12,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       sport: "american-football",
       worldSeed,
       createdAt: "2026-08-17T00:00:00.000Z",

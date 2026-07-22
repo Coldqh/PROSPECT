@@ -5,7 +5,7 @@ import { createFootballRelationships } from "../relationships/createFootballRela
 import { createFootballEcosystem } from "./createEcosystem";
 import { advanceFootballEcosystem } from "./simulateEcosystem";
 import { placeHeroInCollegeEcosystem } from "./heroIntegration";
-import type { CareerSave } from "../../../storage/saves/schema";
+import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 
 function createSave(seed = "ecosystem-test-seed"): CareerSave {
   const generated = createFootballCareerState(seed, createLegacyFootballSetup(seed));
@@ -14,7 +14,7 @@ function createSave(seed = "ecosystem-test-seed"): CareerSave {
   return {
     meta: {
       id: "ecosystem-career",
-      schemaVersion: 13,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       sport: "american-football",
       worldSeed: seed,
       createdAt: "2026-08-17T00:00:00.000Z",

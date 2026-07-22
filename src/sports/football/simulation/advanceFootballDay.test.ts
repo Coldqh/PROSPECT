@@ -5,7 +5,7 @@ import { createFootballRelationships } from "../relationships/createFootballRela
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import type { FootballCareerSetup } from "../career/types";
 import { advanceFootballCareerDay, updateWeeklyPlan } from "./advanceFootballDay";
-import type { CareerSave } from "../../../storage/saves/schema";
+import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 
 const setup: FootballCareerSetup = {
   character: {
@@ -30,7 +30,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "career",
-      schemaVersion: 12,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       sport: "american-football",
       worldSeed: "simulation-seed",
       createdAt: "2026-07-21T10:00:00.000Z",

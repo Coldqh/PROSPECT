@@ -4,7 +4,7 @@ import { createFootballCareerState } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import type { FootballCareerSetup } from "../career/types";
-import { careerSaveSchema, type CareerSave } from "../../../storage/saves/schema";
+import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { resolveMatchDecision, startMatch } from "./simulateMatch";
 
 function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
@@ -32,7 +32,7 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
   return {
     meta: {
       id: `career-${position}`,
-      schemaVersion: 12,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       sport: "american-football",
       worldSeed: `match-${position}`,
       createdAt: "2026-07-21T10:00:00.000Z",
