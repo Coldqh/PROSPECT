@@ -17,9 +17,11 @@ interface CareerDashboardProps {
   actionError?: string;
   onOpenMatch(): void;
   onRecruitingAction(programId: string, actionId: RecruitingActionId): Promise<void>;
+  onCommitToCollege(programId: string): Promise<void>;
+  onWithdrawCommitment(): Promise<void>;
 }
 
-export function CareerDashboard({ save, mutating, actionError, onOpenMatch, onRecruitingAction }: CareerDashboardProps) {
+export function CareerDashboard({ save, mutating, actionError, onOpenMatch, onRecruitingAction, onCommitToCollege, onWithdrawCommitment }: CareerDashboardProps) {
   const [view, setView] = useState<ViewId>("season");
   return (
     <div className="career-dashboard-shell">
@@ -27,7 +29,7 @@ export function CareerDashboard({ save, mutating, actionError, onOpenMatch, onRe
       {view === "season" ? (
         <SeasonDashboard save={save} onOpenMatch={onOpenMatch} />
       ) : (
-        <RecruitingDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={onRecruitingAction} />
+        <RecruitingDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={onRecruitingAction} onCommit={onCommitToCollege} onWithdrawCommitment={onWithdrawCommitment} />
       )}
     </div>
   );

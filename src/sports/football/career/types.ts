@@ -65,7 +65,7 @@ export interface DepthChartState {
 }
 
 export interface FootballCareerState {
-  moduleVersion: 7;
+  moduleVersion: 8;
   worldSeed: string;
   stage: "high-school-preseason";
   position: FootballPosition;

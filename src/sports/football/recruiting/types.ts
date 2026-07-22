@@ -2,8 +2,16 @@ import type { GameDate } from "../../../core/calendar/types";
 
 export type RecruitingProgramTier = "national" | "power" | "regional" | "developmental";
 export type RecruitingStage = "unaware" | "watchlist" | "evaluating" | "contact" | "priority" | "offered" | "cooled";
-export type RecruitingActionId = "send-film" | "coach-call" | "send-transcript" | "declare-interest";
+export type RecruitingActionId =
+  | "send-film"
+  | "coach-call"
+  | "send-transcript"
+  | "declare-interest"
+  | "recruiter-call"
+  | "schedule-visit";
 export type ProjectedCollegeRole = "immediate-competition" | "rotation-path" | "developmental" | "long-shot";
+export type OfficialVisitStatus = "none" | "invited" | "scheduled" | "completed";
+export type RecruitingPromiseCategory = "role" | "development" | "scheme" | "stability";
 
 export interface RecruitingOffer {
   id: string;
@@ -11,6 +19,32 @@ export interface RecruitingOffer {
   scholarship: "full";
   projectedRole: ProjectedCollegeRole;
   expiresAfterWeek: number;
+}
+
+export interface RecruitingPromise {
+  id: string;
+  category: RecruitingPromiseCategory;
+  statement: string;
+  credibility: number;
+  source: "recruiter-call" | "official-visit";
+  madeWeek: number;
+}
+
+export interface OfficialVisit {
+  id: string;
+  status: "scheduled" | "completed";
+  scheduledWeek: number;
+  scheduledDate: GameDate;
+  dueCompletedDay: number;
+  completedWeek?: number | undefined;
+  completedDate?: GameDate | undefined;
+  campusFit?: number | undefined;
+  staffConnection?: number | undefined;
+  roleClarity?: number | undefined;
+  familyComfort?: number | undefined;
+  overallImpression?: number | undefined;
+  summary?: string | undefined;
+  warning?: string | undefined;
 }
 
 export interface RecruitingProgram {
@@ -40,9 +74,24 @@ export interface RecruitingProgram {
   projectedRole: ProjectedCollegeRole;
   recruiterName: string;
   recruiterStyle: "direct" | "patient" | "salesman" | "analytical";
+  contactQuality: number;
+  roleClarity: number;
+  staffTrust: number;
+  visitStatus: OfficialVisitStatus;
+  officialVisit?: OfficialVisit | undefined;
+  promises: RecruitingPromise[];
+  playerRead: string;
   evaluation: string;
   lastUpdate: string;
   offer?: RecruitingOffer | undefined;
+}
+
+export interface RecruitingCommitment {
+  programId: string;
+  status: "verbal";
+  committedWeek: number;
+  committedDate: GameDate;
+  confidence: number;
 }
 
 export interface RecruitingActivity {
@@ -50,13 +99,13 @@ export interface RecruitingActivity {
   week: number;
   programId?: string | undefined;
   date: GameDate;
-  kind: "evaluation" | "contact" | "action" | "offer" | "cooling";
+  kind: "evaluation" | "contact" | "action" | "offer" | "cooling" | "conversation" | "visit" | "commitment" | "expiration";
   title: string;
   detail: string;
 }
 
 export interface FootballRecruitingState {
-  moduleVersion: 1;
+  moduleVersion: 2;
   visibility: number;
   filmGrade: number;
   consistency: number;
@@ -69,6 +118,8 @@ export interface FootballRecruitingState {
   offers: number;
   actionWeek: number;
   actionsUsed: number;
+  decommitments: number;
+  commitment?: RecruitingCommitment | undefined;
   programs: RecruitingProgram[];
   activity: RecruitingActivity[];
 }

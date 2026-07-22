@@ -18,6 +18,8 @@ interface CareerSaveState {
   resolveMatchDecision(optionId: string): Promise<void>;
   resolveRelationshipEvent(optionId: string): Promise<void>;
   performRecruitingAction(programId: string, actionId: RecruitingActionId): Promise<void>;
+  commitToCollege(programId: string): Promise<void>;
+  withdrawCollegeCommitment(): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -159,6 +161,34 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const commitToCollege = useCallback(async (programId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.commitToCollege(careerId, programId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось подтвердить выбор колледжа.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const withdrawCollegeCommitment = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.withdrawCollegeCommitment(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось отозвать устный коммит.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -172,5 +202,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     resolveMatchDecision,
     resolveRelationshipEvent,
     performRecruitingAction,
+    commitToCollege,
+    withdrawCollegeCommitment,
   };
 }

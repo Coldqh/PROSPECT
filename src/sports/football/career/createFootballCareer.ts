@@ -228,7 +228,7 @@ export function createFootballCareerState(
   const season = generateHighSchoolSeason(worldSeed, school, { year: 2026, month: 8, day: 17 });
 
   let football: FootballCareerState = {
-    moduleVersion: 7,
+    moduleVersion: 8,
     worldSeed,
     stage: "high-school-preseason",
     position: setup.position,

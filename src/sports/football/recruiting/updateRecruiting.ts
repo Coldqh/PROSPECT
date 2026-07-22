@@ -10,6 +10,7 @@ import type {
   RecruitingProgram,
   RecruitingStage,
 } from "./types";
+import { createRecruiterPromise, scheduleOfficialVisitForProgram } from "./visits";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -46,10 +47,11 @@ function stageFromEvaluation(program: RecruitingProgram): RecruitingStage {
 }
 
 function evaluationText(program: RecruitingProgram): string {
-  if (program.offer) return `Штаб готов вложить полную стипендию. Проектируемая роль: ${roleLabel(program.offer.projectedRole)}.`;
+  if (program.offer) return `Штаб готов вложить полную стипендию. Проектируемая роль: ${roleLabel(program.offer.projectedRole)}.${program.visitStatus === "completed" ? " Оценка подтверждена личным визитом." : " Визит ещё может изменить понимание роли."}`;
   if (!program.academicEligible) return "Футбольная оценка положительная, но текущий академический профиль не проходит внутренний порог.";
   if (program.medicalConcern) return "Скауты видят талант, но медицинская служба требует стабильной готовности и чистой недели без боли.";
-  if (program.stage === "priority") return "Герой входит в короткий список позиции. Следующий шаг зависит от контакта и проверки состава.";
+  if (program.visitStatus === "invited") return "Программа пригласила героя на официальный визит. Теперь можно проверить штаб, кампус и реальные перспективы роли.";
+  if (program.stage === "priority") return "Герой входит в короткий список позиции. Следующий шаг зависит от прямого контакта и проверки состава.";
   if (program.depthCompetition >= 82) return "Талант признают, но позиционная комната переполнена и ранняя роль не гарантируется.";
   if (program.positionNeed >= 78 && program.fit >= 70) return "Позиция нужна в этом наборе, а игровой профиль хорошо совпадает со схемой.";
   if (program.fit >= 75) return "Схема подходит, но штаб хочет больше плёнки против сильных соперников.";
@@ -227,10 +229,13 @@ export function performRecruitingAction(save: CareerSave, programId: string, act
   const state = save.football.recruitment;
   const currentWeek = save.football.season.week;
   const used = state.actionWeek === currentWeek ? state.actionsUsed : 0;
+  if (state.commitment) throw new Error("Recruiting is closed by a verbal commitment");
   if (used >= 2) throw new Error("No recruiting actions remaining this week");
   const target = state.programs.find((program) => program.id === programId);
   if (!target) throw new Error("Unknown recruiting program");
   if (target.stage === "unaware" && actionId !== "send-film") throw new Error("Program has no active evaluation");
+  if (actionId === "recruiter-call" && !["contact", "priority", "offered"].includes(target.stage)) throw new Error("Program has not opened direct contact");
+  if (actionId === "schedule-visit" && target.visitStatus !== "invited") throw new Error("Program has not offered an official visit");
 
   let program = { ...target };
   let title = "";
@@ -252,6 +257,8 @@ export function performRecruitingAction(save: CareerSave, programId: string, act
       program.interest = clamp(program.interest + 4 + state.coachRecommendation * 0.025);
       program.scoutingConfidence = clamp(program.scoutingConfidence + 5);
       program.stage = maxStage(program.stage, "contact");
+      program.contactQuality = clamp(program.contactQuality + 8);
+      program.staffTrust = clamp(program.staffTrust + 4);
       title = `${save.football.staff.headCoach.name} позвонил в ${program.shortName}`;
       detail = "Школьный тренер подтвердил роль, дисциплину и прогресс игрока.";
       break;
@@ -267,8 +274,27 @@ export function performRecruitingAction(save: CareerSave, programId: string, act
     case "declare-interest": {
       program.interest = clamp(program.interest + (program.stage === "contact" || program.stage === "priority" ? 5 : 2));
       program.stage = maxStage(program.stage, "contact");
+      program.contactQuality = clamp(program.contactQuality + 4);
       title = `${program.shortName} получил сигнал о серьёзном интересе`;
       detail = "Рекрутер понимает, что программа рассматривается всерьёз, но это не создаёт обещаний игрового времени.";
+      break;
+    }
+    case "recruiter-call": {
+      const promise = createRecruiterPromise(program, currentWeek, "recruiter-call", `${used}`);
+      program.promises = [...program.promises, promise].slice(-5);
+      program.contactQuality = clamp(program.contactQuality + 11);
+      program.roleClarity = clamp(program.roleClarity + (program.recruiterStyle === "direct" || program.recruiterStyle === "analytical" ? 13 : 7));
+      program.staffTrust = clamp(program.staffTrust + (promise.credibility - 50) * 0.08 + 4);
+      program.interest = clamp(program.interest + 3);
+      program.playerRead = `${program.recruiterName}: «${promise.statement}» Надёжность слов пока оценивается по составу, роли и поведению штаба.`;
+      title = `Разговор с ${program.recruiterName}`;
+      detail = promise.statement;
+      break;
+    }
+    case "schedule-visit": {
+      program = scheduleOfficialVisitForProgram(save, program);
+      title = `Визит в ${program.shortName} назначен`;
+      detail = program.lastUpdate;
       break;
     }
   }
@@ -280,7 +306,8 @@ export function performRecruitingAction(save: CareerSave, programId: string, act
   const programs = state.programs.map((candidate) => candidate.id === programId ? program : candidate);
   const interestedPrograms = programs.filter((candidate) => !["unaware", "cooled"].includes(candidate.stage)).length;
   const offers = programs.filter((candidate) => Boolean(candidate.offer)).length;
-  const actionRecord = activity(save, "action", title, detail, program.id);
+  const actionKind: RecruitingActivity["kind"] = actionId === "recruiter-call" ? "conversation" : actionId === "schedule-visit" ? "visit" : "action";
+  const actionRecord = activity(save, actionKind, title, detail, program.id);
 
   return {
     ...save,

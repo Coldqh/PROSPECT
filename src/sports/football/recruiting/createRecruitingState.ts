@@ -127,6 +127,12 @@ export function createRecruitingState(
       projectedRole: projectedRole(interest, need, competition),
       recruiterName: `${localRandom.pick(RECRUITER_FIRST)} ${localRandom.pick(RECRUITER_LAST)}`,
       recruiterStyle: localRandom.pick(["direct", "patient", "salesman", "analytical"] as const),
+      contactQuality: stageForInterest(interest, confidence) === "contact" ? clamp(28 + localRandom.integer(-5, 8)) : 0,
+      roleClarity: clamp(16 + localRandom.integer(-4, 8)),
+      staffTrust: clamp(18 + localRandom.integer(-6, 9)),
+      visitStatus: "none",
+      promises: [],
+      playerRead: "Контакт ещё не дал достаточно информации, чтобы отделить реальность от рекрутинговой подачи.",
       evaluation: "",
       lastUpdate: "Предсезонная первичная оценка.",
     };
@@ -135,7 +141,7 @@ export function createRecruitingState(
 
   const interestedPrograms = programs.filter((program) => program.stage !== "unaware" && program.stage !== "cooled").length;
   return {
-    moduleVersion: 1,
+    moduleVersion: 2,
     visibility: baseVisibility,
     filmGrade: clamp(football.ratings.technique * 0.45 + football.ratings.footballIq * 0.25 + football.ratings.athleticism * 0.3),
     consistency: clamp(55 + character.personality.discipline * 0.28 + character.personality.composure * 0.17),
@@ -148,6 +154,7 @@ export function createRecruitingState(
     offers: 0,
     actionWeek: 0,
     actionsUsed: 0,
+    decommitments: 0,
     programs,
     activity: [],
   };

@@ -34,7 +34,7 @@ describe("migrateCareerSave", () => {
   it("migrates foundation saves through player creation into the weekly loop schema", () => {
     const result = migrateCareerSave(legacySave);
     expect(result.migratedFrom).toBe(1);
-    expect(result.save.meta.schemaVersion).toBe(9);
+    expect(result.save.meta.schemaVersion).toBe(10);
     expect(result.save.meta.phase).toBe("high-school-preseason");
     expect(result.save.character.identity.fullName.length).toBeGreaterThan(3);
     expect(result.save.football.stage).toBe("high-school-preseason");
@@ -103,7 +103,7 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionThree);
     expect(result.migratedFrom).toBe(3);
-    expect(result.save.meta.schemaVersion).toBe(9);
+    expect(result.save.meta.schemaVersion).toBe(10);
     expect(result.save.football.roster.length).toBeGreaterThan(40);
     expect(result.save.football.school.primaryColor).toBe("#d7192d");
     expect(result.save.football.training.body.medicalStatus).toBe("cleared");
@@ -144,8 +144,8 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionFour);
     expect(result.migratedFrom).toBe(4);
-    expect(result.save.meta.schemaVersion).toBe(9);
-    expect(result.save.football.moduleVersion).toBe(7);
+    expect(result.save.meta.schemaVersion).toBe(10);
+    expect(result.save.football.moduleVersion).toBe(8);
     expect(result.save.football.training.plan.focusId).toBe("position-craft");
     expect(result.save.football.match.status).toBe("upcoming");
   });
@@ -184,7 +184,7 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionFive);
     expect(result.migratedFrom).toBe(5);
-    expect(result.save.meta.schemaVersion).toBe(9);
+    expect(result.save.meta.schemaVersion).toBe(10);
     expect(result.save.football.match.status).toBe("upcoming");
     expect(result.save.football.match.heroUnit).toMatch(/offense|defense/);
   });
@@ -241,8 +241,8 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionSix);
     expect(result.migratedFrom).toBe(6);
-    expect(result.save.meta.schemaVersion).toBe(9);
-    expect(result.save.football.moduleVersion).toBe(7);
+    expect(result.save.meta.schemaVersion).toBe(10);
+    expect(result.save.football.moduleVersion).toBe(8);
     expect(result.save.football.season.schedule).toHaveLength(8);
     expect(result.save.football.season.standings.length).toBeGreaterThan(8);
   });
@@ -257,7 +257,7 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionSeven);
     expect(result.migratedFrom).toBe(7);
-    expect(result.save.meta.schemaVersion).toBe(9);
+    expect(result.save.meta.schemaVersion).toBe(10);
     expect(result.save.relationships.npcs).toHaveLength(7);
     expect(result.save.relationships.npcs.every((npc) => typeof npc.relationship === "number")).toBe(true);
   });
@@ -280,9 +280,46 @@ describe("migrateCareerSave", () => {
     };
     const result = migrateCareerSave(versionEight);
     expect(result.migratedFrom).toBe(8);
-    expect(result.save.meta.schemaVersion).toBe(9);
-    expect(result.save.football.moduleVersion).toBe(7);
+    expect(result.save.meta.schemaVersion).toBe(10);
+    expect(result.save.football.moduleVersion).toBe(8);
     expect(result.save.football.recruitment.programs).toHaveLength(24);
+  });
+
+  it("migrates version nine recruiting saves into visits and commitment schema", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const programs = current.football.recruitment.programs.map((program) => {
+      const {
+        contactQuality: _contactQuality,
+        roleClarity: _roleClarity,
+        staffTrust: _staffTrust,
+        visitStatus: _visitStatus,
+        officialVisit: _officialVisit,
+        promises: _promises,
+        playerRead: _playerRead,
+        ...legacyProgram
+      } = program;
+      return legacyProgram;
+    });
+    const {
+      decommitments: _decommitments,
+      commitment: _commitment,
+      ...legacyRecruitment
+    } = current.football.recruitment;
+    const versionNine = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 9 },
+      football: {
+        ...current.football,
+        moduleVersion: 7,
+        recruitment: { ...legacyRecruitment, moduleVersion: 1, programs },
+      },
+    };
+    const result = migrateCareerSave(versionNine);
+    expect(result.migratedFrom).toBe(9);
+    expect(result.save.meta.schemaVersion).toBe(10);
+    expect(result.save.football.moduleVersion).toBe(8);
+    expect(result.save.football.recruitment.moduleVersion).toBe(2);
+    expect(result.save.football.recruitment.programs[0]?.visitStatus).toBe("none");
   });
 
   it("produces the same migrated athlete for the same seed", () => {

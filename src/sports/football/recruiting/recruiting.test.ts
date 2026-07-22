@@ -5,6 +5,8 @@ import { createFootballCareerState } from "../career/createFootballCareer";
 import type { FootballCareerSetup } from "../career/types";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { performRecruitingAction } from "./updateRecruiting";
+import { advanceRecruitingWorld, commitToCollege, withdrawCollegeCommitment } from "./visits";
+import { addGameDays } from "../../../core/calendar/types";
 
 const setup: FootballCareerSetup = {
   character: {
@@ -29,7 +31,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "recruiting-career",
-      schemaVersion: 9,
+      schemaVersion: 10,
       sport: "american-football",
       worldSeed: "recruiting-seed",
       createdAt: "2026-07-21T10:00:00.000Z",
@@ -63,6 +65,86 @@ describe("college recruiting", () => {
     expect(second.football.recruitment.actionsUsed).toBe(2);
     expect(second.football.recruitment.programs[0]?.scoutingConfidence).toBeGreaterThan(program.scoutingConfidence);
     expect(() => performRecruitingAction(second, program.id, "send-film")).toThrow();
+  });
+
+
+
+  it("turns direct recruiter contact into a concrete promise", () => {
+    const save = makeSave();
+    const target = save.football.recruitment.programs[0];
+    if (!target) throw new Error("Missing program");
+    const prepared: CareerSave = {
+      ...save,
+      football: {
+        ...save.football,
+        recruitment: {
+          ...save.football.recruitment,
+          programs: save.football.recruitment.programs.map((program) => program.id === target.id ? { ...program, stage: "contact", interest: 72 } : program),
+        },
+      },
+    };
+    const result = performRecruitingAction(prepared, target.id, "recruiter-call");
+    const updated = result.football.recruitment.programs.find((program) => program.id === target.id);
+    expect(updated?.promises).toHaveLength(1);
+    expect(updated?.roleClarity).toBeGreaterThan(target.roleClarity);
+  });
+
+  it("schedules one official visit and resolves it on Sunday", () => {
+    const save = makeSave();
+    const target = save.football.recruitment.programs[0];
+    if (!target) throw new Error("Missing program");
+    const invited: CareerSave = {
+      ...save,
+      football: {
+        ...save.football,
+        recruitment: {
+          ...save.football.recruitment,
+          programs: save.football.recruitment.programs.map((program) => program.id === target.id ? { ...program, stage: "priority", visitStatus: "invited" } : program),
+        },
+      },
+    };
+    const scheduled = performRecruitingAction(invited, target.id, "schedule-visit");
+    const scheduledProgram = scheduled.football.recruitment.programs.find((program) => program.id === target.id);
+    expect(scheduledProgram?.visitStatus).toBe("scheduled");
+    const sunday: CareerSave = {
+      ...scheduled,
+      meta: { ...scheduled.meta, currentDate: addGameDays(scheduled.meta.currentDate, 6) },
+      life: { ...scheduled.life, dayIndex: 6, completedDays: scheduled.life.completedDays + 6 },
+    };
+    const completed = advanceRecruitingWorld(sunday);
+    const completedProgram = completed.football.recruitment.programs.find((program) => program.id === target.id);
+    expect(completedProgram?.visitStatus).toBe("completed");
+    expect(completedProgram?.officialVisit?.overallImpression).toBeGreaterThan(0);
+    expect(completedProgram?.promises.length).toBeGreaterThan(0);
+  });
+
+  it("makes a verbal commitment consequential and reversible", () => {
+    const save = makeSave();
+    const target = save.football.recruitment.programs[0];
+    if (!target) throw new Error("Missing program");
+    const offered: CareerSave = {
+      ...save,
+      football: {
+        ...save.football,
+        recruitment: {
+          ...save.football.recruitment,
+          programs: save.football.recruitment.programs.map((program) => program.id === target.id ? {
+            ...program,
+            stage: "offered",
+            academicEligible: true,
+            offer: { id: "offer-1", issuedWeek: 1, scholarship: "full", projectedRole: program.projectedRole, expiresAfterWeek: 8 },
+          } : program),
+          offers: 1,
+        },
+      },
+    };
+    const committed = commitToCollege(offered, target.id);
+    expect(committed.football.recruitment.commitment?.programId).toBe(target.id);
+    expect(committed.character.condition.stress).toBeLessThan(save.character.condition.stress);
+    const withdrawn = withdrawCollegeCommitment(committed);
+    expect(withdrawn.football.recruitment.commitment).toBeUndefined();
+    expect(withdrawn.football.recruitment.decommitments).toBe(1);
+    expect(withdrawn.football.recruitment.programs.find((program) => program.id === target.id)?.offer).toBeUndefined();
   });
 
   it("keeps academics and depth competition separate from raw interest", () => {

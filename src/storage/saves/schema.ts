@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 9;
+export const CURRENT_SCHEMA_VERSION = 10;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -324,6 +324,35 @@ const recruitingProgramSchema = z.object({
   projectedRole: projectedCollegeRoleSchema,
   recruiterName: z.string().min(2),
   recruiterStyle: z.enum(["direct", "patient", "salesman", "analytical"]),
+  contactQuality: z.number().min(0).max(100),
+  roleClarity: z.number().min(0).max(100),
+  staffTrust: z.number().min(0).max(100),
+  visitStatus: z.enum(["none", "invited", "scheduled", "completed"]),
+  officialVisit: z.object({
+    id: z.string().min(1),
+    status: z.enum(["scheduled", "completed"]),
+    scheduledWeek: z.number().int().nonnegative(),
+    scheduledDate: gameDateSchema,
+    dueCompletedDay: z.number().int().nonnegative(),
+    completedWeek: z.number().int().nonnegative().optional(),
+    completedDate: gameDateSchema.optional(),
+    campusFit: z.number().min(0).max(100).optional(),
+    staffConnection: z.number().min(0).max(100).optional(),
+    roleClarity: z.number().min(0).max(100).optional(),
+    familyComfort: z.number().min(0).max(100).optional(),
+    overallImpression: z.number().min(0).max(100).optional(),
+    summary: z.string().min(2).optional(),
+    warning: z.string().min(2).optional(),
+  }).optional(),
+  promises: z.array(z.object({
+    id: z.string().min(1),
+    category: z.enum(["role", "development", "scheme", "stability"]),
+    statement: z.string().min(2),
+    credibility: z.number().min(0).max(100),
+    source: z.enum(["recruiter-call", "official-visit"]),
+    madeWeek: z.number().int().nonnegative(),
+  })),
+  playerRead: z.string().min(2),
   evaluation: z.string().min(2),
   lastUpdate: z.string().min(2),
   offer: z.object({
@@ -335,7 +364,7 @@ const recruitingProgramSchema = z.object({
   }).optional(),
 });
 const footballRecruitingSchema = z.object({
-  moduleVersion: z.literal(1),
+  moduleVersion: z.literal(2),
   visibility: z.number().min(0).max(100),
   filmGrade: z.number().min(0).max(100),
   consistency: z.number().min(0).max(100),
@@ -348,20 +377,28 @@ const footballRecruitingSchema = z.object({
   offers: z.number().int().nonnegative(),
   actionWeek: z.number().int().nonnegative(),
   actionsUsed: z.number().int().nonnegative().max(2),
+  decommitments: z.number().int().nonnegative(),
+  commitment: z.object({
+    programId: z.string().min(1),
+    status: z.literal("verbal"),
+    committedWeek: z.number().int().nonnegative(),
+    committedDate: gameDateSchema,
+    confidence: z.number().min(0).max(100),
+  }).optional(),
   programs: z.array(recruitingProgramSchema).min(20),
   activity: z.array(z.object({
     id: z.string().min(1),
     week: z.number().int().nonnegative(),
     programId: z.string().min(1).optional(),
     date: gameDateSchema,
-    kind: z.enum(["evaluation", "contact", "action", "offer", "cooling"]),
+    kind: z.enum(["evaluation", "contact", "action", "offer", "cooling", "conversation", "visit", "commitment", "expiration"]),
     title: z.string().min(2),
     detail: z.string().min(2),
   })),
 });
 
 const footballSchema = z.object({
-  moduleVersion: z.literal(7),
+  moduleVersion: z.literal(8),
   worldSeed: z.string().min(1),
   stage: z.literal("high-school-preseason"),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),

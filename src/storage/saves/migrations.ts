@@ -8,6 +8,7 @@ import { createInitialMatchState } from "../../sports/football/matches/createMat
 import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
+import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
 export interface MigrationResult {
@@ -35,6 +36,35 @@ type LegacyRecruitingFootball = Omit<FootballCareerState, "moduleVersion" | "rec
   moduleVersion: 6;
   recruitment: LegacyRecruitment;
 };
+
+
+
+type LegacyRecruitingV1Program = Omit<
+  RecruitingProgram,
+  "contactQuality" | "roleClarity" | "staffTrust" | "visitStatus" | "officialVisit" | "promises" | "playerRead"
+>;
+
+type LegacyRecruitingV1State = Omit<
+  FootballRecruitingState,
+  "moduleVersion" | "decommitments" | "commitment" | "programs"
+> & {
+  moduleVersion: 1;
+  programs: LegacyRecruitingV1Program[];
+};
+
+type LegacyRecruitingV1Football = Omit<FootballCareerState, "moduleVersion" | "recruitment"> & {
+  moduleVersion: 7;
+  recruitment: LegacyRecruitingV1State;
+};
+
+interface LegacyRecruitingSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 9 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyRecruitingV1Football;
+  relationships: CareerSave["relationships"];
+  history: HistoryEntry[];
+}
 
 interface LegacyFoundationSave {
   meta: {
@@ -162,13 +192,53 @@ function addRecruitingToFootball(
 ): FootballCareerState {
   const base = {
     ...football,
-    moduleVersion: 7 as const,
+    moduleVersion: 8 as const,
     recruitment: undefined as never,
   };
   return {
     ...base,
     recruitment: createRecruitingState(worldSeed, character, base),
   };
+}
+
+function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRecruitingState {
+  return {
+    ...state,
+    moduleVersion: 2,
+    decommitments: 0,
+    programs: state.programs.map((program) => ({
+      ...program,
+      contactQuality: ["contact", "priority", "offered"].includes(program.stage) ? Math.min(100, 24 + program.scoutingConfidence * 0.25) : 0,
+      roleClarity: Math.min(100, 16 + program.positionNeed * 0.16 + (100 - program.depthCompetition) * 0.08),
+      staffTrust: Math.min(100, 18 + program.interest * 0.18),
+      visitStatus: "none" as const,
+      promises: [],
+      playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
+    })),
+  };
+}
+
+function migrateVersionNine(input: LegacyRecruitingSave): CareerSave {
+  const football: FootballCareerState = {
+    ...input.football,
+    moduleVersion: 8,
+    recruitment: upgradeRecruitingVersionOne(input.football.recruitment),
+  };
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football,
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v10`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Рекрутинг получил решения",
+        description: "Карьера получила разговоры с рекрутерами, официальные визиты, сравнение предложений и устный выбор колледжа.",
+      },
+    ],
+  });
 }
 
 function migrateVersionEight(input: LegacyRelationshipsSave): CareerSave {
@@ -239,7 +309,7 @@ function enrichFootball(
   const season = seasonForMigration(football, worldSeed, currentDate);
   let enriched: FootballCareerState = {
     ...football,
-    moduleVersion: 7,
+    moduleVersion: 8,
     recruitment: undefined as never,
     school: {
       ...football.school,
@@ -309,7 +379,7 @@ function addTraining(
   const season = seasonForMigration(football, worldSeed, currentDate);
   const base: FootballCareerState = {
     ...football,
-    moduleVersion: 7,
+    moduleVersion: 8,
     recruitment: undefined as never,
     season,
     training: createInitialTrainingState(worldSeed, football.position, character, football.ratings),
@@ -328,7 +398,7 @@ function addMatch(
   const season = seasonForMigration(football, worldSeed, currentDate);
   const base: FootballCareerState = {
     ...football,
-    moduleVersion: 7,
+    moduleVersion: 8,
     recruitment: undefined as never,
     season,
     match: createInitialMatchState(worldSeed, football.position, season, currentDate, dayIndex),
@@ -340,7 +410,7 @@ function migrateVersionSix(input: LegacyMatchSave): CareerSave {
   const season = seasonForMigration(input.football, input.meta.worldSeed, input.meta.currentDate);
   const footballBase: FootballCareerState = {
     ...input.football,
-    moduleVersion: 7,
+    moduleVersion: 8,
     recruitment: undefined as never,
     season,
     match: createInitialMatchState(
@@ -475,6 +545,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 9) return { save: migrateVersionNine(input as LegacyRecruitingSave), migratedFrom: 9 };
   if (schemaVersion === 8) return { save: migrateVersionEight(input as LegacyRelationshipsSave), migratedFrom: 8 };
   if (schemaVersion === 7) return { save: migrateVersionSeven(input as LegacySeasonSave), migratedFrom: 7 };
   if (schemaVersion === 6) return { save: migrateVersionSix(input as LegacyMatchSave), migratedFrom: 6 };

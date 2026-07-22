@@ -83,7 +83,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("people");
@@ -195,7 +195,7 @@ export default function CareerOverviewScreen() {
           )}
 
           {activeTab === "career" && (
-            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} />
+            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} />
           )}
 
           {activeTab === "team" && (

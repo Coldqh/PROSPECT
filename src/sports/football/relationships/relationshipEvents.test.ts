@@ -11,7 +11,7 @@ function makeSave(): CareerSave {
   return {
     meta: {
       id: "relationship-career",
-      schemaVersion: 9,
+      schemaVersion: 10,
       sport: "american-football",
       worldSeed,
       createdAt: "2026-07-21T10:00:00.000Z",
