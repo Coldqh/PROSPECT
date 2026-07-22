@@ -32,7 +32,7 @@ export interface WorldConstitution {
     endOfYearThree: number;
     endOfYearFour: number;
   };
-  simulationOrder: readonly [
+  simulationOrder: [
     "calendar",
     "eligibility",
     "rosters",

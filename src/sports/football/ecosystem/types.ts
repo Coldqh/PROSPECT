@@ -115,7 +115,7 @@ export interface EcosystemIndependentProspect {
   graduationYear: number;
   yearsInRoute: number;
   status: "available" | "contacted" | "committed";
-  committedTeamId?: string;
+  committedTeamId?: string | undefined;
 }
 
 export interface EcosystemTalentClassRecord {
@@ -188,7 +188,7 @@ export interface EcosystemTeam {
   shortName: string;
   level: EcosystemLevel;
   stateCode: string;
-  conferenceId?: string;
+  conferenceId?: string | undefined;
   prestige: number;
   rating: number;
   expectation: number;
@@ -226,7 +226,7 @@ export interface EcosystemPlayer {
   trajectory: EcosystemPlayerTrajectory;
   nationalRank: number;
   recruitingStage: "unranked" | "tracked" | "offered" | "committed";
-  committedTeamId?: string;
+  committedTeamId?: string | undefined;
   eligibilityYears: number;
   seasonsPlayed: number;
   transferStatus: EcosystemTransferStatus;
@@ -282,7 +282,7 @@ export interface EcosystemTeamSeasonRecord {
   finalRating: number;
   finish: number;
   conferenceChampion: boolean;
-  headCoachId?: string;
+  headCoachId?: string | undefined;
 }
 
 export interface EcosystemTransaction {
@@ -293,10 +293,10 @@ export interface EcosystemTransaction {
   createdOn: GameDate;
   title: string;
   detail: string;
-  playerId?: string;
-  coachId?: string;
-  fromTeamId?: string;
-  toTeamId?: string;
+  playerId?: string | undefined;
+  coachId?: string | undefined;
+  fromTeamId?: string | undefined;
+  toTeamId?: string | undefined;
   relatedToHero: boolean;
 }
 

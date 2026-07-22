@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { FootballCareerState } from "../../sports/football/career/types";
+import type { CareerSave } from "../../storage/saves/schema";
 import type {
   EcosystemConference,
   EcosystemStory,
@@ -69,10 +69,7 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
   }[kind];
 }
 
-interface WorldDashboardSave {
-  world: FootballEcosystemState;
-  football: FootballCareerState;
-}
+type WorldDashboardSave = Pick<CareerSave, "world" | "football">;
 
 export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   const [view, setView] = useState<WorldView>("pulse");

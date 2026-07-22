@@ -147,7 +147,7 @@ export function resolveTrainingDay(
       recurrenceRisk: selected.severity === "moderate" ? random.integer(28, 48) : random.integer(12, 28),
       startedOn: dateKey(date),
     };
-    issueOccurred = nextIssue.diagnosis;
+    issueOccurred = selected.diagnosis;
     injuryRisk = clamp(injuryRisk + 18);
   }
 

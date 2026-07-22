@@ -13,6 +13,7 @@ export const FORBIDDEN_SOURCE_PATHS = Object.freeze([
   "src/app/layout",
   "src/app/providers",
   "src/app/workspaces",
+  "src/simulation/population",
   "src/core/events",
   "src/core/ids",
   "src/core/saves",
@@ -20,7 +21,19 @@ export const FORBIDDEN_SOURCE_PATHS = Object.freeze([
   "src/core/storage",
   "src/core/time",
   "src/core/version",
-  "src/core/random/seededRandom.ts",
+]);
+
+
+const REQUIRED_CANONICAL_FILES = Object.freeze([
+  "src/core/random/SeededRandom.ts",
+]);
+
+const FORBIDDEN_SOURCE_FRAGMENTS = Object.freeze([
+  "core/random/seededRandom",
+  "../random/seededRandom",
+  "./random/seededRandom",
+  "./seededRandom",
+  "simulation/population",
 ]);
 
 const FORBIDDEN_APP_IMPORTS = Object.freeze([
@@ -89,6 +102,16 @@ export function inspectSourceBoundaries(repositoryRoot = DEFAULT_ROOT) {
     }
   }
 
+  for (const requiredPath of REQUIRED_CANONICAL_FILES) {
+    if (!exactPathExists(root, requiredPath)) {
+      violations.push({
+        kind: "missing-canonical-file",
+        path: requiredPath,
+        message: `Обязательный файл PROSPECT отсутствует или имеет неверный регистр: ${requiredPath}`,
+      });
+    }
+  }
+
   const appPath = join(root, "src", "app", "App.tsx");
   if (existsSync(appPath) && statSync(appPath).isFile()) {
     const source = readFileSync(appPath, "utf8");
@@ -111,11 +134,17 @@ export function inspectSourceBoundaries(repositoryRoot = DEFAULT_ROOT) {
     }
 
     const source = readFileSync(filePath, "utf8");
-    if (source.includes("districtPulse") || source.includes("housingSystem") || source.includes("pressureSystem")) {
+    const containsForeignSignature =
+      source.includes("districtPulse") ||
+      source.includes("housingSystem") ||
+      source.includes("pressureSystem") ||
+      FORBIDDEN_SOURCE_FRAGMENTS.some((fragment) => source.includes(fragment));
+
+    if (containsForeignSignature) {
       violations.push({
         kind: "foreign-signature",
         path: normalized,
-        message: `В файле найден импорт/код чужого проекта: ${normalized}`,
+        message: `В файле найден импорт/код чужого проекта или неверный регистр импорта: ${normalized}`,
       });
     }
   }

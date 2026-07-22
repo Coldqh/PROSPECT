@@ -1,6 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { CharacterState } from "../../../core/character/types";
 import type { LifeState } from "../../../core/life/types";
+import type { RelationshipState } from "../../../core/relationships/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { FootballCareerState, FootballPosition } from "../career/types";
 import type { RecruitingProgram } from "../recruiting/types";
@@ -40,6 +41,7 @@ interface EcosystemCareerState {
   character: CharacterState;
   life: LifeState;
   football: FootballCareerState;
+  relationships: RelationshipState;
   world: FootballEcosystemState;
   history: Array<{
     id: string;
