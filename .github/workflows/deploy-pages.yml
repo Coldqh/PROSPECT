@@ -37,6 +37,12 @@ jobs:
           npm --version
           npm config get registry
 
+      - name: Guard source boundaries
+        run: node scripts/check-source-boundaries.mjs
+
+      - name: Run architecture tests
+        run: node --test scripts/check-source-boundaries.test.mjs
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
