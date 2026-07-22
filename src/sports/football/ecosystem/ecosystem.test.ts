@@ -42,13 +42,15 @@ describe("football ecosystem", () => {
     expect(left.world.coaches.length).toBeGreaterThan(30);
     expect(left.world.conferences).toHaveLength(4);
     expect(left.world.players.some((player) => player.isHero)).toBe(true);
-    expect(left.world.moduleVersion).toBe(4);
+    expect(left.world.moduleVersion).toBe(5);
     expect(left.world.constitution.collegeRosterLimit).toBe(105);
     expect(left.world.teams.every((team) => team.compliance.estimatedRosterSize <= team.compliance.rosterLimit)).toBe(true);
     expect(left.world.players.every((player) => Boolean(player.eligibility.model))).toBe(true);
     expect(left.world.teams.every((team) => team.resources.annualBudget > 0)).toBe(true);
     expect(left.world.teams.filter((team) => team.level === "college").every((team) => team.resources.nilCapacity >= 0)).toBe(true);
     expect(left.world.market.totalRecruitingBudget).toBeGreaterThan(0);
+    expect(left.world.talentPipeline.regions.length).toBeGreaterThanOrEqual(8);
+    expect(left.world.players.every((player) => Boolean(player.talent.regionId))).toBe(true);
   });
 
   it("advances the market and synchronizes college needs with hero recruiting", () => {
@@ -159,6 +161,19 @@ describe("football ecosystem", () => {
       life: { ...base.life, completedDays: 35, weekNumber: 6, dayIndex: 0 },
       meta: { ...base.meta, currentDate: { year: 2026, month: 9, day: 21 } },
     }).world).toEqual(result.world);
+  });
+
+  it("creates a new class and preserves alternative routes across the offseason", () => {
+    const base = createSave("annual-talent-flow");
+    const result = advanceFootballEcosystem({
+      ...base,
+      life: { ...base.life, completedDays: 140, weekNumber: 21, dayIndex: 0 },
+      meta: { ...base.meta, currentDate: { year: 2027, month: 1, day: 4 } },
+    });
+    expect(result.world.talentPipeline.generationYear).toBe(2027);
+    expect(result.world.talentPipeline.classHistory.some((record) => record.seasonYear === 2027)).toBe(true);
+    expect(result.world.players.some((player) => player.level === "high-school" && player.classYear === "Freshman" && player.talent.graduationYear === 2030)).toBe(true);
+    expect(result.world.market.annualProspects).toBeGreaterThan(0);
   });
 
   it("is deterministic for the same world state and completed day", () => {

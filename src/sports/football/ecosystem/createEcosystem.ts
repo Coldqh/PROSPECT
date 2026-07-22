@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
 import { createProgramResources } from "./resources";
+import { createTalentPipeline, createTalentProfile } from "./talent";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -110,6 +111,7 @@ function createGeneratedPlayer(
   const form = clamp(56 + random.integer(-16, 21));
   const age = team.level === "college" ? random.integer(18, 22) : random.integer(15, 18);
   const eligibility = createPlayerEligibility(team.level, age, classYear, seasonYear, random.fork("eligibility"));
+  const talent = createTalentProfile({ level: team.level, classYear, overall, potential, nationalRank: team.level === "high-school" ? 900 : 9999, isHero: false }, team.stateCode, seasonYear, random.fork("talent"));
   return {
     id: `${team.id}-player-${position.toLowerCase()}-${depthRank}`,
     seed: `${team.seed}:${position}:${depthRank}`,
@@ -136,6 +138,7 @@ function createGeneratedPlayer(
     previousTeamIds: [],
     isHero: false,
     eligibility,
+    talent,
   };
 }
 
@@ -191,6 +194,7 @@ function createHeroTeamPlayers(
         previousTeamIds: [],
         isHero: false,
         eligibility: createPlayerEligibility("high-school", player.year === "Senior" ? 18 : player.year === "Junior" ? 17 : player.year === "Sophomore" ? 16 : 15, player.year, seasonYear, random.fork(`eligibility:${player.id}`)),
+        talent: createTalentProfile({ level: "high-school", classYear: player.year, overall: player.overall, potential: player.potential, nationalRank: random.integer(90, 1500), isHero: false }, team.stateCode, seasonYear, random.fork(`talent:${player.id}`)),
       });
     });
   }
@@ -218,6 +222,7 @@ function createHeroTeamPlayers(
     previousTeamIds: [],
     isHero: true,
     eligibility: createPlayerEligibility("high-school", 17, "Senior", seasonYear, random.fork("eligibility:hero")),
+    talent: createTalentProfile({ level: "high-school", classYear: "Senior", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, team.stateCode, seasonYear, random.fork("talent:hero")),
   });
   return players;
 }
@@ -336,7 +341,7 @@ export function assignCollegeConferences(teams: EcosystemTeam[]): { teams: Ecosy
   };
 }
 
-function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[]) {
+function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[], talentPipeline: FootballEcosystemState["talentPipeline"]) {
   const seniors = players.filter((player) => player.level === "high-school" && player.classYear === "Senior");
   const collegeTeams = teams.filter((team) => team.level === "college");
   return {
@@ -349,6 +354,10 @@ function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], 
     totalRecruitingBudget: Math.round(collegeTeams.reduce((sum, team) => sum + team.resources.recruitingBudget, 0) * 100) / 100,
     totalNilCapacity: Math.round(collegeTeams.reduce((sum, team) => sum + team.resources.nilCapacity, 0) * 100) / 100,
     programsUnderFinancialPressure: collegeTeams.filter((team) => team.resources.financialPressure >= 65).length,
+    annualProspects: players.filter((player) => player.level === "high-school" && player.talent.graduationYear >= talentPipeline.generationYear).length,
+    jucoProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "juco").length,
+    walkOnProspects: talentPipeline.independentProspects.filter((prospect) => prospect.route === "walk-on").length,
+    nationallyExposedProspects: players.filter((player) => player.level === "high-school" && player.talent.exposure === "national").length,
   };
 }
 
@@ -390,8 +399,9 @@ export function createFootballEcosystem(
   }
 
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
+  const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 4,
+    moduleVersion: 5,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,
@@ -411,8 +421,9 @@ export function createFootballEcosystem(
       `${teams.filter((team) => team.level === "college").length} колледжей одновременно следят за рынком и закрывают собственные потребности.`,
       `${players.filter((player) => player.level === "high-school" && player.classYear === "Senior").length} выпускников конкурируют за предложения.`,
     ],
-    market: calculateMarket(players, coaches, teams),
+    market: calculateMarket(players, coaches, teams, talentPipeline),
     teamHistory: [],
     transactions: [],
+    talentPipeline,
   };
 }

@@ -8,6 +8,7 @@ import type {
 } from "./types";
 import { createPlayerEligibility, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { createTalentProfile } from "./talent";
 
 function archiveCurrentSeason(world: FootballEcosystemState): EcosystemTeamSeasonRecord[] {
   return world.conferences.flatMap((conference) => {
@@ -78,6 +79,7 @@ function currentHero(
       : existing?.previousTeamIds ?? [],
     isHero: true,
     eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:eligibility:${targetTeamId}`), football.college.entryRoute === "preferred-walk-on" ? "none" : "full"),
+    talent: existing?.talent ?? createTalentProfile({ level: "college", classYear: "Freshman", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, world.teams.find((team) => team.id === targetTeamId)?.stateCode ?? football.school.stateCode, Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:talent:${targetTeamId}`)),
   };
 }
 

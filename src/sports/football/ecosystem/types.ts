@@ -9,6 +9,9 @@ export type EcosystemCoachRole = "head-coach" | "coordinator";
 export type EcosystemCoachStatus = "secure" | "watched" | "hot-seat";
 export type EcosystemSeasonPhase = "regular-season" | "postseason" | "offseason";
 export type EcosystemTransferStatus = "none" | "portal" | "transferred";
+export type EcosystemTalentRoute = "traditional" | "multi-sport" | "late-bloomer" | "juco" | "walk-on";
+export type EcosystemExposureLevel = "hidden" | "local" | "regional" | "national";
+export type EcosystemDevelopmentCurve = "early" | "steady" | "late";
 export type EcosystemResourceTier = "local" | "regional" | "power" | "elite";
 export type EcosystemSpendingPriority = "balanced" | "recruiting" | "development" | "medical" | "facilities";
 export type EcosystemStoryKind =
@@ -28,7 +31,11 @@ export type EcosystemStoryKind =
   | "investment"
   | "budget-crunch"
   | "nil-battle"
-  | "resource-shift";
+  | "resource-shift"
+  | "talent-class"
+  | "camp-breakout"
+  | "juco-route"
+  | "walk-on-route";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -39,7 +46,10 @@ export type EcosystemTransactionKind =
   | "recruit-enrolled"
   | "facility-investment"
   | "budget-cut"
-  | "nil-commitment";
+  | "nil-commitment"
+  | "juco-entry"
+  | "walk-on-entry"
+  | "talent-enrolled";
 
 export interface EcosystemPositionNeeds {
   QB: number;
@@ -47,6 +57,85 @@ export interface EcosystemPositionNeeds {
   WR: number;
   LB: number;
   CB: number;
+}
+
+
+export interface EcosystemTalentProfile {
+  regionId: string;
+  homeState: string;
+  graduationYear: number;
+  route: EcosystemTalentRoute;
+  developmentCurve: EcosystemDevelopmentCurve;
+  physicalMaturity: number;
+  scoutingGrade: number;
+  campExposure: number;
+  exposure: EcosystemExposureLevel;
+  academicProjection: number;
+  discoveredYear: number;
+}
+
+export interface EcosystemTalentRegion {
+  id: string;
+  name: string;
+  stateCodes: string[];
+  populationWeight: number;
+  footballCulture: number;
+  infrastructure: number;
+  exposureBias: number;
+  academicAccess: number;
+  annualClassSize: number;
+}
+
+export interface EcosystemCamp {
+  id: string;
+  name: string;
+  regionId: string;
+  phase: "summer-recruiting" | "spring-development";
+  phaseWeek: number;
+  prestige: number;
+  capacity: number;
+  lastHeldSeasonYear: number;
+}
+
+export interface EcosystemIndependentProspect {
+  id: string;
+  seed: string;
+  name: string;
+  age: number;
+  position: FootballPosition;
+  route: "juco" | "walk-on";
+  regionId: string;
+  homeState: string;
+  overall: number;
+  potential: number;
+  health: number;
+  academicProjection: number;
+  exposure: EcosystemExposureLevel;
+  campExposure: number;
+  graduationYear: number;
+  yearsInRoute: number;
+  status: "available" | "contacted" | "committed";
+  committedTeamId?: string;
+}
+
+export interface EcosystemTalentClassRecord {
+  seasonYear: number;
+  generatedPlayers: number;
+  traditionalPlayers: number;
+  multiSportPlayers: number;
+  lateBloomers: number;
+  jucoEntries: number;
+  walkOnEntries: number;
+  topProspectIds: string[];
+}
+
+export interface EcosystemTalentPipeline {
+  version: 1;
+  generationYear: number;
+  regions: EcosystemTalentRegion[];
+  camps: EcosystemCamp[];
+  independentProspects: EcosystemIndependentProspect[];
+  classHistory: EcosystemTalentClassRecord[];
 }
 
 export interface EcosystemConferenceChampion {
@@ -144,6 +233,7 @@ export interface EcosystemPlayer {
   previousTeamIds: string[];
   isHero: boolean;
   eligibility: EcosystemPlayerEligibility;
+  talent: EcosystemTalentProfile;
 }
 
 export interface EcosystemCoach {
@@ -220,10 +310,14 @@ export interface EcosystemMarketState {
   totalRecruitingBudget: number;
   totalNilCapacity: number;
   programsUnderFinancialPressure: number;
+  annualProspects: number;
+  jucoProspects: number;
+  walkOnProspects: number;
+  nationallyExposedProspects: number;
 }
 
 export interface FootballEcosystemState {
-  moduleVersion: 4;
+  moduleVersion: 5;
   constitution: WorldConstitution;
   cycle: WorldCycleState;
   lastSimulatedDay: number;
@@ -242,4 +336,5 @@ export interface FootballEcosystemState {
   market: EcosystemMarketState;
   teamHistory: EcosystemTeamSeasonRecord[];
   transactions: EcosystemTransaction[];
+  talentPipeline: EcosystemTalentPipeline;
 }

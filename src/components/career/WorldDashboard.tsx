@@ -16,6 +16,7 @@ const views = [
   { id: "leagues", label: "Лиги" },
   { id: "moves", label: "Движение" },
   { id: "resources", label: "Ресурсы" },
+  { id: "talent", label: "Таланты" },
   { id: "history", label: "История" },
 ] as const;
 
@@ -40,6 +41,10 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "budget-crunch": "Бюджет",
     "nil-battle": "NIL",
     "resource-shift": "Ресурсы",
+    "talent-class": "Поколение",
+    "camp-breakout": "Лагерь",
+    "juco-route": "JUCO",
+    "walk-on-route": "Walk-on",
   }[kind];
 }
 
@@ -58,6 +63,9 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
     "facility-investment": "Инфраструктура",
     "budget-cut": "Сокращение",
     "nil-commitment": "NIL",
+    "juco-entry": "JUCO",
+    "walk-on-entry": "Walk-on",
+    "talent-enrolled": "Набор",
   }[kind];
 }
 
@@ -99,6 +107,22 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         || right.resources.annualBudget - left.resources.annualBudget,
       ),
     [world.teams, heroProgramId],
+  );
+  const topProspects = useMemo(
+    () => world.players
+      .filter((player) => player.level === "high-school")
+      .sort((left, right) => right.talent.scoutingGrade - left.talent.scoutingGrade || right.potential - left.potential)
+      .slice(0, 10),
+    [world.players],
+  );
+  const talentRegions = useMemo(
+    () => world.talentPipeline.regions
+      .map((region) => ({
+        region,
+        prospects: world.players.filter((player) => player.level === "high-school" && player.talent.regionId === region.id),
+      }))
+      .sort((left, right) => right.prospects.length - left.prospects.length || right.region.footballCulture - left.region.footballCulture),
+    [world.players, world.talentPipeline.regions],
   );
 
   function conferenceStandings(conference: EcosystemConference) {
@@ -229,6 +253,55 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {view === "talent" && (
+        <div className="compact-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Школьники</small><strong>{world.market.annualProspects}</strong></span>
+            <span><small>JUCO</small><strong>{world.market.jucoProspects}</strong></span>
+            <span><small>Walk-on</small><strong>{world.market.walkOnProspects}</strong></span>
+            <span><small>Национальный уровень</small><strong>{world.market.nationallyExposedProspects}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Ежегодный поток</small><h3>Новые поколения не создаются из воздуха</h3>
+            <p>Регион, инфраструктура, лагеря, физическая зрелость и доступ к скаутам определяют, кого заметят рано, кто раскроется поздно и кто продолжит путь через JUCO или walk-on.</p>
+          </section>
+
+          <div className="talent-prospect-list">
+            {topProspects.slice(0, 6).map((player, index) => (
+              <article key={player.id}>
+                <span>{index + 1}</span>
+                <div><strong>{player.name}</strong><small>{player.position} · {player.talent.homeState} · {player.talent.route}</small></div>
+                <em>{Math.round(player.talent.scoutingGrade)}</em>
+              </article>
+            ))}
+          </div>
+
+          <div className="talent-region-grid">
+            {talentRegions.slice(0, 8).map(({ region, prospects }) => (
+              <article key={region.id}>
+                <header><strong>{region.name}</strong><span>{prospects.length}</span></header>
+                <div><small>Культура</small><b>{Math.round(region.footballCulture)}</b></div>
+                <div><small>Инфраструктура</small><b>{Math.round(region.infrastructure)}</b></div>
+                <div><small>Экспозиция</small><b>{Math.round(region.exposureBias)}</b></div>
+              </article>
+            ))}
+          </div>
+
+          {world.talentPipeline.independentProspects.length > 0 && (
+            <section className="independent-route-list">
+              <header><small>Альтернативные маршруты</small><h3>Карьера не заканчивается после школы</h3></header>
+              {world.talentPipeline.independentProspects.slice(0, 6).map((prospect) => (
+                <article key={prospect.id}>
+                  <span>{prospect.route === "juco" ? "JUCO" : "WALK-ON"}</span>
+                  <div><strong>{prospect.name}</strong><small>{prospect.position} · OVR {Math.round(prospect.overall)} · {prospect.status}</small></div>
+                </article>
+              ))}
+            </section>
+          )}
         </div>
       )}
 

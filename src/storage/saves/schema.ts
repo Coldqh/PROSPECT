@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 15;
+export const CURRENT_SCHEMA_VERSION = 16;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -803,8 +803,55 @@ const ecosystemPlayerEligibilitySchema = z.object({
   scholarshipStatus: z.enum(["none", "partial", "full"]),
 });
 
+const ecosystemTalentProfileSchema = z.object({
+  regionId: z.string().min(1),
+  homeState: z.string().length(2),
+  graduationYear: z.number().int().min(2020).max(2200),
+  route: z.enum(["traditional", "multi-sport", "late-bloomer", "juco", "walk-on"]),
+  developmentCurve: z.enum(["early", "steady", "late"]),
+  physicalMaturity: z.number().min(0).max(100),
+  scoutingGrade: z.number().min(0).max(100),
+  campExposure: z.number().min(0).max(100),
+  exposure: z.enum(["hidden", "local", "regional", "national"]),
+  academicProjection: z.number().min(0).max(100),
+  discoveredYear: z.number().int().min(2020).max(2200),
+});
+
+const ecosystemTalentPipelineSchema = z.object({
+  version: z.literal(1),
+  generationYear: z.number().int().min(2020).max(2200),
+  regions: z.array(z.object({
+    id: z.string().min(1), name: z.string().min(2), stateCodes: z.array(z.string().length(2)).min(1),
+    populationWeight: z.number().min(0).max(100), footballCulture: z.number().min(0).max(100),
+    infrastructure: z.number().min(0).max(100), exposureBias: z.number().min(0).max(100),
+    academicAccess: z.number().min(0).max(100), annualClassSize: z.number().int().positive(),
+  })).min(4),
+  camps: z.array(z.object({
+    id: z.string().min(1), name: z.string().min(2), regionId: z.string().min(1),
+    phase: z.enum(["summer-recruiting", "spring-development"]),
+    phaseWeek: z.number().int().min(1).max(30), prestige: z.number().min(0).max(100),
+    capacity: z.number().int().positive(), lastHeldSeasonYear: z.number().int().min(2019).max(2200),
+  })),
+  independentProspects: z.array(z.object({
+    id: z.string().min(1), seed: z.string().min(1), name: z.string().min(2),
+    age: z.number().int().min(17).max(23), position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    route: z.enum(["juco", "walk-on"]), regionId: z.string().min(1), homeState: z.string().length(2),
+    overall: z.number().min(0).max(100), potential: z.number().min(0).max(100), health: z.number().min(0).max(100),
+    academicProjection: z.number().min(0).max(100), exposure: z.enum(["hidden", "local", "regional", "national"]),
+    campExposure: z.number().min(0).max(100), graduationYear: z.number().int().min(2020).max(2200),
+    yearsInRoute: z.number().int().min(0).max(4), status: z.enum(["available", "contacted", "committed"]),
+    committedTeamId: z.string().min(1).optional(),
+  })),
+  classHistory: z.array(z.object({
+    seasonYear: z.number().int().min(2020).max(2200), generatedPlayers: z.number().int().nonnegative(),
+    traditionalPlayers: z.number().int().nonnegative(), multiSportPlayers: z.number().int().nonnegative(),
+    lateBloomers: z.number().int().nonnegative(), jucoEntries: z.number().int().nonnegative(),
+    walkOnEntries: z.number().int().nonnegative(), topProspectIds: z.array(z.string().min(1)),
+  })),
+});
+
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(4),
+  moduleVersion: z.literal(5),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -874,6 +921,7 @@ const footballEcosystemSchema = z.object({
     previousTeamIds: z.array(z.string().min(1)),
     isHero: z.boolean(),
     eligibility: ecosystemPlayerEligibilitySchema,
+    talent: ecosystemTalentProfileSchema,
   })).min(40),
   coaches: z.array(z.object({
     id: z.string().min(1),
@@ -896,7 +944,7 @@ const footballEcosystemSchema = z.object({
   })).min(10),
   stories: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift"]),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route"]),
     createdOn: gameDateSchema,
     week: z.number().int().min(1),
     title: z.string().min(2),
@@ -918,6 +966,10 @@ const footballEcosystemSchema = z.object({
     totalRecruitingBudget: z.number().min(0),
     totalNilCapacity: z.number().min(0),
     programsUnderFinancialPressure: z.number().int().nonnegative(),
+    annualProspects: z.number().int().nonnegative(),
+    jucoProspects: z.number().int().nonnegative(),
+    walkOnProspects: z.number().int().nonnegative(),
+    nationallyExposedProspects: z.number().int().nonnegative(),
   }),
   teamHistory: z.array(z.object({
     id: z.string().min(1),
@@ -935,7 +987,7 @@ const footballEcosystemSchema = z.object({
   })),
   transactions: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["portal-entry", "transfer", "coach-fired", "coach-hired", "graduation", "recruit-enrolled", "facility-investment", "budget-cut", "nil-commitment"]),
+    kind: z.enum(["portal-entry", "transfer", "coach-fired", "coach-hired", "graduation", "recruit-enrolled", "facility-investment", "budget-cut", "nil-commitment", "juco-entry", "walk-on-entry", "talent-enrolled"]),
     seasonYear: z.number().int(),
     week: z.number().int().min(1),
     createdOn: gameDateSchema,
@@ -947,6 +999,7 @@ const footballEcosystemSchema = z.object({
     toTeamId: z.string().min(1).optional(),
     relatedToHero: z.boolean(),
   })),
+  talentPipeline: ecosystemTalentPipelineSchema,
 });
 
 const careerMetaSchema = z.object({

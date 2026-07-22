@@ -2066,3 +2066,28 @@ body::after {
   .resource-team-list span strong { font-size: 9px; }
   .resource-team-list em { width: 25px; height: 25px; font-size: 9px; }
 }
+
+.talent-prospect-list { display: grid; gap: 7px; }
+.talent-prospect-list article { min-height: 58px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 14px; display: grid; grid-template-columns: 28px minmax(0,1fr) 34px; align-items: center; gap: 9px; background: var(--surface); }
+.talent-prospect-list article > span { color: #ef3340; font-weight: 950; font-size: 12px; }
+.talent-prospect-list article div { min-width: 0; display: grid; gap: 3px; }
+.talent-prospect-list article strong { font-size: 11px; }
+.talent-prospect-list article small { color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.talent-prospect-list article em { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: rgba(239,51,64,.11); color: #ff9ca5; font-size: 10px; font-style: normal; font-weight: 950; }
+.talent-region-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.talent-region-grid article { padding: 11px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.talent-region-grid header { margin-bottom: 9px; display: flex; justify-content: space-between; gap: 8px; }
+.talent-region-grid header strong { font-size: 10px; }
+.talent-region-grid header span { color: #ef3340; font-size: 11px; font-weight: 950; }
+.talent-region-grid article > div { padding: 4px 0; display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,.035); }
+.talent-region-grid small { color: var(--muted); font-size: 7px; }
+.talent-region-grid b { font-size: 8px; }
+.independent-route-list { padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.independent-route-list header { margin-bottom: 9px; }
+.independent-route-list header small { color: #ef3340; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.independent-route-list header h3 { margin: 4px 0 0; font-size: 13px; }
+.independent-route-list article { min-height: 48px; padding: 8px 0; display: grid; grid-template-columns: 55px minmax(0,1fr); gap: 9px; align-items: center; border-top: 1px solid var(--line); }
+.independent-route-list article > span { color: #ff9ca5; font-size: 7px; font-weight: 950; }
+.independent-route-list article div { min-width: 0; display: grid; gap: 3px; }
+.independent-route-list article strong { font-size: 10px; }
+.independent-route-list article small { color: var(--muted); font-size: 8px; }

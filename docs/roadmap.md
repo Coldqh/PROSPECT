@@ -15,7 +15,7 @@
 - [x] Multi-season conferences, transfers and coaching carousel
 - [x] World constitution, eligibility and roster compliance
 - [x] Finite program resources and institutional economics
-- [ ] Annual talent pipeline and geographic recruiting classes
+- [x] Annual talent pipeline and geographic recruiting classes
 - [ ] Multi-year roster-planning AI
 - [ ] Unified recruiting, transfer and coaching labor market
 - [ ] Tactical identities and scheme-driven roster value
@@ -54,3 +54,15 @@
 - resource-dependent recovery, development, recruiting and coaching movement;
 - annual budget rebalance based on results and institutional support;
 - deterministic migration from schema v14 to v15.
+
+
+## v0.16 — Annual talent pipeline
+
+- eight persistent talent regions with different culture, infrastructure, exposure and academic access;
+- annual freshman generation for every active high-school program;
+- multi-sport and late-bloomer development profiles;
+- regional spring combines and summer showcases;
+- scouting grades that change when verified information appears;
+- unsigned seniors preserved through JUCO and walk-on routes;
+- independent prospects can develop, commit and enroll later;
+- deterministic migration from schema v15 to v16.
