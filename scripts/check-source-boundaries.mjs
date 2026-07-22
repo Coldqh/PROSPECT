@@ -12,6 +12,7 @@ export const FORBIDDEN_SOURCE_PATHS = Object.freeze([
   "src/ui",
   "src/app/layout",
   "src/app/providers",
+  "src/app/workspaces",
   "src/core/events",
   "src/core/ids",
   "src/core/saves",

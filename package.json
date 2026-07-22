@@ -1,7 +1,7 @@
 {
   "name": "prospect",
   "private": true,
-  "version": "0.16.2",
+  "version": "0.16.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --pretty false",
     "check:boundaries": "node scripts/check-source-boundaries.mjs",
     "test:architecture": "node --test scripts/check-source-boundaries.test.mjs",
-    "fix:foreign-sources": "powershell -ExecutionPolicy Bypass -File scripts/apply-prospect-source-cleanup.ps1"
+    "fix:foreign-sources": "node scripts/apply-prospect-source-cleanup.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",
