@@ -10,10 +10,11 @@ import type {
 } from "./types";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { createProgramResources } from "./resources";
 
 type LegacyTeam = Omit<
   EcosystemTeam,
-  "conferenceId" | "conferenceWins" | "conferenceLosses" | "championships"
+  "conferenceId" | "conferenceWins" | "conferenceLosses" | "championships" | "compliance" | "resources"
 >;
 
 type LegacyPlayer = Omit<
@@ -26,7 +27,7 @@ type LegacyCoach = Omit<
   "tenureYears" | "careerWins" | "careerLosses" | "previousTeamIds"
 >;
 
-type LegacyV2Team = Omit<EcosystemTeam, "compliance">;
+type LegacyV2Team = Omit<EcosystemTeam, "compliance" | "resources">;
 type LegacyV2Player = Omit<EcosystemPlayer, "eligibility">;
 
 export interface LegacyFootballEcosystemStateV2 extends Omit<
@@ -36,6 +37,21 @@ export interface LegacyFootballEcosystemStateV2 extends Omit<
   moduleVersion: 2;
   teams: LegacyV2Team[];
   players: LegacyV2Player[];
+}
+
+type LegacyV3Team = Omit<EcosystemTeam, "resources">;
+type LegacyV3Market = Omit<
+  FootballEcosystemState["market"],
+  "totalRecruitingBudget" | "totalNilCapacity" | "programsUnderFinancialPressure"
+>;
+
+export interface LegacyFootballEcosystemStateV3 extends Omit<
+  FootballEcosystemState,
+  "moduleVersion" | "teams" | "market"
+> {
+  moduleVersion: 3;
+  teams: LegacyV3Team[];
+  market: LegacyV3Market;
 }
 
 export interface LegacyFootballEcosystemStateV1 {
@@ -112,6 +128,7 @@ export function upgradeFootballEcosystemV1(
     conferenceLosses: 0,
     championships: 0,
     compliance: createTeamCompliance(team, team.rosterIds.length, new SeededRandom(`${team.seed}:compliance:v14`)),
+    resources: createProgramResources(team, new SeededRandom(`${team.seed}:resources:v15`), currentDate.year),
   }));
   const conferenceSetup = assignCollegeConferences(teams);
   const players: EcosystemPlayer[] = input.players
@@ -150,7 +167,7 @@ export function upgradeFootballEcosystemV1(
     compliance: refreshTeamCompliance(team, players, new SeededRandom(`${team.seed}:compliance:upgrade`), constitution),
   }));
   return {
-    moduleVersion: 3,
+    moduleVersion: 4,
     constitution,
     cycle: resolveWorldCycle(currentDate),
     lastSimulatedDay: input.lastSimulatedDay,
@@ -170,6 +187,9 @@ export function upgradeFootballEcosystemV1(
       ...input.market,
       portalPlayers: 0,
       coachOpenings: 0,
+      totalRecruitingBudget: compliantTeams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.recruitingBudget, 0),
+      totalNilCapacity: compliantTeams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.nilCapacity, 0),
+      programsUnderFinancialPressure: compliantTeams.filter((team) => team.level === "college" && team.resources.financialPressure >= 65).length,
     },
     teamHistory: [],
     transactions: [],
@@ -197,6 +217,7 @@ export function upgradeFootballEcosystemV2(
     const withCompliance: EcosystemTeam = {
       ...team,
       compliance: createTeamCompliance(team, team.rosterIds.length, new SeededRandom(`${team.seed}:compliance:v14`), constitution),
+      resources: createProgramResources(team, new SeededRandom(`${team.seed}:resources:v15`), input.seasonYear),
     };
     return {
       ...withCompliance,
@@ -205,10 +226,43 @@ export function upgradeFootballEcosystemV2(
   });
   return {
     ...input,
-    moduleVersion: 3,
+    moduleVersion: 4,
     constitution,
     cycle: resolveWorldCycle(currentDate),
     teams,
     players,
+    market: {
+      ...input.market,
+      totalRecruitingBudget: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.recruitingBudget, 0),
+      totalNilCapacity: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.nilCapacity, 0),
+      programsUnderFinancialPressure: teams.filter((team) => team.level === "college" && team.resources.financialPressure >= 65).length,
+    },
+  };
+}
+
+
+export function upgradeFootballEcosystemV3(
+  input: LegacyFootballEcosystemStateV3,
+  currentDate: GameDate,
+): FootballEcosystemState {
+  const teams: EcosystemTeam[] = input.teams.map((team) => ({
+    ...team,
+    resources: createProgramResources(
+      team,
+      new SeededRandom(`${team.seed}:resources:v15`),
+      input.seasonYear,
+    ),
+  }));
+  return {
+    ...input,
+    moduleVersion: 4,
+    cycle: resolveWorldCycle(currentDate),
+    teams,
+    market: {
+      ...input.market,
+      totalRecruitingBudget: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.recruitingBudget, 0),
+      totalNilCapacity: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + team.resources.nilCapacity, 0),
+      programsUnderFinancialPressure: teams.filter((team) => team.level === "college" && team.resources.financialPressure >= 65).length,
+    },
   };
 }

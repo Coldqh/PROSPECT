@@ -10,7 +10,7 @@ import { createFootballRelationships } from "../../sports/football/relationships
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
-import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -88,6 +88,16 @@ interface LegacyContinuitySave {
   football: FootballCareerState;
   relationships: CareerSave["relationships"];
   world: LegacyFootballEcosystemStateV2;
+  history: HistoryEntry[];
+}
+
+interface LegacyWorldConstitutionSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 14 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV3;
   history: HistoryEntry[];
 }
 
@@ -268,6 +278,24 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionFourteen(input: LegacyWorldConstitutionSave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV3(input.world, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v15`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Ресурсы программ стали конечными",
+        description: "Команды получили реальные бюджеты, NIL-ёмкость, медицину, инфраструктуру, донорское давление и стоимость кадровых решений.",
+      },
+    ],
+  });
 }
 
 function migrateVersionThirteen(input: LegacyContinuitySave): CareerSave {
@@ -673,6 +701,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 14) return { save: migrateVersionFourteen(input as LegacyWorldConstitutionSave), migratedFrom: 14 };
   if (schemaVersion === 13) return { save: migrateVersionThirteen(input as LegacyContinuitySave), migratedFrom: 13 };
   if (schemaVersion === 12) return { save: migrateVersionTwelve(input as LegacyEcosystemSave), migratedFrom: 12 };
   if (schemaVersion === 11) return { save: migrateVersionEleven(input as LegacyCollegeTransitionSave), migratedFrom: 11 };

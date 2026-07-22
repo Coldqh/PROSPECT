@@ -12,6 +12,7 @@ import type {
   FootballEcosystemState,
 } from "./types";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
+import { createProgramResources } from "./resources";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -248,6 +249,7 @@ function createHighSchoolTeams(football: FootballCareerState): EcosystemTeam[] {
       rosterIds: [],
       coachIds: [],
       compliance: createTeamCompliance({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)) }, 0, random.fork("compliance")),
+      resources: createProgramResources({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)), offenseStyle: opponent?.offenseStyle ?? random.pick(OFFENSE_STYLES), defenseStyle: opponent?.defenseStyle ?? random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
       trend: standing.streak >= 2 ? "rising" : standing.streak <= -2 ? "falling" : "stable",
     };
   });
@@ -281,6 +283,7 @@ function createCollegeTeams(football: FootballCareerState): EcosystemTeam[] {
       rosterIds: [],
       coachIds: [],
       compliance: createTeamCompliance({ level: "college", prestige: program.prestige }, 0, random.fork("compliance")),
+      resources: createProgramResources({ level: "college", prestige: program.prestige, offenseStyle: program.scheme, defenseStyle: random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
       trend: "stable",
     };
   });
@@ -335,13 +338,17 @@ export function assignCollegeConferences(teams: EcosystemTeam[]): { teams: Ecosy
 
 function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[]) {
   const seniors = players.filter((player) => player.level === "high-school" && player.classYear === "Senior");
+  const collegeTeams = teams.filter((team) => team.level === "college");
   return {
-    openScholarships: teams.filter((team) => team.level === "college").reduce((sum, team) => sum + Math.max(0, team.compliance.fundedScholarships - team.compliance.scholarshipsUsed), 0),
+    openScholarships: collegeTeams.reduce((sum, team) => sum + Math.max(0, team.compliance.fundedScholarships - team.compliance.scholarshipsUsed), 0),
     activeRecruitments: seniors.filter((player) => player.recruitingStage === "tracked" || player.recruitingStage === "offered").length,
     committedPlayers: seniors.filter((player) => player.recruitingStage === "committed").length,
     coachingHotSeats: coaches.filter((coach) => coach.status === "hot-seat").length,
     portalPlayers: players.filter((player) => player.transferStatus === "portal").length,
     coachOpenings: 0,
+    totalRecruitingBudget: Math.round(collegeTeams.reduce((sum, team) => sum + team.resources.recruitingBudget, 0) * 100) / 100,
+    totalNilCapacity: Math.round(collegeTeams.reduce((sum, team) => sum + team.resources.nilCapacity, 0) * 100) / 100,
+    programsUnderFinancialPressure: collegeTeams.filter((team) => team.resources.financialPressure >= 65).length,
   };
 }
 
@@ -376,6 +383,7 @@ export function createFootballEcosystem(
     const coordinator = createCoach(team.id, "coordinator", team.level, random.fork("coordinator"));
     team.rosterIds = teamPlayers.map((player) => player.id);
     team.compliance = refreshTeamCompliance(team, teamPlayers, random.fork("compliance-final"), constitution);
+    team.resources = createProgramResources(team, random.fork("resources-final"), cycle.seasonYear);
     team.coachIds = [headCoach.id, coordinator.id];
     players.push(...teamPlayers);
     coaches.push(headCoach, coordinator);
@@ -383,7 +391,7 @@ export function createFootballEcosystem(
 
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   return {
-    moduleVersion: 3,
+    moduleVersion: 4,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,

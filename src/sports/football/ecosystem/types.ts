@@ -9,6 +9,8 @@ export type EcosystemCoachRole = "head-coach" | "coordinator";
 export type EcosystemCoachStatus = "secure" | "watched" | "hot-seat";
 export type EcosystemSeasonPhase = "regular-season" | "postseason" | "offseason";
 export type EcosystemTransferStatus = "none" | "portal" | "transferred";
+export type EcosystemResourceTier = "local" | "regional" | "power" | "elite";
+export type EcosystemSpendingPriority = "balanced" | "recruiting" | "development" | "medical" | "facilities";
 export type EcosystemStoryKind =
   | "breakout"
   | "injury"
@@ -22,7 +24,11 @@ export type EcosystemStoryKind =
   | "championship"
   | "transfer"
   | "graduation"
-  | "enrollment";
+  | "enrollment"
+  | "investment"
+  | "budget-crunch"
+  | "nil-battle"
+  | "resource-shift";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -30,7 +36,10 @@ export type EcosystemTransactionKind =
   | "coach-fired"
   | "coach-hired"
   | "graduation"
-  | "recruit-enrolled";
+  | "recruit-enrolled"
+  | "facility-investment"
+  | "budget-cut"
+  | "nil-commitment";
 
 export interface EcosystemPositionNeeds {
   QB: number;
@@ -53,6 +62,34 @@ export interface EcosystemConference {
   prestige: number;
   teamIds: string[];
   champions: EcosystemConferenceChampion[];
+}
+
+
+
+export interface EcosystemProgramResources {
+  tier: EcosystemResourceTier;
+  annualBudget: number;
+  footballBudget: number;
+  coachingBudget: number;
+  recruitingBudget: number;
+  medicalBudget: number;
+  facilitiesBudget: number;
+  academicBudget: number;
+  nilCapacity: number;
+  donorSupport: number;
+  mediaRevenue: number;
+  currentBalance: number;
+  recruitingCommitted: number;
+  medicalCommitted: number;
+  nilCommitted: number;
+  facilitiesLevel: number;
+  medicalLevel: number;
+  academicSupportLevel: number;
+  donorConfidence: number;
+  boardPatience: number;
+  financialPressure: number;
+  spendingPriority: EcosystemSpendingPriority;
+  lastBudgetYear: number;
 }
 
 export interface EcosystemTeam {
@@ -79,6 +116,7 @@ export interface EcosystemTeam {
   coachIds: string[];
   trend: "rising" | "stable" | "falling";
   compliance: EcosystemTeamCompliance;
+  resources: EcosystemProgramResources;
 }
 
 export interface EcosystemPlayer {
@@ -179,10 +217,13 @@ export interface EcosystemMarketState {
   coachingHotSeats: number;
   portalPlayers: number;
   coachOpenings: number;
+  totalRecruitingBudget: number;
+  totalNilCapacity: number;
+  programsUnderFinancialPressure: number;
 }
 
 export interface FootballEcosystemState {
-  moduleVersion: 3;
+  moduleVersion: 4;
   constitution: WorldConstitution;
   cycle: WorldCycleState;
   lastSimulatedDay: number;

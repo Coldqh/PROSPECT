@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 15;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -763,6 +763,32 @@ const ecosystemTeamComplianceSchema = z.object({
   status: z.enum(["clear", "warning", "violation"]),
 });
 
+const ecosystemProgramResourcesSchema = z.object({
+  tier: z.enum(["local", "regional", "power", "elite"]),
+  annualBudget: z.number().min(0),
+  footballBudget: z.number().min(0),
+  coachingBudget: z.number().min(0),
+  recruitingBudget: z.number().min(0),
+  medicalBudget: z.number().min(0),
+  facilitiesBudget: z.number().min(0),
+  academicBudget: z.number().min(0),
+  nilCapacity: z.number().min(0),
+  donorSupport: z.number().min(0).max(100),
+  mediaRevenue: z.number().min(0),
+  currentBalance: z.number(),
+  recruitingCommitted: z.number().min(0),
+  medicalCommitted: z.number().min(0),
+  nilCommitted: z.number().min(0),
+  facilitiesLevel: z.number().min(0).max(100),
+  medicalLevel: z.number().min(0).max(100),
+  academicSupportLevel: z.number().min(0).max(100),
+  donorConfidence: z.number().min(0).max(100),
+  boardPatience: z.number().min(0).max(100),
+  financialPressure: z.number().min(0).max(100),
+  spendingPriority: z.enum(["balanced", "recruiting", "development", "medical", "facilities"]),
+  lastBudgetYear: z.number().int().min(2020).max(2200),
+});
+
 const ecosystemPlayerEligibilitySchema = z.object({
   model: z.enum(["high-school", "legacy-four-in-five", "age-based-five-year"]),
   initialEnrollmentYear: z.number().int().min(2020).max(2200),
@@ -778,7 +804,7 @@ const ecosystemPlayerEligibilitySchema = z.object({
 });
 
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(3),
+  moduleVersion: z.literal(4),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -821,6 +847,7 @@ const footballEcosystemSchema = z.object({
     coachIds: z.array(z.string().min(1)),
     trend: z.enum(["rising", "stable", "falling"]),
     compliance: ecosystemTeamComplianceSchema,
+    resources: ecosystemProgramResourcesSchema,
   })).min(10),
   players: z.array(z.object({
     id: z.string().min(1),
@@ -869,7 +896,7 @@ const footballEcosystemSchema = z.object({
   })).min(10),
   stories: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment"]),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift"]),
     createdOn: gameDateSchema,
     week: z.number().int().min(1),
     title: z.string().min(2),
@@ -888,6 +915,9 @@ const footballEcosystemSchema = z.object({
     coachingHotSeats: z.number().int().nonnegative(),
     portalPlayers: z.number().int().nonnegative(),
     coachOpenings: z.number().int().nonnegative(),
+    totalRecruitingBudget: z.number().min(0),
+    totalNilCapacity: z.number().min(0),
+    programsUnderFinancialPressure: z.number().int().nonnegative(),
   }),
   teamHistory: z.array(z.object({
     id: z.string().min(1),
@@ -905,7 +935,7 @@ const footballEcosystemSchema = z.object({
   })),
   transactions: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["portal-entry", "transfer", "coach-fired", "coach-hired", "graduation", "recruit-enrolled"]),
+    kind: z.enum(["portal-entry", "transfer", "coach-fired", "coach-hired", "graduation", "recruit-enrolled", "facility-investment", "budget-cut", "nil-commitment"]),
     seasonYear: z.number().int(),
     week: z.number().int().min(1),
     createdOn: gameDateSchema,

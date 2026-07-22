@@ -2022,3 +2022,47 @@ body::after {
   .world-market-strip--four strong { font-size: 17px; }
   .conference-grid > button { min-height: 146px; }
 }
+
+
+.resource-team-list { display: grid; gap: 7px; }
+.resource-team-list > button {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto 28px;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+.resource-team-list > button.is-hero { border-color: rgba(239,51,64,.55); background: linear-gradient(155deg, rgba(239,51,64,.11), rgba(255,255,255,.012)), var(--surface); }
+.resource-team-list > button.is-pressure { box-shadow: inset 3px 0 0 rgba(239,51,64,.72); }
+.resource-team-list div { min-width: 0; display: grid; gap: 2px; }
+.resource-team-list div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.resource-team-list div small, .resource-team-list span small { color: var(--muted); font-size: 6px; text-transform: uppercase; letter-spacing: .07em; }
+.resource-team-list span { display: grid; gap: 2px; text-align: right; }
+.resource-team-list span strong { font-size: 10px; }
+.resource-team-list em {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(239,51,64,.16);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+.resource-team-sheet { display: grid; gap: 12px; }
+
+@media (max-width: 430px) {
+  .resource-team-list > button { grid-template-columns: minmax(0,1fr) auto auto 25px; gap: 6px; padding: 9px; }
+  .resource-team-list div strong { font-size: 10px; }
+  .resource-team-list span strong { font-size: 9px; }
+  .resource-team-list em { width: 25px; height: 25px; font-size: 9px; }
+}

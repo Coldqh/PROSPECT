@@ -369,10 +369,37 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionThirteen);
     expect(result.migratedFrom).toBe(13);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(3);
+    expect(result.save.world.moduleVersion).toBe(4);
     expect(result.save.world.constitution.collegeRosterLimit).toBe(105);
     expect(result.save.world.players.every((player) => player.eligibility.athleticallyEligible !== undefined)).toBe(true);
     expect(result.save.world.teams.every((team) => team.compliance.rosterLimit > 0)).toBe(true);
+  });
+
+  it("migrates version fourteen worlds into finite program resources", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const legacyTeams = current.world.teams.map(({ resources: _resources, ...team }) => team);
+    const {
+      totalRecruitingBudget: _totalRecruitingBudget,
+      totalNilCapacity: _totalNilCapacity,
+      programsUnderFinancialPressure: _programsUnderFinancialPressure,
+      ...legacyMarket
+    } = current.world.market;
+    const versionFourteen = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 14 as const },
+      world: {
+        ...current.world,
+        moduleVersion: 3 as const,
+        teams: legacyTeams,
+        market: legacyMarket,
+      },
+    };
+    const result = migrateCareerSave(versionFourteen);
+    expect(result.migratedFrom).toBe(14);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(4);
+    expect(result.save.world.teams.every((team) => team.resources.annualBudget > 0)).toBe(true);
+    expect(result.save.world.market.totalRecruitingBudget).toBeGreaterThan(0);
   });
 
   it("produces the same migrated athlete for the same seed", () => {

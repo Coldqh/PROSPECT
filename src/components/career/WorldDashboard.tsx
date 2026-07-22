@@ -3,6 +3,7 @@ import type { FootballCareerState } from "../../sports/football/career/types";
 import type {
   EcosystemConference,
   EcosystemStory,
+  EcosystemTeam,
   EcosystemTransaction,
   FootballEcosystemState,
 } from "../../sports/football/ecosystem/types";
@@ -14,6 +15,7 @@ const views = [
   { id: "pulse", label: "Пульс" },
   { id: "leagues", label: "Лиги" },
   { id: "moves", label: "Движение" },
+  { id: "resources", label: "Ресурсы" },
   { id: "history", label: "История" },
 ] as const;
 
@@ -34,6 +36,10 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     transfer: "Трансфер",
     graduation: "Выпуск",
     enrollment: "Набор",
+    investment: "Инвестиции",
+    "budget-crunch": "Бюджет",
+    "nil-battle": "NIL",
+    "resource-shift": "Ресурсы",
   }[kind];
 }
 
@@ -49,6 +55,9 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
     "coach-hired": "Назначение",
     graduation: "Выпуск",
     "recruit-enrolled": "Зачисление",
+    "facility-investment": "Инфраструктура",
+    "budget-cut": "Сокращение",
+    "nil-commitment": "NIL",
   }[kind];
 }
 
@@ -61,6 +70,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   const [view, setView] = useState<WorldView>("pulse");
   const [selectedStory, setSelectedStory] = useState<EcosystemStory>();
   const [selectedConference, setSelectedConference] = useState<EcosystemConference>();
+  const [selectedTeam, setSelectedTeam] = useState<EcosystemTeam>();
   const { world, football } = save;
 
   const stories = useMemo(
@@ -80,6 +90,16 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
     [world.teamHistory],
   );
   const heroProgramId = football.college.signedProgramId;
+  const resourceTeams = useMemo(
+    () => world.teams
+      .filter((team) => team.level === "college")
+      .sort((left, right) =>
+        Number(right.id === heroProgramId) - Number(left.id === heroProgramId)
+        || right.resources.financialPressure - left.resources.financialPressure
+        || right.resources.annualBudget - left.resources.annualBudget,
+      ),
+    [world.teams, heroProgramId],
+  );
 
   function conferenceStandings(conference: EcosystemConference) {
     return conference.teamIds
@@ -177,6 +197,41 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
+      {view === "resources" && (
+        <div className="compact-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Рекрутинг</small><strong>${Math.round(world.market.totalRecruitingBudget)}M</strong></span>
+            <span><small>NIL-ёмкость</small><strong>${Math.round(world.market.totalNilCapacity)}M</strong></span>
+            <span><small>Под давлением</small><strong>{world.market.programsUnderFinancialPressure}</strong></span>
+            <span><small>Свободные места</small><strong>{world.market.openScholarships}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Ограниченные ресурсы</small><h3>Деньги меняют решения программ</h3>
+            <p>Бюджет набора, NIL, медицина, база и зарплаты штаба теперь конечны. Сильная программа может проиграть рынок из-за перегретых расходов или финансового давления.</p>
+          </section>
+
+          <div className="resource-team-list">
+            {resourceTeams.slice(0, 12).map((team) => (
+              <button
+                key={team.id}
+                type="button"
+                className={team.id === heroProgramId ? "is-hero" : team.resources.financialPressure >= 68 ? "is-pressure" : ""}
+                onClick={() => setSelectedTeam(team)}
+              >
+                <div>
+                  <strong>{team.shortName}</strong>
+                  <small>{team.resources.tier} · {team.resources.spendingPriority}</small>
+                </div>
+                <span><small>Бюджет</small><strong>${team.resources.annualBudget.toFixed(1)}M</strong></span>
+                <span><small>NIL</small><strong>${team.resources.nilCapacity.toFixed(1)}M</strong></span>
+                <em>{Math.round(team.resources.financialPressure)}</em>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {view === "history" && (
         <div className="compact-view">
           <section className="world-context-card">
@@ -219,6 +274,32 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
             <div className="info-list info-list--compact">
               <span><small>Неделя</small><strong>{selectedStory.week}</strong></span>
               <span><small>Связь с карьерой</small><strong>{selectedStory.relatedToHero ? "Прямая" : "Косвенная"}</strong></span>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet
+        open={Boolean(selectedTeam)}
+        title={selectedTeam?.name ?? "Ресурсы программы"}
+        {...(selectedTeam ? { eyebrow: `${selectedTeam.resources.tier} · приоритет: ${selectedTeam.resources.spendingPriority}` } : {})}
+        onClose={() => setSelectedTeam(undefined)}
+      >
+        {selectedTeam && (
+          <div className="resource-team-sheet">
+            <section className="world-market-strip world-market-strip--four">
+              <span><small>Годовой бюджет</small><strong>${selectedTeam.resources.annualBudget.toFixed(1)}M</strong></span>
+              <span><small>Рекрутинг</small><strong>${selectedTeam.resources.recruitingBudget.toFixed(1)}M</strong></span>
+              <span><small>Медицина</small><strong>{Math.round(selectedTeam.resources.medicalLevel)}</strong></span>
+              <span><small>База</small><strong>{Math.round(selectedTeam.resources.facilitiesLevel)}</strong></span>
+            </section>
+            <div className="info-list info-list--compact">
+              <span><small>NIL доступно</small><strong>${Math.max(0, selectedTeam.resources.nilCapacity - selectedTeam.resources.nilCommitted).toFixed(1)}M</strong></span>
+              <span><small>Бюджет набора доступен</small><strong>${Math.max(0, selectedTeam.resources.recruitingBudget - selectedTeam.resources.recruitingCommitted).toFixed(1)}M</strong></span>
+              <span><small>Доверие доноров</small><strong>{Math.round(selectedTeam.resources.donorConfidence)}</strong></span>
+              <span><small>Терпение руководства</small><strong>{Math.round(selectedTeam.resources.boardPatience)}</strong></span>
+              <span><small>Финансовое давление</small><strong>{Math.round(selectedTeam.resources.financialPressure)}</strong></span>
+              <span><small>Текущий баланс</small><strong>${selectedTeam.resources.currentBalance.toFixed(1)}M</strong></span>
             </div>
           </div>
         )}

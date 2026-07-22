@@ -12,9 +12,17 @@
 - [x] Official visits, offers and verbal commitment
 - [x] Formal signing and college arrival
 - [x] Autonomous football ecosystem core
-- [ ] Freshman camp, redshirt and college depth-chart battle
-- [ ] Full college season
-- [ ] Professional draft route
+- [x] Multi-season conferences, transfers and coaching carousel
+- [x] World constitution, eligibility and roster compliance
+- [x] Finite program resources and institutional economics
+- [ ] Annual talent pipeline and geographic recruiting classes
+- [ ] Multi-year roster-planning AI
+- [ ] Unified recruiting, transfer and coaching labor market
+- [ ] Tactical identities and scheme-driven roster value
+- [ ] National competition, rankings and program reputation
+- [ ] Twenty-season autonomous stability test
+- [ ] Social ecosystem
+- [ ] Resume hero gameplay inside the stable world
 
 ## v0.11 — High school to college
 
@@ -35,3 +43,14 @@
 - recruiting needs changed by other players;
 - compact World view that reports state changes instead of inventing news;
 - automatic migration from schema v11 to v12.
+
+
+## v0.15 — Finite program resources
+
+- annual football budgets and operating balances;
+- finite coaching, recruiting, medical, facilities and academic allocations;
+- NIL capacity and committed NIL spending;
+- donor confidence, board patience and financial pressure;
+- resource-dependent recovery, development, recruiting and coaching movement;
+- annual budget rebalance based on results and institutional support;
+- deterministic migration from schema v14 to v15.

@@ -42,10 +42,13 @@ describe("football ecosystem", () => {
     expect(left.world.coaches.length).toBeGreaterThan(30);
     expect(left.world.conferences).toHaveLength(4);
     expect(left.world.players.some((player) => player.isHero)).toBe(true);
-    expect(left.world.moduleVersion).toBe(3);
+    expect(left.world.moduleVersion).toBe(4);
     expect(left.world.constitution.collegeRosterLimit).toBe(105);
     expect(left.world.teams.every((team) => team.compliance.estimatedRosterSize <= team.compliance.rosterLimit)).toBe(true);
     expect(left.world.players.every((player) => Boolean(player.eligibility.model))).toBe(true);
+    expect(left.world.teams.every((team) => team.resources.annualBudget > 0)).toBe(true);
+    expect(left.world.teams.filter((team) => team.level === "college").every((team) => team.resources.nilCapacity >= 0)).toBe(true);
+    expect(left.world.market.totalRecruitingBudget).toBeGreaterThan(0);
   });
 
   it("advances the market and synchronizes college needs with hero recruiting", () => {
@@ -134,6 +137,28 @@ describe("football ecosystem", () => {
     expect(world.teams.find((team) => team.id === target.id)?.rosterIds).toContain(previousHero.id);
     expect(world.teams.find((team) => team.id === previousHero.teamId)?.rosterIds).not.toContain(previousHero.id);
     expect(world.transactions.some((transaction) => transaction.kind === "recruit-enrolled" && transaction.relatedToHero)).toBe(true);
+  });
+
+  it("spends finite recruiting resources and keeps budgets deterministic", () => {
+    const base = createSave("resource-market");
+    const beforeBudget = base.world.teams
+      .filter((team) => team.level === "college")
+      .reduce((sum, team) => sum + team.resources.recruitingCommitted, 0);
+    const result = advanceFootballEcosystem({
+      ...base,
+      life: { ...base.life, completedDays: 35, weekNumber: 6, dayIndex: 0 },
+      meta: { ...base.meta, currentDate: { year: 2026, month: 9, day: 21 } },
+    });
+    const afterBudget = result.world.teams
+      .filter((team) => team.level === "college")
+      .reduce((sum, team) => sum + team.resources.recruitingCommitted, 0);
+    expect(afterBudget).toBeGreaterThanOrEqual(beforeBudget);
+    expect(result.world.teams.every((team) => team.resources.financialPressure >= 0 && team.resources.financialPressure <= 100)).toBe(true);
+    expect(advanceFootballEcosystem({
+      ...base,
+      life: { ...base.life, completedDays: 35, weekNumber: 6, dayIndex: 0 },
+      meta: { ...base.meta, currentDate: { year: 2026, month: 9, day: 21 } },
+    }).world).toEqual(result.world);
   });
 
   it("is deterministic for the same world state and completed day", () => {
