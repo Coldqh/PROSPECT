@@ -540,6 +540,19 @@ describe("migrateCareerSave", () => {
     expect(result.save.world.social.bonds.every((bond) => bond.active)).toBe(true);
   });
 
+  it("migrates version twenty-one saves into the active hero schema", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const versionTwentyOne = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 21 as const },
+    };
+    const result = migrateCareerSave(versionTwentyOne);
+    expect(result.migratedFrom).toBe(21);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.college.heroCareer).toBeUndefined();
+    expect(result.save.history.at(-1)?.title).toBe("Герой вернулся в живой мир");
+  });
+
   it("produces the same migrated athlete for the same seed", () => {
     expect(migrateCareerSave(legacySave).save.character).toEqual(migrateCareerSave(legacySave).save.character);
   });

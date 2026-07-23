@@ -9,6 +9,7 @@ import { generateHighSchoolSeason } from "../../sports/football/season/generateS
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
+import { activateCollegeHeroCareer } from "../../sports/football/college/heroCareer";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
@@ -128,6 +129,16 @@ interface LegacyTacticalSave {
   football: FootballCareerState;
   relationships: CareerSave["relationships"];
   world: LegacyFootballEcosystemStateV8;
+  history: HistoryEntry[];
+}
+
+interface LegacySocialSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 21 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
   history: HistoryEntry[];
 }
 
@@ -338,6 +349,31 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionTwentyOne(input: LegacySocialSave): CareerSave {
+  const upgraded = {
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+  } as CareerSave;
+  const activated = upgraded.meta.phase === "college-orientation"
+    && upgraded.football.college.status === "orientation"
+    && Boolean(upgraded.football.college.onboardingPriority)
+    ? activateCollegeHeroCareer(upgraded)
+    : upgraded;
+  return careerSaveSchema.parse({
+    ...activated,
+    history: [
+      ...activated.history,
+      {
+        id: `migration-${input.meta.id}-v22`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Герой вернулся в живой мир",
+        description: "Колледж получил активный недельный цикл, реальные depth chart, игровые роли, обещания штаба, решения и трансферное давление.",
+      },
+    ],
+  });
 }
 
 function migrateVersionTwenty(input: LegacyCompetitionSave): CareerSave {
@@ -869,6 +905,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 21) return { save: migrateVersionTwentyOne(input as LegacySocialSave), migratedFrom: 21 };
   if (schemaVersion === 20) return { save: migrateVersionTwenty(input as LegacyCompetitionSave), migratedFrom: 20 };
   if (schemaVersion === 19) return { save: migrateVersionNineteen(input as LegacyTacticalSave), migratedFrom: 19 };
   if (schemaVersion === 18) return { save: migrateVersionEighteen(input as LegacyUnifiedMarketSave), migratedFrom: 18 };

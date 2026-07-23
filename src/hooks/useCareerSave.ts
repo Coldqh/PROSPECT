@@ -24,6 +24,7 @@ interface CareerSaveState {
   signCollegeAgreement(programId: string, route: CollegeEntryRoute): Promise<void>;
   reportToCollege(): Promise<void>;
   setCollegeOnboardingPriority(priority: CollegeOnboardingPriority): Promise<void>;
+  resolveCollegeHeroDecision(optionId: string): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -235,6 +236,20 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const resolveCollegeHeroDecision = useCallback(async (optionId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.resolveCollegeHeroDecision(careerId, optionId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось применить решение университетской карьеры.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -253,5 +268,6 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     signCollegeAgreement,
     reportToCollege,
     setCollegeOnboardingPriority,
+    resolveCollegeHeroDecision,
   };
 }

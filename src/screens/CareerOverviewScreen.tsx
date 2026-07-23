@@ -11,6 +11,7 @@ import { MatchDashboard } from "../components/career/MatchDashboard";
 import { CareerDashboard } from "../components/career/CareerDashboard";
 import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
+import { CollegeCareerDashboard } from "../components/career/CollegeCareerDashboard";
 import { WorldDashboard } from "../components/career/WorldDashboard";
 import {
   familyIncomeLabels,
@@ -86,7 +87,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority, resolveCollegeHeroDecision } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<TabId>("today");
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("people");
@@ -130,6 +131,33 @@ export default function CareerOverviewScreen() {
           mutating={mutating}
           {...(actionError ? { actionError } : {})}
           onSetPriority={setCollegeOnboardingPriority}
+        />
+      </ScreenShell>
+    );
+  }
+
+  if (save.meta.phase === "college-season") {
+    return (
+      <ScreenShell
+        narrow
+        header={
+          <AppHeader
+            compact
+            action={
+              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
+                <Icon name="menu" />
+              </button>
+            }
+          />
+        }
+      >
+        <CollegeCareerDashboard
+          save={save}
+          mutating={mutating}
+          {...(actionError ? { actionError } : {})}
+          onAdvanceDay={advanceDay}
+          onUpdateTrainingPlan={updateTrainingPlan}
+          onResolveDecision={resolveCollegeHeroDecision}
         />
       </ScreenShell>
     );

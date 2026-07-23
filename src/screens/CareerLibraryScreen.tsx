@@ -13,6 +13,12 @@ const potentialLabels = {
   "national-ceiling": "National ceiling",
 } as const;
 
+const phaseLabels = {
+  "high-school-preseason": "Senior season",
+  "college-orientation": "College arrival",
+  "college-season": "Freshman season",
+} as const;
+
 export default function CareerLibraryScreen() {
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -69,11 +75,11 @@ export default function CareerLibraryScreen() {
     <ScreenShell header={<AppHeader />}>
       <section className="landing-hero">
         <div className="landing-hero__grid" />
-        <div className="landing-hero__topline"><span>CAREER LIFE SIMULATOR</span><em>BUILD 0.2</em></div>
+        <div className="landing-hero__topline"><span>CAREER LIFE SIMULATOR</span><em>BUILD 0.23</em></div>
         <div className="landing-hero__copy">
           <span className="eyebrow">AMERICAN FOOTBALL // ORIGIN</span>
           <h1>Талант даёт шанс.<br />Дальше решаешь ты.</h1>
-          <p>Последний школьный сезон. Место в составе. Учёба. Тело. Люди. Первый выбор колледжа.</p>
+          <p>Школьный сезон, рекрутинг и первый год в колледже внутри одного автономного футбольного мира.</p>
           <div className="landing-hero__actions">
             <Link className="button button--primary button--launch" to="/new">Создать спортсмена <Icon name="arrow-right" /></Link>
             <button className="button button--ghost" onClick={() => fileInput.current?.click()}><Icon name="upload" /> Импорт</button>
@@ -119,7 +125,7 @@ export default function CareerLibraryScreen() {
                   </div>
                   <div className="career-file__meta">
                     <span><small>CEILING</small><strong>{potentialLabels[career.potentialBand]}</strong></span>
-                    <span><small>PHASE</small><strong>Senior preseason</strong></span>
+                    <span><small>PHASE</small><strong>{phaseLabels[career.phase]}</strong></span>
                   </div>
                   <div className="career-file__resume">Продолжить карьеру <Icon name="arrow-right" /></div>
                 </button>

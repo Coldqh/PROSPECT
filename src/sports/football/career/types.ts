@@ -68,7 +68,7 @@ export interface DepthChartState {
 export interface FootballCareerState {
   moduleVersion: 8;
   worldSeed: string;
-  stage: "high-school-preseason" | "college-orientation";
+  stage: "high-school-preseason" | "college-orientation" | "college-season";
   position: FootballPosition;
   archetypeId: string;
   archetypeName: string;

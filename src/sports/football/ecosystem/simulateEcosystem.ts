@@ -122,7 +122,7 @@ function updatePlayersDaily(
   day: number,
 ): { players: EcosystemPlayer[]; stories: EcosystemStory[] } {
   const stories: EcosystemStory[] = [];
-  const heroTeamId = save.football.school.id;
+  const heroTeamId = save.football.college.signedProgramId ?? save.football.school.id;
   const nextPlayers = players.map((player) => {
     const team = teams.find((item) => item.id === player.teamId);
     const playerRandom = random.fork(player.id);
@@ -229,7 +229,7 @@ function reorderDepthCharts(
           depthRank: nextRank,
           status: original.status === "injured" ? "injured" : nextRank === 1 ? "starter" : nextRank === 2 ? "rotation" : "backup",
         };
-        const directlyRelevant = teamId === save.football.school.id || teamId === save.football.season.nextOpponent.id;
+        const directlyRelevant = teamId === (save.football.college.signedProgramId ?? save.football.school.id) || teamId === save.football.season.nextOpponent.id;
         if (changed && nextRank === 1 && (directlyRelevant || player.overall >= 72)) {
           stories.push(story(
             save,
@@ -409,6 +409,7 @@ function syncEcosystemIntoFootball(
   world: FootballEcosystemState,
   date: GameDate,
 ): FootballCareerState {
+  if (football.stage === "college-season") return football;
   const heroTeamPlayers = world.players.filter((player) => player.teamId === football.school.id);
   const byId = new Map(heroTeamPlayers.map((player) => [player.id, player]));
   const roster: FootballRosterPlayer[] = football.roster.map((player) => {
@@ -1633,7 +1634,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         players,
         cycle,
         random.fork("talent-camps"),
-        save.football.school.id,
+        save.football.college.signedProgramId ?? save.football.school.id,
       );
       talentPipeline = campResult.pipeline;
       players = campResult.players;

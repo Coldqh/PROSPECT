@@ -10,6 +10,7 @@ import { createPlayerEligibility, refreshTeamCompliance, resolveWorldCycle } fro
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createTalentProfile } from "./talent";
 import { careerArchetypeRole, createPlayerTacticalProfile, reevaluatePlayerTacticalProfile } from "./tactics";
+import { resetCompetitionForSeason } from "./competition";
 
 function archiveCurrentSeason(world: FootballEcosystemState): EcosystemTeamSeasonRecord[] {
   return world.conferences.flatMap((conference) => {
@@ -152,6 +153,16 @@ export function placeHeroInCollegeEcosystem(
     teams: compliantTeams,
     players,
     teamHistory: history,
+    competition: advancedYear
+      ? resetCompetitionForSeason(
+          world.competition,
+          arrivalDate.year,
+          world.conferences,
+          compliantTeams,
+          new SeededRandom(`${football.worldSeed}:hero-arrival:competition:${arrivalDate.year}`),
+        )
+      : world.competition,
+    social: advancedYear ? { ...world.social, seasonYear: arrivalDate.year } : world.social,
     transactions: alreadyRecorded
       ? world.transactions
       : [

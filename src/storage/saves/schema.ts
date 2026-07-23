@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 21;
+export const CURRENT_SCHEMA_VERSION = 22;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -399,9 +399,76 @@ const footballRecruitingSchema = z.object({
   })),
 });
 
+
+const collegeHeroRoleSchema = z.enum(["starter", "rotation", "special-teams", "developmental"]);
+const collegeHeroDecisionSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["coach-meeting", "position-rivalry", "transfer-window"]),
+  createdWeek: z.number().int().min(1),
+  title: z.string().min(2),
+  detail: z.string().min(2),
+  options: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(2),
+    detail: z.string().min(2),
+  })).min(2),
+});
+const collegeHeroCareerSchema = z.object({
+  version: z.literal(1),
+  teamId: z.string().min(1),
+  seasonYear: z.number().int(),
+  week: z.number().int().min(1),
+  role: collegeHeroRoleSchema,
+  depthRank: z.number().int().min(1),
+  coachTrust: z.number().min(0).max(100),
+  lockerRoomStanding: z.number().min(0).max(100),
+  practiceReps: z.number().min(0).max(100),
+  weeklyPracticeGrade: z.enum(["A", "B", "C", "D"]),
+  seasonSnaps: z.number().int().nonnegative(),
+  gamesPlayed: z.number().int().nonnegative(),
+  starts: z.number().int().nonnegative(),
+  redshirtStatus: z.enum(["active", "candidate", "used"]),
+  transferIntent: z.enum(["stay", "open", "portal"]),
+  promises: z.array(z.object({
+    id: z.string().min(1),
+    kind: z.literal("playing-time"),
+    targetRole: projectedCollegeRoleSchema,
+    madeWeek: z.number().int().min(1),
+    deadlineWeek: z.number().int().min(1),
+    status: z.enum(["active", "kept", "broken"]),
+    summary: z.string().min(2),
+  })),
+  pendingDecision: collegeHeroDecisionSchema.optional(),
+  gameLog: z.array(z.object({
+    id: z.string().min(1),
+    seasonYear: z.number().int(),
+    week: z.number().int().min(1),
+    opponentId: z.string().min(1),
+    opponentName: z.string().min(1),
+    won: z.boolean(),
+    score: z.string().min(3),
+    snaps: z.number().int().nonnegative(),
+    started: z.boolean(),
+    grade: z.enum(["A", "B", "C", "D"]),
+    role: collegeHeroRoleSchema,
+  })),
+  weekLog: z.array(z.object({
+    id: z.string().min(1),
+    seasonYear: z.number().int(),
+    week: z.number().int().min(1),
+    role: collegeHeroRoleSchema,
+    depthRank: z.number().int().min(1),
+    coachTrust: z.number().min(0).max(100),
+    lockerRoomStanding: z.number().min(0).max(100),
+    practiceGrade: z.enum(["A", "B", "C", "D"]),
+    summary: z.string().min(2),
+  })),
+  lastSummary: z.string().min(2),
+});
+
 const footballCollegeSchema = z.object({
   moduleVersion: z.literal(1),
-  status: z.enum(["high-school", "signed", "orientation"]),
+  status: z.enum(["high-school", "signed", "orientation", "active"]),
   entryRoute: z.enum(["scholarship", "preferred-walk-on"]).optional(),
   signedProgramId: z.string().min(1).optional(),
   signedDate: gameDateSchema.optional(),
@@ -448,12 +515,13 @@ const footballCollegeSchema = z.object({
   }).optional(),
   arrivalDate: gameDateSchema.optional(),
   onboardingPriority: z.enum(["compete-now", "learn-system", "academic-base"]).optional(),
+  heroCareer: collegeHeroCareerSchema.optional(),
 });
 
 const footballSchema = z.object({
   moduleVersion: z.literal(8),
   worldSeed: z.string().min(1),
-  stage: z.enum(["high-school-preseason", "college-orientation"]),
+  stage: z.enum(["high-school-preseason", "college-orientation", "college-season"]),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
   archetypeId: z.string().min(1),
   archetypeName: z.string().min(1),
@@ -1305,7 +1373,7 @@ const careerMetaSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   currentDate: gameDateSchema,
-  phase: z.enum(["high-school-preseason", "college-orientation"]),
+  phase: z.enum(["high-school-preseason", "college-orientation", "college-season"]),
   revision: z.number().int().nonnegative(),
 });
 
@@ -1333,7 +1401,7 @@ export interface CareerIndexRecord {
   id: string;
   displayName: string;
   sport: "american-football";
-  phase: "high-school-preseason" | "college-orientation";
+  phase: "high-school-preseason" | "college-orientation" | "college-season";
   currentDate: string;
   updatedAt: string;
   revision: number;

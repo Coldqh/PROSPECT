@@ -22,7 +22,8 @@
 - [x] National competition, rankings and program reputation
 - [x] Twenty-season autonomous stability test
 - [x] Social ecosystem
-- [ ] Resume hero gameplay inside the stable world
+- [x] Resume hero gameplay inside the stable world
+- [ ] Interactive college match layer and full multi-year athlete progression
 
 ## v0.11 — High school to college
 
@@ -141,3 +142,16 @@
 - compact People tab and locker-room breakdown for every program;
 - social invariants included in the twenty-season observer;
 - deterministic migration from schema v20 to v21.
+
+## v0.23 — Hero inside the stable world
+
+- college orientation now activates a persistent freshman season inside the autonomous ecosystem;
+- the hero occupies a real program roster slot and a real position-room depth rank;
+- daily life and training update practice reps, coach trust, locker-room standing, health, form and ratings;
+- weekly roles become starter, rotation, special teams or developmental from actual world state;
+- completed national-schedule games create hero game logs with snaps, starts, grades and results;
+- playing-time promises are checked against real roles and accumulated snaps;
+- coach meetings, position rivalries and transfer pressure generate blocking career decisions;
+- portal requests update the hero, world transactions and persistent history;
+- compact Week, Depth, People and Season views replace the temporary end-of-demo state;
+- deterministic migration from schema v21 to v22.

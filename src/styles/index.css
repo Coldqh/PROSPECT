@@ -2226,3 +2226,203 @@ body::after {
 .social-team-list > button > em { color: #ffb6bd; border-color: rgba(239,51,64,.24); }
 .social-incident-list article > em { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 .social-team-sheet { border-color: rgba(239,51,64,.2); }
+
+/* v0.23 hero college career */
+.college-career-shell { display: grid; gap: 12px; }
+.college-career-head {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(145deg, rgba(201,24,42,.11), rgba(255,255,255,.018));
+}
+.college-career-head > div { min-width: 0; display: grid; gap: 3px; }
+.college-career-head small { color: #ef3340; font-size: 8px; font-weight: 850; letter-spacing: .08em; }
+.college-career-head h1 { margin: 0; font-size: 26px; letter-spacing: -.04em; }
+.college-career-head p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.college-career-head > span { min-width: 72px; display: grid; place-items: center; align-content: center; border-left: 1px solid var(--line); }
+.college-career-head > span small { color: var(--muted); }
+.college-career-head > span strong { font-size: 28px; line-height: 1; }
+.college-career-head > span em { color: #ff9ca5; font-size: 9px; font-style: normal; font-weight: 900; }
+.college-week-view,
+.college-people-view,
+.college-season-view { display: grid; gap: 10px; }
+.college-week-strip,
+.college-season-strip,
+.college-depth-reality,
+.college-culture-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+.college-week-strip span,
+.college-season-strip span,
+.college-depth-reality span,
+.college-culture-grid article {
+  min-width: 0;
+  padding: 10px 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 3px;
+  background: var(--surface);
+}
+.college-week-strip small,
+.college-season-strip small,
+.college-depth-reality small,
+.college-culture-grid small { color: var(--muted); font-size: 7px; }
+.college-week-strip strong,
+.college-season-strip strong,
+.college-depth-reality strong,
+.college-culture-grid strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.college-decision-card,
+.college-next-game-card,
+.college-training-card,
+.college-last-day-card,
+.college-room-context,
+.college-culture-card,
+.college-bond-list,
+.college-promise-list,
+.college-transfer-card,
+.college-game-log,
+.college-world-stories {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.college-decision-card { border-color: rgba(239,51,64,.48); background: rgba(239,51,64,.075); }
+.college-decision-card > small,
+.college-next-game-card small,
+.college-training-card header small,
+.college-room-context small,
+.college-culture-card small,
+.college-bond-list header small,
+.college-promise-list header small,
+.college-transfer-card small,
+.college-game-log header small,
+.college-world-stories header small { color: #ef3340; font-size: 7px; font-weight: 850; letter-spacing: .08em; }
+.college-decision-card h3,
+.college-next-game-card h3,
+.college-training-card h3,
+.college-room-context h3,
+.college-culture-card h3,
+.college-bond-list h3,
+.college-promise-list h3,
+.college-transfer-card h3,
+.college-game-log h3,
+.college-world-stories h3 { margin: 3px 0 0; font-size: 13px; }
+.college-decision-card p,
+.college-next-game-card p,
+.college-room-context p,
+.college-culture-card p,
+.college-transfer-card p { margin: 7px 0 0; color: var(--muted); font-size: 8px; line-height: 1.45; }
+.college-decision-card > div { margin-top: 10px; display: grid; gap: 6px; }
+.college-decision-card button,
+.college-training-focuses button {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  display: grid;
+  gap: 3px;
+  color: var(--text);
+  background: rgba(255,255,255,.018);
+  text-align: left;
+  cursor: pointer;
+}
+.college-decision-card button strong,
+.college-training-focuses button strong { font-size: 9px; }
+.college-decision-card button small,
+.college-training-focuses button small { color: var(--muted); font-size: 7px; line-height: 1.35; }
+.college-next-game-card,
+.college-culture-card,
+.college-transfer-card { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+.college-next-game-card > div,
+.college-culture-card > div,
+.college-transfer-card > div { min-width: 0; }
+.college-next-game-card > span,
+.college-culture-card > strong { color: #ef3340; font-size: 24px; font-weight: 950; }
+.college-training-card { display: grid; gap: 9px; }
+.college-training-card > header { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.college-training-card > header > span { color: #ff9ca5; font-size: 8px; text-transform: uppercase; }
+.college-training-focuses { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.college-training-focuses button.is-active { border-color: rgba(239,51,64,.55); background: rgba(239,51,64,.09); }
+.college-last-day-card { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 10px; align-items: center; }
+.college-last-day-card > span { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: var(--accent); font-size: 17px; font-weight: 950; }
+.college-last-day-card > div { min-width: 0; display: grid; gap: 3px; }
+.college-last-day-card small { color: var(--muted); font-size: 7px; }
+.college-last-day-card strong { font-size: 10px; }
+.college-last-day-card p { margin: 0; color: var(--muted); font-size: 8px; line-height: 1.4; }
+.college-advance-day { margin-top: 2px; }
+.college-active-room { display: grid; gap: 6px; }
+.college-active-room > article {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+}
+.college-active-room > article.is-hero { border-color: rgba(239,51,64,.58); background: rgba(239,51,64,.08); }
+.college-active-room > article > span { color: #ef3340; font-size: 12px; font-weight: 950; }
+.college-active-room > article div { min-width: 0; display: grid; gap: 2px; }
+.college-active-room > article strong { font-size: 10px; }
+.college-active-room > article small { color: var(--muted); font-size: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.college-active-room > article em { font-size: 11px; font-style: normal; font-weight: 950; text-align: right; }
+.college-bond-list,
+.college-promise-list,
+.college-game-log,
+.college-world-stories { display: grid; gap: 6px; }
+.college-bond-list > header,
+.college-promise-list > header,
+.college-game-log > header,
+.college-world-stories > header { margin-bottom: 3px; }
+.college-bond-list article,
+.college-game-log article {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 62px minmax(0,1fr) 28px;
+  gap: 8px;
+  align-items: center;
+}
+.college-bond-list article > span { color: #ff9ca5; font-size: 7px; font-weight: 900; }
+.college-bond-list article div,
+.college-game-log article div { min-width: 0; display: grid; gap: 2px; }
+.college-bond-list article strong,
+.college-game-log article strong { font-size: 9px; }
+.college-bond-list article small,
+.college-game-log article small { color: var(--muted); font-size: 7px; }
+.college-bond-list article em,
+.college-game-log article em { font-size: 10px; font-style: normal; font-weight: 950; text-align: right; }
+.college-bond-list article em.is-danger { color: var(--danger); }
+.college-promise-list article {
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 72px minmax(0,1fr);
+  gap: 8px;
+  background: rgba(255,255,255,.018);
+}
+.college-promise-list article.is-broken { border-color: rgba(255,74,87,.42); }
+.college-promise-list article.is-kept { border-color: rgba(255,255,255,.18); }
+.college-promise-list article > span { color: #ff9ca5; font-size: 7px; font-weight: 900; }
+.college-promise-list article div { display: grid; gap: 2px; }
+.college-promise-list article strong { font-size: 9px; }
+.college-promise-list article small { color: var(--muted); font-size: 7px; line-height: 1.4; }
+.college-game-log article > span { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 8px; font-weight: 950; background: rgba(255,255,255,.06); }
+.college-game-log article > span.is-win { color: #fff; background: rgba(239,51,64,.22); }
+.college-game-log article > span.is-loss { color: var(--muted); }
+.college-world-stories article { padding: 8px 0; border-top: 1px solid var(--line); display: grid; gap: 3px; }
+.college-world-stories article strong { font-size: 9px; }
+.college-world-stories article small { color: var(--muted); font-size: 7px; line-height: 1.4; }
+@media (max-width: 430px) {
+  .college-career-head h1 { font-size: 22px; }
+  .college-week-strip,
+  .college-season-strip,
+  .college-depth-reality,
+  .college-culture-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .college-training-focuses { grid-template-columns: 1fr; }
+}

@@ -17,6 +17,7 @@ import { commitToCollege, withdrawCollegeCommitment } from "../../sports/footbal
 import type { RecruitingActionId } from "../../sports/football/recruiting/types";
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../../sports/football/college/types";
 import { reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "../../sports/football/college/transition";
+import { resolveCollegeHeroDecision } from "../../sports/football/college/heroCareer";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -44,7 +45,7 @@ function toIndexRecord(save: CareerSave): CareerIndexRecord {
     revision: save.meta.revision,
     position: save.football.position,
     jerseyNumber: save.football.jerseyNumber,
-    schoolName: save.football.college.status === "orientation" && save.football.college.program
+    schoolName: (save.football.college.status === "orientation" || save.football.college.status === "active") && save.football.college.program
       ? save.football.college.program.name
       : save.football.school.name,
     stateCode: save.character.origin.stateCode,
@@ -158,7 +159,7 @@ export class CareerRepository {
 
   async startMatch(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
-    if (current.meta.phase === "college-orientation") throw new Error("College daily cycle is not active during orientation");
+    if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is only available during high school");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
     if (current.life.dayIndex !== 5) throw new Error("Match is only available on Saturday");
     return this.save(startMatch(current));
@@ -205,11 +206,19 @@ export class CareerRepository {
     return this.save(setCollegeOnboardingPriority(current, priority));
   }
 
+
+  async resolveCollegeHeroDecision(careerId: string, optionId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(resolveCollegeHeroDecision(current, optionId));
+  }
+
   async advanceDay(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
-    if (current.meta.phase === "college-orientation") throw new Error("College daily cycle is not active during orientation");
-    if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before advancing");
-    if (current.life.dayIndex === 5 && current.football.match.status !== "complete") {
+    if (current.meta.phase === "college-orientation") throw new Error("College orientation must be completed before advancing");
+    if (current.meta.phase === "high-school-preseason" && current.relationships.pendingEvent) {
+      throw new Error("Relationship event must be resolved before advancing");
+    }
+    if (current.meta.phase === "high-school-preseason" && current.life.dayIndex === 5 && current.football.match.status !== "complete") {
       throw new Error("Match must be completed before advancing Saturday");
     }
     return this.save(advanceFootballCareerDay(current));

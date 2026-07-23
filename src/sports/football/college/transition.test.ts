@@ -83,6 +83,8 @@ describe("college transition", () => {
     const arrived = reportToCollege(signCollegeAgreement(save, program.id, "scholarship"));
     const selected = setCollegeOnboardingPriority(arrived, "learn-system");
     expect(selected.football.college.onboardingPriority).toBe("learn-system");
+    expect(selected.meta.phase).toBe("college-season");
+    expect(selected.football.college.heroCareer?.teamId).toBe(program.id);
     expect(() => setCollegeOnboardingPriority(selected, "compete-now")).toThrow();
   });
 });

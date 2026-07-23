@@ -10,6 +10,7 @@ import { createInitialMatchState } from "../matches/createMatchState";
 import { advanceRelationshipWorld } from "../relationships/relationshipEvents";
 import { advanceRecruitingWorld } from "../recruiting/visits";
 import { advanceFootballEcosystem } from "../ecosystem/simulateEcosystem";
+import { advanceCollegeCareerDay } from "../college/heroCareer";
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -94,6 +95,7 @@ export function updateTrainingPlan(
 }
 
 export function advanceFootballCareerDay(save: CareerSave): CareerSave {
+  if (save.meta.phase === "college-season") return advanceCollegeCareerDay(save);
   const result = advanceLifeDay(save.character, save.life, save.meta.currentDate, save.meta.worldSeed);
   const weekday = save.life.dayIndex;
   const practiceFactor = [0.9, 1, 1.15, 1.05, 0.72, 0.95, 0.2][weekday] ?? 1;

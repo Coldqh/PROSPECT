@@ -2,6 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { placeHeroInCollegeEcosystem } from "../ecosystem/heroIntegration";
+import { activateCollegeHeroCareer } from "./heroCareer";
 import type { RelationshipNpc } from "../../../core/relationships/types";
 import type { ProjectedCollegeRole, RecruitingProgram } from "../recruiting/types";
 import type {
@@ -397,7 +398,7 @@ export function setCollegeOnboardingPriority(save: CareerSave, priority: College
     "learn-system": { confidence: 1, stress: -1, footballIq: 0.8, gpa: 0, label: "Сначала выучить систему" },
     "academic-base": { confidence: 0, stress: -2, footballIq: 0.2, gpa: 0.06, label: "Закрепить учебный фундамент" },
   }[priority];
-  return {
+  const prioritized: CareerSave = {
     ...save,
     character: {
       ...save.character,
@@ -424,4 +425,5 @@ export function setCollegeOnboardingPriority(save: CareerSave, priority: College
       },
     ],
   };
+  return activateCollegeHeroCareer(prioritized);
 }
