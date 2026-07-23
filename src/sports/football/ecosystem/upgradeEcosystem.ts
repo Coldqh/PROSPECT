@@ -14,15 +14,16 @@ import { createProgramResources } from "./resources";
 import { createTalentPipeline, createTalentProfile } from "./talent";
 import { createEmptyRosterPlan, reviewRosterManagement } from "./rosterManagement";
 import { createUnifiedMovementMarket } from "./movementMarket";
+import { createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 
 type LegacyTeam = Omit<
   EcosystemTeam,
-  "conferenceId" | "conferenceWins" | "conferenceLosses" | "championships" | "compliance" | "resources" | "rosterPlan"
+  "conferenceId" | "conferenceWins" | "conferenceLosses" | "championships" | "compliance" | "resources" | "rosterPlan" | "tactical"
 >;
 
 type LegacyPlayer = Omit<
   EcosystemPlayer,
-  "eligibilityYears" | "seasonsPlayed" | "transferStatus" | "previousTeamIds" | "isHero" | "talent" | "usagePlan" | "positionHistory"
+  "eligibilityYears" | "seasonsPlayed" | "transferStatus" | "previousTeamIds" | "isHero" | "talent" | "usagePlan" | "positionHistory" | "tactical"
 >;
 
 type LegacyCoach = Omit<
@@ -30,11 +31,11 @@ type LegacyCoach = Omit<
   "tenureYears" | "careerWins" | "careerLosses" | "previousTeamIds"
 >;
 
-type LegacyV2Team = Omit<EcosystemTeam, "compliance" | "resources" | "rosterPlan">;
-type LegacyV2Player = Omit<EcosystemPlayer, "eligibility" | "talent" | "usagePlan" | "positionHistory">;
+type LegacyV2Team = Omit<EcosystemTeam, "compliance" | "resources" | "rosterPlan" | "tactical">;
+type LegacyV2Player = Omit<EcosystemPlayer, "eligibility" | "talent" | "usagePlan" | "positionHistory" | "tactical">;
 type LegacyV2Market = Omit<
   FootballEcosystemState["market"],
-  "totalRecruitingBudget" | "totalNilCapacity" | "programsUnderFinancialPressure" | "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates"
+  "totalRecruitingBudget" | "totalNilCapacity" | "programsUnderFinancialPressure" | "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems"
 >;
 
 export interface LegacyFootballEcosystemStateV2 extends Omit<
@@ -47,11 +48,11 @@ export interface LegacyFootballEcosystemStateV2 extends Omit<
   market: LegacyV2Market;
 }
 
-type LegacyV3Team = Omit<EcosystemTeam, "resources" | "rosterPlan">;
-type LegacyV3Player = Omit<EcosystemPlayer, "talent" | "usagePlan" | "positionHistory">;
+type LegacyV3Team = Omit<EcosystemTeam, "resources" | "rosterPlan" | "tactical">;
+type LegacyV3Player = Omit<EcosystemPlayer, "talent" | "usagePlan" | "positionHistory" | "tactical">;
 type LegacyV3Market = Omit<
   FootballEcosystemState["market"],
-  "totalRecruitingBudget" | "totalNilCapacity" | "programsUnderFinancialPressure" | "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates"
+  "totalRecruitingBudget" | "totalNilCapacity" | "programsUnderFinancialPressure" | "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems"
 >;
 
 export interface LegacyFootballEcosystemStateV3 extends Omit<
@@ -64,11 +65,11 @@ export interface LegacyFootballEcosystemStateV3 extends Omit<
   market: LegacyV3Market;
 }
 
-type LegacyV4Team = Omit<EcosystemTeam, "rosterPlan">;
-type LegacyV4Player = Omit<EcosystemPlayer, "talent" | "usagePlan" | "positionHistory">;
+type LegacyV4Team = Omit<EcosystemTeam, "rosterPlan" | "tactical">;
+type LegacyV4Player = Omit<EcosystemPlayer, "talent" | "usagePlan" | "positionHistory" | "tactical">;
 type LegacyV4Market = Omit<
   FootballEcosystemState["market"],
-  "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates"
+  "annualProspects" | "jucoProspects" | "walkOnProspects" | "nationallyExposedProspects" | "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems"
 >;
 
 export interface LegacyFootballEcosystemStateV4 extends Omit<
@@ -81,9 +82,9 @@ export interface LegacyFootballEcosystemStateV4 extends Omit<
   market: LegacyV4Market;
 }
 
-type LegacyV5Team = Omit<EcosystemTeam, "rosterPlan">;
-type LegacyV5Player = Omit<EcosystemPlayer, "usagePlan" | "positionHistory">;
-type LegacyV5Market = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates">;
+type LegacyV5Team = Omit<EcosystemTeam, "rosterPlan" | "tactical">;
+type LegacyV5Player = Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">;
+type LegacyV5Market = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 
 export interface LegacyFootballEcosystemStateV5 extends Omit<
   FootballEcosystemState,
@@ -95,8 +96,18 @@ export interface LegacyFootballEcosystemStateV5 extends Omit<
   market: LegacyV5Market;
 }
 
-export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "movementMarket"> {
+export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "movementMarket" | "market"> {
   moduleVersion: 6;
+  teams: Array<Omit<EcosystemTeam, "tactical">>;
+  players: Array<Omit<EcosystemPlayer, "tactical">>;
+  market: Omit<FootballEcosystemState["market"], "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
+}
+
+export interface LegacyFootballEcosystemStateV7 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market"> {
+  moduleVersion: 7;
+  teams: Array<Omit<EcosystemTeam, "tactical">>;
+  players: Array<Omit<EcosystemPlayer, "tactical">>;
+  market: Omit<FootballEcosystemState["market"], "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 }
 
 export interface LegacyFootballEcosystemStateV1 {
@@ -119,16 +130,41 @@ export interface LegacyFootballEcosystemStateV1 {
 
 const CLASS_INDEX = { Freshman: 0, Sophomore: 1, Junior: 2, Senior: 3 } as const;
 
-type PreRosterMarket = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates">;
+type PreRosterMarket = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket"> & {
-  teams: Array<Omit<EcosystemTeam, "rosterPlan">>;
-  players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">>;
+  teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">>;
+  players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">>;
   market: PreRosterMarket;
 };
 
+function addTacticalLayer(
+  teams: Array<Omit<EcosystemTeam, "tactical">>,
+  players: Array<Omit<EcosystemPlayer, "tactical">>,
+  coaches: EcosystemCoach[],
+  seasonYear: number,
+): { teams: EcosystemTeam[]; players: EcosystemPlayer[] } {
+  const tacticalTeams: EcosystemTeam[] = teams.map((team) => {
+    const headCoach = coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
+    return {
+      ...team,
+      tactical: createTacticalIdentity(team, headCoach, new SeededRandom(`${team.seed}:tactical:v19`)),
+    };
+  });
+  const teamMap = new Map(tacticalTeams.map((team) => [team.id, team]));
+  const tacticalPlayers: EcosystemPlayer[] = players.map((player) => {
+    const team = teamMap.get(player.teamId);
+    if (!team) throw new Error(`Cannot assign tactical profile without team: ${player.teamId}`);
+    return {
+      ...player,
+      tactical: createPlayerTacticalProfile(player, team.tactical, new SeededRandom(`${player.seed}:tactical:v19`)),
+    };
+  });
+  return { teams: tacticalTeams, players: tacticalPlayers };
+}
+
 function normalizeRosterPlayers(
-  players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">>,
-): EcosystemPlayer[] {
+  players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">>,
+): Array<Omit<EcosystemPlayer, "tactical">> {
   return players.map((player) => ({
     ...player,
     usagePlan: player.depthRank === 1 ? "starter" : player.depthRank === 2 ? "rotation" : "developmental",
@@ -137,11 +173,14 @@ function normalizeRosterPlayers(
 }
 
 function finalizeRosterUpgrade(base: PreRosterWorld, currentDate: GameDate): FootballEcosystemState {
-  const players = normalizeRosterPlayers(base.players);
-  const teams: EcosystemTeam[] = base.teams.map((team) => ({
+  const rosterPlayers = normalizeRosterPlayers(base.players);
+  const rosterTeams: Array<Omit<EcosystemTeam, "tactical">> = base.teams.map((team) => ({
     ...team,
     rosterPlan: createEmptyRosterPlan(team, base.seasonYear),
   }));
+  const tactical = addTacticalLayer(rosterTeams, rosterPlayers, base.coaches, base.seasonYear);
+  const players = tactical.players;
+  const teams = tactical.teams;
   const planning = reviewRosterManagement(
     teams,
     players,
@@ -155,7 +194,7 @@ function finalizeRosterUpgrade(base: PreRosterWorld, currentDate: GameDate): Foo
   const collegeTeams = planning.teams.filter((team) => team.level === "college");
   return {
     ...base,
-    moduleVersion: 7,
+    moduleVersion: 8,
     teams: planning.teams,
     players: planning.players,
     market: {
@@ -166,6 +205,8 @@ function finalizeRosterUpgrade(base: PreRosterWorld, currentDate: GameDate): Foo
       activeNegotiations: 0,
       withdrawnOffers: 0,
       transferCandidates: planning.players.filter((player) => player.level === "college" && player.depthRank >= 3 && player.eligibilityYears > 1).length,
+      lowSchemeFitPlayers: planning.players.filter((player) => player.level === "college" && player.tactical.schemeFit < 55).length,
+      programsInstallingNewSystems: collegeTeams.filter((team) => team.tactical.installation < 58 || team.tactical.continuity < 48).length,
     },
     movementMarket: createUnifiedMovementMarket(planning.teams, planning.players, base.seasonYear),
   };
@@ -178,7 +219,7 @@ function currentSeasonYear(football: FootballCareerState): number {
 function heroPlayer(
   character: CharacterState,
   football: FootballCareerState,
-): EcosystemPlayer {
+): Omit<EcosystemPlayer, "tactical"> {
   return {
     id: "hero",
     seed: `${football.worldSeed}:hero`,
@@ -222,7 +263,7 @@ export function upgradeFootballEcosystemV1(
   football: FootballCareerState,
   currentDate: GameDate,
 ): FootballEcosystemState {
-  const teams: Array<Omit<EcosystemTeam, "rosterPlan">> = input.teams.map((team) => ({
+  const teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">> = input.teams.map((team) => ({
     ...team,
     conferenceWins: 0,
     conferenceLosses: 0,
@@ -231,7 +272,7 @@ export function upgradeFootballEcosystemV1(
     resources: createProgramResources(team, new SeededRandom(`${team.seed}:resources:v15`), currentDate.year),
   }));
   const conferenceSetup = assignCollegeConferences(teams);
-  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">> = input.players
+  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">> = input.players
     .filter((player) => player.id !== "hero")
     .map((player) => ({
       ...player,
@@ -263,7 +304,7 @@ export function upgradeFootballEcosystemV1(
     return team;
   });
   const constitution = createWorldConstitution();
-  const compliantTeams: Array<Omit<EcosystemTeam, "rosterPlan">> = updatedTeams.map((team) => ({
+  const compliantTeams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">> = updatedTeams.map((team) => ({
     ...team,
     compliance: refreshTeamCompliance(team, players, new SeededRandom(`${team.seed}:compliance:upgrade`), constitution),
   }));
@@ -307,7 +348,7 @@ export function upgradeFootballEcosystemV2(
   currentDate: GameDate,
 ): FootballEcosystemState {
   const constitution = createWorldConstitution();
-  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">> = input.players.map((player) => ({
+  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">> = input.players.map((player) => ({
     ...player,
     eligibility: createPlayerEligibility(
       player.level,
@@ -319,8 +360,8 @@ export function upgradeFootballEcosystemV2(
     ),
     talent: createTalentProfile({ level: player.level, classYear: player.classYear, overall: player.overall, potential: player.potential, nationalRank: player.nationalRank, isHero: player.isHero }, input.teams.find((team) => team.id === player.teamId)?.stateCode ?? "TX", input.seasonYear, new SeededRandom(`${player.seed}:talent:v16`)),
   }));
-  const teams: Array<Omit<EcosystemTeam, "rosterPlan">> = input.teams.map((team) => {
-    const withCompliance: Omit<EcosystemTeam, "rosterPlan"> = {
+  const teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">> = input.teams.map((team) => {
+    const withCompliance: Omit<EcosystemTeam, "rosterPlan" | "tactical"> = {
       ...team,
       compliance: createTeamCompliance(team, team.rosterIds.length, new SeededRandom(`${team.seed}:compliance:v14`), constitution),
       resources: createProgramResources(team, new SeededRandom(`${team.seed}:resources:v15`), input.seasonYear),
@@ -355,7 +396,7 @@ export function upgradeFootballEcosystemV3(
   input: LegacyFootballEcosystemStateV3,
   currentDate: GameDate,
 ): FootballEcosystemState {
-  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">> = input.players.map((player) => ({
+  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">> = input.players.map((player) => ({
     ...player,
     talent: createTalentProfile(
       { level: player.level, classYear: player.classYear, overall: player.overall, potential: player.potential, nationalRank: player.nationalRank, isHero: player.isHero },
@@ -364,7 +405,7 @@ export function upgradeFootballEcosystemV3(
       new SeededRandom(`${player.seed}:talent:v16`),
     ),
   }));
-  const teams: Array<Omit<EcosystemTeam, "rosterPlan">> = input.teams.map((team) => ({
+  const teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">> = input.teams.map((team) => ({
     ...team,
     resources: createProgramResources(
       team,
@@ -396,7 +437,7 @@ export function upgradeFootballEcosystemV4(
   input: LegacyFootballEcosystemStateV4,
   currentDate: GameDate,
 ): FootballEcosystemState {
-  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory">> = input.players.map((player) => ({
+  const players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">> = input.players.map((player) => ({
     ...player,
     talent: createTalentProfile(
       { level: player.level, classYear: player.classYear, overall: player.overall, potential: player.potential, nationalRank: player.nationalRank, isHero: player.isHero },
@@ -435,17 +476,43 @@ export function upgradeFootballEcosystemV6(
   input: LegacyFootballEcosystemStateV6,
   currentDate: GameDate,
 ): FootballEcosystemState {
-  const movementMarket = createUnifiedMovementMarket(input.teams, input.players, input.seasonYear);
+  const rosterTeams = input.teams;
+  const rosterPlayers = input.players;
+  const tactical = addTacticalLayer(rosterTeams, rosterPlayers, input.coaches, input.seasonYear);
+  const movementMarket = createUnifiedMovementMarket(tactical.teams, tactical.players, input.seasonYear);
   return {
     ...input,
-    moduleVersion: 7,
+    moduleVersion: 8,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
+    teams: tactical.teams,
+    players: tactical.players,
     market: {
       ...input.market,
       activeNegotiations: 0,
       withdrawnOffers: 0,
-      transferCandidates: input.players.filter((player) => player.level === "college" && player.depthRank >= 3 && player.eligibilityYears > 1).length,
+      transferCandidates: tactical.players.filter((player) => player.level === "college" && player.depthRank >= 3 && player.eligibilityYears > 1).length,
+      lowSchemeFitPlayers: tactical.players.filter((player) => player.level === "college" && player.tactical.schemeFit < 55).length,
+      programsInstallingNewSystems: tactical.teams.filter((team) => team.level === "college" && (team.tactical.installation < 58 || team.tactical.continuity < 48)).length,
     },
     movementMarket,
+  };
+}
+
+export function upgradeFootballEcosystemV7(
+  input: LegacyFootballEcosystemStateV7,
+  currentDate: GameDate,
+): FootballEcosystemState {
+  const tactical = addTacticalLayer(input.teams, input.players, input.coaches, input.seasonYear);
+  return {
+    ...input,
+    moduleVersion: 8,
+    cycle: input.cycle ?? resolveWorldCycle(currentDate),
+    teams: tactical.teams,
+    players: tactical.players,
+    market: {
+      ...input.market,
+      lowSchemeFitPlayers: tactical.players.filter((player) => player.level === "college" && player.tactical.schemeFit < 55).length,
+      programsInstallingNewSystems: tactical.teams.filter((team) => team.level === "college" && (team.tactical.installation < 58 || team.tactical.continuity < 48)).length,
+    },
   };
 }

@@ -6,6 +6,7 @@ import { createEmptyRosterPlan } from "./rosterManagement";
 import { createUnifiedMovementMarket } from "./movementMarket";
 import { ECOSYSTEM_MODULE_VERSION } from "./types";
 import { createTalentPipeline, createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
+import { createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 import type { EcosystemPlayer, EcosystemTeam, FootballEcosystemState } from "./types";
 
 function createTeam(id: string, level: EcosystemTeam["level"], stateCode: string): EcosystemTeam {
@@ -40,6 +41,7 @@ function createTeam(id: string, level: EcosystemTeam["level"], stateCode: string
     compliance,
     resources,
     rosterPlan: createEmptyRosterPlan({ ...base, compliance }, 2026),
+    tactical: createTacticalIdentity(base, undefined, random.fork("tactical")),
   };
 }
 
@@ -74,6 +76,7 @@ function createSenior(team: EcosystemTeam): EcosystemPlayer {
   };
   return {
     ...player,
+    tactical: createPlayerTacticalProfile(player, team.tactical, random.fork("tactical")),
     talent: {
       ...createTalentProfile(player, team.stateCode, 2026, random.fork("talent")),
       academicProjection: 50,
@@ -120,6 +123,8 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
       activeNegotiations: 0,
       withdrawnOffers: 0,
       transferCandidates: 0,
+      lowSchemeFitPlayers: 0,
+      programsInstallingNewSystems: 0,
     },
     teamHistory: [],
     transactions: [],

@@ -9,6 +9,7 @@ import type {
 import { createPlayerEligibility, refreshTeamCompliance, resolveWorldCycle } from "./constitution";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createTalentProfile } from "./talent";
+import { careerArchetypeRole, createPlayerTacticalProfile, reevaluatePlayerTacticalProfile } from "./tactics";
 
 function archiveCurrentSeason(world: FootballEcosystemState): EcosystemTeamSeasonRecord[] {
   return world.conferences.flatMap((conference) => {
@@ -43,6 +44,8 @@ function currentHero(
   targetTeamId: string,
 ): EcosystemPlayer {
   const existing = world.players.find((player) => player.isHero);
+  const targetTeam = world.teams.find((team) => team.id === targetTeamId);
+  if (!targetTeam) throw new Error(`College ecosystem team not found: ${targetTeamId}`);
   return {
     ...(existing ?? {
       id: "hero",
@@ -57,6 +60,7 @@ function currentHero(
       isHero: true,
       usagePlan: "developmental" as const,
       positionHistory: [],
+      tactical: createPlayerTacticalProfile({ seed: `${football.worldSeed}:hero`, position: football.position, overall: football.ratings.overall, potential: football.ratings.overall + 8, classYear: "Freshman" }, targetTeam.tactical, new SeededRandom(`${football.worldSeed}:hero:tactical:${targetTeamId}`), careerArchetypeRole(football.position, football.archetypeId)),
       eligibility: createPlayerEligibility("college", character.identity.age, "Freshman", world.seasonYear, new SeededRandom(`${football.worldSeed}:hero:eligibility`), "full"),
     }),
     name: character.identity.fullName,
@@ -84,6 +88,9 @@ function currentHero(
     talent: existing?.talent ?? createTalentProfile({ level: "college", classYear: "Freshman", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, world.teams.find((team) => team.id === targetTeamId)?.stateCode ?? football.school.stateCode, Math.max(2027, world.seasonYear), new SeededRandom(`${football.worldSeed}:hero:talent:${targetTeamId}`)),
     usagePlan: (football.college.depthRank ?? 3) === 1 ? "starter" : (football.college.depthRank ?? 3) === 2 ? "rotation" : "developmental",
     positionHistory: existing?.positionHistory ?? [],
+    tactical: existing
+      ? reevaluatePlayerTacticalProfile(existing, targetTeam.tactical, Math.max(2027, world.seasonYear))
+      : createPlayerTacticalProfile({ seed: `${football.worldSeed}:hero`, position: football.position, overall: football.ratings.overall, potential: football.ratings.overall + 8, classYear: "Freshman" }, targetTeam.tactical, new SeededRandom(`${football.worldSeed}:hero:tactical:${targetTeamId}`), careerArchetypeRole(football.position, football.archetypeId)),
   };
 }
 

@@ -1,4 +1,5 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { createPlayerTacticalProfile } from "./tactics";
 import type { FootballPosition } from "../career/types";
 import { createPlayerEligibility, refreshTeamCompliance, type WorldCycleState } from "./constitution";
 import { availableNilCapacity, availableRecruitingBudget, reserveRecruitingResources } from "./resources";
@@ -142,7 +143,7 @@ function createCamps(regions: EcosystemTalentRegion[], seasonYear: number): Ecos
 }
 
 export function createTalentPipeline(
-  players: EcosystemPlayer[],
+  players: Array<Pick<EcosystemPlayer, "id" | "level" | "talent">>,
   seasonYear: number,
 ): EcosystemTalentPipeline {
   const regions = createTalentRegions();
@@ -358,6 +359,7 @@ function createFreshman(
     },
     usagePlan: depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "developmental",
     positionHistory: [],
+    tactical: createPlayerTacticalProfile({ seed: `${team.seed}:class:${seasonYear}:${position}:${depthRank}`, position, overall, potential, classYear: "Freshman" }, team.tactical, random.fork("tactical")),
   };
 }
 
@@ -410,6 +412,7 @@ function enrollIndependent(
     },
     usagePlan: "developmental",
     positionHistory: [],
+    tactical: createPlayerTacticalProfile({ seed: prospect.seed, position: prospect.position, overall: prospect.overall, potential: prospect.potential, classYear }, target.tactical, random.fork("tactical")),
   };
 }
 

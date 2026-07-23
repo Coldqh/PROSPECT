@@ -1,6 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { FootballPosition } from "../career/types";
+import { defaultRoleForPosition, tacticalRecruitingFit } from "./tactics";
 import {
   availableNilCapacity,
   availableRecruitingBudget,
@@ -48,6 +49,8 @@ interface MarketCandidate {
   playerId?: string | undefined;
   independentId?: string | undefined;
   nationalRank: number;
+  preferredRole: import("./types").EcosystemPositionRole;
+  secondaryRole: import("./types").EcosystemPositionRole;
 }
 
 export interface UnifiedMarketResult {
@@ -227,6 +230,8 @@ function candidatePool(
       sourceTeamId: player.teamId,
       playerId: player.id,
       nationalRank: player.nationalRank,
+      preferredRole: player.tactical.preferredRole,
+      secondaryRole: player.tactical.secondaryRole,
     }));
 
   const transfers = (context.phase === "offseason" || context.phase === "winter-evaluation" || context.phase === "spring-development")
@@ -247,6 +252,8 @@ function candidatePool(
         sourceTeamId: player.teamId,
         playerId: player.id,
         nationalRank: player.nationalRank,
+        preferredRole: player.tactical.preferredRole,
+        secondaryRole: player.tactical.secondaryRole,
       }))
     : [];
 
@@ -263,6 +270,7 @@ function candidatePool(
         homeState: prospect.homeState,
         independentId: prospect.id,
         nationalRank: 9999,
+        ...defaultRoleForPosition(prospect.position, prospect.seed),
       }))
     : [];
 
@@ -307,6 +315,7 @@ function offerScore(
   const stability = (coach?.jobSecurity ?? 50) * 0.09 - (coach?.pressure ?? 50) * 0.05;
   const proximity = team.stateCode === candidate.homeState ? 8 : 0;
   const need = team.rosterPlan.positionProjections[candidate.position].needNow * 0.22;
+  const tacticalFit = tacticalRecruitingFit(candidate.position, candidate.preferredRole, candidate.secondaryRole, team);
   return clamp(
     roleValue
       + aidValue
@@ -314,6 +323,7 @@ function offerScore(
       + team.prestige * 0.13
       + resourceRecruitingPower(team.resources) * 0.11
       + need
+      + tacticalFit * 0.16
       + stability
       + proximity
       + random.integer(-8, 8),
@@ -331,7 +341,9 @@ function relevant(context: MarketContext, teamId: string, position: FootballPosi
 function offerReason(candidate: MarketCandidate, team: EcosystemTeam, role: EcosystemPromiseRole, opening: EcosystemRosterOpening): string {
   const route = candidate.kind === "transfer" ? "опытный трансфер" : candidate.kind === "juco" ? "JUCO-игрок" : candidate.kind === "walk-on" ? "walk-on кандидат" : "школьный рекрут";
   const roleText = role === "starter-path" ? "путь к стартовой роли" : role === "rotation" ? "место в ротации" : "долгосрочное развитие";
-  return `${team.shortName} рассматривает ${route}: ${opening.reason} Штаб предлагает ${roleText}.`;
+  const fit = tacticalRecruitingFit(candidate.position, candidate.preferredRole, candidate.secondaryRole, team);
+  const fitText = fit >= 82 ? "идеально подходит системе" : fit >= 66 ? "подходит основной роли" : "потребует адаптации к схеме";
+  return `${team.shortName} рассматривает ${route}: ${opening.reason} Штаб предлагает ${roleText}; игрок ${fitText}.`;
 }
 
 function createOffers(
@@ -407,6 +419,8 @@ function candidateFromNegotiation(
       sourceTeamId: player.teamId,
       playerId: player.id,
       nationalRank: player.nationalRank,
+      preferredRole: player.tactical.preferredRole,
+      secondaryRole: player.tactical.secondaryRole,
     };
   }
   const id = negotiation.candidateId.replace(`${negotiation.candidateKind}:`, "");
@@ -422,6 +436,7 @@ function candidateFromNegotiation(
     homeState: prospect.homeState,
     independentId: prospect.id,
     nationalRank: 9999,
+    ...defaultRoleForPosition(prospect.position, prospect.seed),
   };
 }
 

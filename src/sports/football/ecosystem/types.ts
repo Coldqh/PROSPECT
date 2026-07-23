@@ -2,7 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 7 as const;
+export const ECOSYSTEM_MODULE_VERSION = 8 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -17,6 +17,17 @@ export type EcosystemDevelopmentCurve = "early" | "steady" | "late";
 export type EcosystemResourceTier = "local" | "regional" | "power" | "elite";
 export type EcosystemSpendingPriority = "balanced" | "recruiting" | "development" | "medical" | "facilities";
 export type EcosystemRosterStrategy = "contend" | "balanced" | "develop" | "rebuild";
+export type EcosystemOffenseSystem = "air-raid" | "west-coast" | "power-run" | "spread-option" | "multiple";
+export type EcosystemDefenseSystem = "quarters-425" | "multiple-34" | "over-43" | "nickel-match" | "man-pressure" | "multiple-defense";
+export type EcosystemTacticalTempo = "controlled" | "balanced" | "fast";
+export type EcosystemTacticalAggression = "conservative" | "balanced" | "aggressive";
+export type EcosystemPositionRole =
+  | "pocket-distributor" | "dual-threat" | "field-general"
+  | "zone-runner" | "power-back" | "receiving-back"
+  | "separator" | "vertical-threat" | "possession-target"
+  | "run-anchor" | "coverage-backer" | "edge-blitzer"
+  | "press-corner" | "zone-corner" | "ball-hawk";
+export type EcosystemPlayerArchetype = EcosystemPositionRole;
 export type EcosystemUsagePlan = "starter" | "rotation" | "special-teams" | "developmental" | "redshirt";
 export type EcosystemCandidateKind = "high-school" | "juco" | "walk-on" | "transfer";
 export type EcosystemNegotiationStatus = "offered" | "accepted" | "withdrawn" | "expired";
@@ -52,7 +63,9 @@ export type EcosystemStoryKind =
   | "offer"
   | "offer-withdrawn"
   | "market-chain"
-  | "coach-vacancy";
+  | "coach-vacancy"
+  | "tactical-change"
+  | "scheme-fit";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -73,7 +86,9 @@ export type EcosystemTransactionKind =
   | "offer-issued"
   | "offer-withdrawn"
   | "commitment"
-  | "coach-vacancy";
+  | "coach-vacancy"
+  | "tactical-change"
+  | "scheme-fit";
 
 export interface EcosystemPositionNeeds {
   QB: number;
@@ -312,6 +327,39 @@ export interface EcosystemRosterPlan {
   lastReviewReason: string;
 }
 
+export interface EcosystemRolePriority {
+  primary: EcosystemPositionRole;
+  secondary: EcosystemPositionRole;
+}
+
+export interface EcosystemTacticalIdentity {
+  version: 1;
+  offenseSystem: EcosystemOffenseSystem;
+  defenseSystem: EcosystemDefenseSystem;
+  tempo: EcosystemTacticalTempo;
+  offensiveAggression: EcosystemTacticalAggression;
+  defensiveAggression: EcosystemTacticalAggression;
+  complexity: number;
+  installation: number;
+  continuity: number;
+  rotationDepth: number;
+  headCoachFingerprint: string;
+  positionRoles: Record<FootballPosition, EcosystemRolePriority>;
+}
+
+export interface EcosystemPlayerTacticalProfile {
+  version: 1;
+  archetype: EcosystemPlayerArchetype;
+  preferredRole: EcosystemPositionRole;
+  secondaryRole: EcosystemPositionRole;
+  schemeFit: number;
+  roleFit: number;
+  learning: number;
+  versatility: number;
+  lastEvaluatedSeason: number;
+  lastCoachFingerprint?: string | undefined;
+}
+
 export interface EcosystemTeam {
   id: string;
   seed: string;
@@ -338,6 +386,7 @@ export interface EcosystemTeam {
   compliance: EcosystemTeamCompliance;
   resources: EcosystemProgramResources;
   rosterPlan: EcosystemRosterPlan;
+  tactical: EcosystemTacticalIdentity;
 }
 
 export interface EcosystemPlayer {
@@ -368,6 +417,7 @@ export interface EcosystemPlayer {
   talent: EcosystemTalentProfile;
   usagePlan: EcosystemUsagePlan;
   positionHistory: FootballPosition[];
+  tactical: EcosystemPlayerTacticalProfile;
 }
 
 export interface EcosystemCoach {
@@ -454,6 +504,8 @@ export interface EcosystemMarketState {
   activeNegotiations: number;
   withdrawnOffers: number;
   transferCandidates: number;
+  lowSchemeFitPlayers: number;
+  programsInstallingNewSystems: number;
 }
 
 

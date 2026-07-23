@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { FootballPosition } from "../career/types";
 import type { WorldConstitution } from "./constitution";
+import { createPlayerTacticalProfile } from "./tactics";
 import type {
   EcosystemCoach,
   EcosystemPlayer,
@@ -54,7 +55,7 @@ function yearsRemaining(player: EcosystemPlayer, seasonYear: number): number {
 
 function playerScore(player: EcosystemPlayer): number {
   const availability = player.status === "injured" || !player.eligibility.athleticallyEligible ? -25 : 0;
-  return player.overall * 0.58 + player.form * 0.2 + player.health * 0.1 + player.potential * 0.12 + availability;
+  return player.overall * 0.5 + player.form * 0.17 + player.health * 0.08 + player.potential * 0.1 + player.tactical.schemeFit * 0.1 + player.tactical.roleFit * 0.05 + availability;
 }
 
 function strategyFor(team: EcosystemTeam, players: EcosystemPlayer[], coach: EcosystemCoach | undefined): EcosystemRosterStrategy {
@@ -128,12 +129,14 @@ function positionProjection(
   const averageOverall = average(room.map((player) => player.overall));
   const bestOverall = room.length > 0 ? Math.max(...room.map((player) => player.overall)) : 0;
   const averagePotential = average(room.map((player) => player.potential));
+  const averageSchemeFit = average(room.map((player) => player.tactical.schemeFit));
   const desiredDetailedDepth = team.level === "college" ? (position === "WR" || position === "CB" ? 4 : 3) : 2;
   const shortageNow = Math.max(0, desiredDetailedDepth - room.length);
   const shortageNext = Math.max(0, desiredDetailedDepth - returningNextYear);
   const qualityNeed = clamp((team.expectation - bestOverall) * 1.35 + (72 - averageOverall) * 0.7, 0, 65);
   const strategyBoost = strategy === "contend" ? 9 : strategy === "rebuild" ? 6 : strategy === "develop" ? 2 : 4;
-  const needNow = clamp(team.positionNeeds[position] * 0.38 + shortageNow * 22 + qualityNeed * 0.44 + strategyBoost, 5, 98);
+  const fitNeed = room.length === 0 ? 18 : Math.max(0, 68 - averageSchemeFit) * 0.42;
+  const needNow = clamp(team.positionNeeds[position] * 0.35 + shortageNow * 22 + qualityNeed * 0.4 + fitNeed + strategyBoost, 5, 98);
   const needNextYear = clamp(needNow * 0.48 + shortageNext * 27 + projectedDepartures * 12 + (78 - averagePotential) * 0.25, 5, 99);
   const targetAdds = Math.max(0, Math.min(3, Math.ceil((needNextYear - 30) / 25) + (shortageNext > 0 ? 1 : 0)));
   return {
@@ -340,6 +343,7 @@ export function reviewRosterManagement(
           status: "backup",
           usagePlan: "developmental",
           positionHistory: [...player.positionHistory, player.position].slice(-6),
+          tactical: createPlayerTacticalProfile({ ...player, position: change.toPosition, classYear: player.classYear }, team.tactical, random.fork(`tactical-change:${player.id}:${change.toPosition}`)),
         };
         change.applied = true;
         drafts.push({

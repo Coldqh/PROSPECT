@@ -18,7 +18,7 @@
 - [x] Annual talent pipeline and geographic recruiting classes
 - [x] Multi-year roster-planning AI
 - [x] Unified recruiting, transfer and coaching labor market
-- [ ] Tactical identities and scheme-driven roster value
+- [x] Tactical identities and scheme-driven roster value
 - [ ] National competition, rankings and program reputation
 - [ ] Twenty-season autonomous stability test
 - [ ] Social ecosystem
@@ -90,3 +90,15 @@
 - independent prospects no longer choose destinations outside the common market;
 - compact Market tab inside the autonomous World dashboard;
 - deterministic migration from schema v17 to v18.
+
+
+## v0.19 — Tactical identities
+
+- persistent offensive and defensive systems for every program;
+- position-specific roles and player archetypes;
+- scheme fit affects development, depth-chart value, recruiting and match execution;
+- playbook installation, complexity, rotation depth and continuity;
+- coaching changes install new systems and reduce short-term execution;
+- roster and market AI value players inside specific systems instead of by OVR alone;
+- compact Schemes tab inside the World dashboard;
+- deterministic migration from schema v18 to v19.

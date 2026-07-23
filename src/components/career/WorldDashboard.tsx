@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
+import { defenseSystemLabel, offenseSystemLabel, positionRoleLabel } from "../../sports/football/ecosystem/tactics";
 import type {
   EcosystemConference,
   EcosystemStory,
@@ -18,6 +19,7 @@ const views = [
   { id: "market", label: "Рынок" },
   { id: "resources", label: "Ресурсы" },
   { id: "plans", label: "Составы" },
+  { id: "tactics", label: "Схемы" },
   { id: "talent", label: "Таланты" },
   { id: "history", label: "История" },
 ] as const;
@@ -55,6 +57,8 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "offer-withdrawn": "Отзыв",
     "market-chain": "Цепочка рынка",
     "coach-vacancy": "Вакансия",
+    "tactical-change": "Смена схемы",
+    "scheme-fit": "Соответствие",
   }[kind];
 }
 
@@ -83,6 +87,8 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
     "offer-withdrawn": "Отзыв",
     commitment: "Коммит",
     "coach-vacancy": "Вакансия",
+    "tactical-change": "Смена схемы",
+    "scheme-fit": "Соответствие",
   }[kind];
 }
 
@@ -153,6 +159,20 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
       ),
     [world.teams, heroProgramId],
   );
+  const tacticalTeams = useMemo(
+    () => world.teams
+      .filter((team) => team.level === "college")
+      .sort((left, right) =>
+        Number(right.id === heroProgramId) - Number(left.id === heroProgramId)
+        || left.tactical.installation - right.tactical.installation
+        || right.rating - left.rating,
+      ),
+    [world.teams, heroProgramId],
+  );
+  const averageInstallation = tacticalTeams.length > 0
+    ? Math.round(tacticalTeams.reduce((sum, team) => sum + team.tactical.installation, 0) / tacticalTeams.length)
+    : 0;
+
   const topProspects = useMemo(
     () => world.players
       .filter((player) => player.level === "high-school")
@@ -383,6 +403,37 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
+      {view === "tactics" && (
+        <div className="compact-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Освоение</small><strong>{averageInstallation}</strong></span>
+            <span><small>Новые системы</small><strong>{world.market.programsInstallingNewSystems}</strong></span>
+            <span><small>Плохой fit</small><strong>{world.market.lowSchemeFitPlayers}</strong></span>
+            <span><small>Playbooks</small><strong>{tacticalTeams.length}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Тактическая идентичность</small><h3>Игрок ценен внутри конкретной системы</h3>
+            <p>Схема определяет роли, развитие, depth chart и набор. После смены штаба освоение playbook падает, а часть состава перестаёт подходить новым требованиям.</p>
+          </section>
+
+          <div className="resource-team-list tactical-team-list">
+            {tacticalTeams.slice(0, 12).map((team) => {
+              const teamPlayers = world.players.filter((player) => player.teamId === team.id);
+              const averageFit = teamPlayers.length > 0 ? Math.round(teamPlayers.reduce((sum, player) => sum + player.tactical.schemeFit, 0) / teamPlayers.length) : 0;
+              return (
+                <button key={team.id} type="button" className={team.id === heroProgramId ? "is-hero" : team.tactical.installation < 55 ? "is-pressure" : ""} onClick={() => setSelectedTeam(team)}>
+                  <div><strong>{team.shortName}</strong><small>{offenseSystemLabel(team.tactical.offenseSystem)} · {defenseSystemLabel(team.tactical.defenseSystem)}</small></div>
+                  <span><small>Освоение</small><strong>{Math.round(team.tactical.installation)}</strong></span>
+                  <span><small>Fit</small><strong>{averageFit}</strong></span>
+                  <em>{Math.round(team.tactical.continuity)}</em>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {view === "talent" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
@@ -501,6 +552,23 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               <span><small>Финансовое давление</small><strong>{Math.round(selectedTeam.resources.financialPressure)}</strong></span>
               <span><small>Текущий баланс</small><strong>${selectedTeam.resources.currentBalance.toFixed(1)}M</strong></span>
             </div>
+            <section className="roster-plan-sheet tactical-sheet">
+              <header><small>Тактическая система</small><h3>{offenseSystemLabel(selectedTeam.tactical.offenseSystem)} / {defenseSystemLabel(selectedTeam.tactical.defenseSystem)}</h3><p>{selectedTeam.offenseStyle} · {selectedTeam.defenseStyle}</p></header>
+              <div className="info-list info-list--compact">
+                <span><small>Освоение playbook</small><strong>{Math.round(selectedTeam.tactical.installation)}</strong></span>
+                <span><small>Преемственность</small><strong>{Math.round(selectedTeam.tactical.continuity)}</strong></span>
+                <span><small>Сложность</small><strong>{Math.round(selectedTeam.tactical.complexity)}</strong></span>
+                <span><small>Глубина ротации</small><strong>{Math.round(selectedTeam.tactical.rotationDepth)}</strong></span>
+                <span><small>Темп</small><strong>{selectedTeam.tactical.tempo === "fast" ? "Высокий" : selectedTeam.tactical.tempo === "controlled" ? "Контроль" : "Баланс"}</strong></span>
+                <span><small>Агрессия</small><strong>{selectedTeam.tactical.offensiveAggression === "aggressive" ? "Высокая" : selectedTeam.tactical.offensiveAggression === "conservative" ? "Осторожная" : "Средняя"}</strong></span>
+              </div>
+              <div className="roster-position-grid">
+                {Object.entries(selectedTeam.tactical.positionRoles).map(([position, roles]) => (
+                  <article key={position}><strong>{position}</strong><span><small>Главная роль</small><b>{positionRoleLabel(roles.primary)}</b></span><span><small>Вторая</small><b>{positionRoleLabel(roles.secondary)}</b></span></article>
+                ))}
+              </div>
+            </section>
+
             <section className="roster-plan-sheet">
               <header><small>План состава · {selectedTeam.rosterPlan.seasonYear}</small><h3>{rosterStrategyLabel(selectedTeam.rosterPlan.strategy)}</h3><p>{selectedTeam.rosterPlan.lastReviewReason}</p></header>
               <div className="info-list info-list--compact">

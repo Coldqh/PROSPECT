@@ -3,6 +3,7 @@ import type { CharacterState } from "../../../core/character/types";
 import type { LifeState } from "../../../core/life/types";
 import type { RelationshipState } from "../../../core/relationships/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { createPlayerTacticalProfile, reevaluatePlayerTacticalProfile, refreshTacticalIdentityAfterCoachChange, tacticalDepthScore, tacticalDevelopmentMultiplier, tacticalTeamModifier } from "./tactics";
 import type { FootballCareerState, FootballPosition } from "../career/types";
 import type { RecruitingProgram } from "../recruiting/types";
 import { evaluateDepthChart } from "../team/evaluateDepthChart";
@@ -175,7 +176,8 @@ function updatePlayersDaily(
               + developmentEnvironment * 0.0022
             ) * Math.min(1, developmentRoom / 18)
           : 0;
-        overall = clamp(overall + development, 40, 99);
+        const tacticalMultiplier = team ? tacticalDevelopmentMultiplier(player, team) : 1;
+        overall = clamp(overall + development * tacticalMultiplier, 40, 99);
       }
     }
 
@@ -188,6 +190,9 @@ function updatePlayersDaily(
       status,
       trajectory,
       eligibility,
+      tactical: team && day % 7 === 0
+        ? reevaluatePlayerTacticalProfile({ ...player, health, form, overall, status, trajectory, eligibility }, team.tactical, save.world.seasonYear)
+        : player.tactical,
     };
   });
   return { players: nextPlayers, stories };
@@ -206,8 +211,8 @@ function reorderDepthCharts(
       const room = next
         .filter((player) => player.teamId === teamId && player.position === position)
         .sort((left, right) => {
-          const leftScore = !isPlayerAvailable(left) ? -100 : left.overall * 0.62 + left.form * 0.28 + left.health * 0.1;
-          const rightScore = !isPlayerAvailable(right) ? -100 : right.overall * 0.62 + right.form * 0.28 + right.health * 0.1;
+          const leftScore = !isPlayerAvailable(left) ? -100 : left.overall * 0.55 + left.form * 0.23 + left.health * 0.06 + tacticalDepthScore(left);
+          const rightScore = !isPlayerAvailable(right) ? -100 : right.overall * 0.55 + right.form * 0.23 + right.health * 0.06 + tacticalDepthScore(right);
           return rightScore - leftScore;
         });
       room.forEach((player, index) => {
@@ -243,6 +248,35 @@ function reorderDepthCharts(
 }
 
 
+function advanceTacticalInstallation(
+  teams: EcosystemTeam[],
+  players: EcosystemPlayer[],
+  coaches: EcosystemCoach[],
+  day: number,
+): { teams: EcosystemTeam[]; players: EcosystemPlayer[] } {
+  if (day % 7 !== 0) return { teams, players };
+  const nextTeams = teams.map((team) => {
+    const headCoach = coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
+    const staffDevelopment = headCoach?.development ?? 50;
+    const installationGain = 0.5 + staffDevelopment * 0.008 + team.resources.facilitiesLevel * 0.004;
+    const continuityGain = team.tactical.headCoachFingerprint === (headCoach?.seed ?? team.tactical.headCoachFingerprint) ? 0.45 : 0.1;
+    return {
+      ...team,
+      tactical: {
+        ...team.tactical,
+        installation: clamp(team.tactical.installation + installationGain, 0, 100),
+        continuity: clamp(team.tactical.continuity + continuityGain, 0, 100),
+      },
+    };
+  });
+  const teamMap = new Map(nextTeams.map((team) => [team.id, team]));
+  const nextPlayers = players.map((player) => {
+    const team = teamMap.get(player.teamId);
+    return team ? { ...player, tactical: reevaluatePlayerTacticalProfile(player, team.tactical, team.rosterPlan.seasonYear) } : player;
+  });
+  return { teams: nextTeams, players: nextPlayers };
+}
+
 function recalculateTeamStrength(
   teams: EcosystemTeam[],
   players: EcosystemPlayer[],
@@ -263,7 +297,8 @@ function recalculateTeamStrength(
       team.rating * 0.54
         + lineupStrength * 0.32
         + depthStrength * 0.07
-        + resourceEnvironment * 0.07,
+        + resourceEnvironment * 0.07
+        + tacticalTeamModifier(team, roster),
       42,
       96,
     );
@@ -827,6 +862,7 @@ function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, s
     talent: createTalentProfile({ level: "college", classYear: "Freshman", overall, potential: clamp(overall + 12, overall, 96), nationalRank: random.integer(150, 2200), isHero: false }, team.stateCode, seasonYear, random.fork("talent")),
     usagePlan: "developmental",
     positionHistory: [],
+    tactical: createPlayerTacticalProfile({ seed: `${team.seed}:incoming:${seasonYear}:${position}:${slot}`, position, overall, potential: clamp(overall + random.integer(5, 18), overall, 96), classYear: "Freshman" }, team.tactical, random.fork("tactical")),
   };
 }
 
@@ -1288,6 +1324,22 @@ function processOffseason(
   const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
+  const tacticalChangeTeamIds = new Set(carousel.transactions.filter((item) => item.kind === "coach-hired").map((item) => item.toTeamId).filter((id): id is string => Boolean(id)));
+  teams = teams.map((team) => {
+    if (!tacticalChangeTeamIds.has(team.id)) return team;
+    const headCoach = carousel.coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
+    if (!headCoach) return team;
+    const changed = refreshTacticalIdentityAfterCoachChange(team, headCoach, seasonYear + 1);
+    const related = team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35);
+    const detail = `${team.shortName} устанавливает ${changed.offenseStyle} / ${changed.defenseStyle}. Старые роли пересматриваются, а освоение системы начинается заново.`;
+    transactions.push({ id: `tactical-change:${seasonYear + 1}:${team.id}`, kind: "tactical-change", seasonYear: seasonYear + 1, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${team.shortName} меняет систему`, detail, toTeamId: team.id, relatedToHero: related });
+    stories.push(story(save, day, "tactical-change", `${team.shortName} перестраивает футбол`, detail, related ? 5 : 3, [team.id], [], [headCoach.id], related));
+    return changed;
+  });
+  players = players.map((player) => {
+    const team = teams.find((item) => item.id === player.teamId);
+    return team ? { ...player, tactical: reevaluatePlayerTacticalProfile(player, team.tactical, seasonYear + 1) } : player;
+  });
   const coachReaction = applyCoachMovementConsequences({
     movementMarket: world.movementMarket,
     coachTransactions: carousel.transactions,
@@ -1442,6 +1494,8 @@ function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: Ec
     activeNegotiations: movementMarket.negotiations.filter((negotiation) => negotiation.status === "offered").length,
     withdrawnOffers: movementMarket.withdrawnOffers,
     transferCandidates: players.filter((player) => player.level === "college" && (player.transferStatus === "portal" || player.depthRank >= 3) && player.eligibilityYears > 1).length,
+    lowSchemeFitPlayers: players.filter((player) => player.level === "college" && player.tactical.schemeFit < 55).length,
+    programsInstallingNewSystems: collegeTeams.filter((team) => team.tactical.installation < 58 || team.tactical.continuity < 48).length,
   };
 }
 
@@ -1483,6 +1537,9 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     const dailyPlayers = updatePlayersDaily(world.players, teams, daySave, random.fork("players"), day);
     let players = dailyPlayers.players;
     generatedStories.push(...dailyPlayers.stories);
+    const tacticalProgress = advanceTacticalInstallation(teams, players, world.coaches, day);
+    teams = tacticalProgress.teams;
+    players = tacticalProgress.players;
     let coaches = world.coaches;
 
     if (day % 7 === 0) {

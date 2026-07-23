@@ -179,6 +179,7 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
 
 function skillValue(save: CareerSave, option: MatchDecisionOption): number {
   const ratings = save.football.ratings;
+  const heroTacticalFit = save.world.players.find((player) => player.isHero)?.tactical.schemeFit ?? 65;
   const focus = {
     technique: ratings.technique,
     athleticism: ratings.athleticism,
@@ -190,8 +191,9 @@ function skillValue(save: CareerSave, option: MatchDecisionOption): number {
     ratings.technique * 0.14 +
     ratings.footballIq * 0.12 +
     save.character.condition.confidence * 0.1 +
-    save.football.training.body.readiness * 0.09 +
-    save.football.depthChart.coachTrust * 0.08
+    save.football.training.body.readiness * 0.07 +
+    save.football.depthChart.coachTrust * 0.06 +
+    heroTacticalFit * 0.06
   );
 }
 

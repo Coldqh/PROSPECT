@@ -481,6 +481,31 @@ describe("migrateCareerSave", () => {
     expect(result.save.world.market.activeNegotiations).toBe(0);
   });
 
+  it("migrates version eighteen worlds into tactical identities", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const legacyTeams = current.world.teams.map(({ tactical: _tactical, ...team }) => team);
+    const legacyPlayers = current.world.players.map(({ tactical: _tactical, ...player }) => player);
+    const { lowSchemeFitPlayers: _lowSchemeFitPlayers, programsInstallingNewSystems: _programsInstallingNewSystems, ...legacyMarket } = current.world.market;
+    const versionEighteen = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 18 as const },
+      world: {
+        ...current.world,
+        moduleVersion: 7 as const,
+        teams: legacyTeams,
+        players: legacyPlayers,
+        market: legacyMarket,
+      },
+    };
+    const result = migrateCareerSave(versionEighteen);
+    expect(result.migratedFrom).toBe(18);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    expect(result.save.world.teams.every((team) => Boolean(team.tactical))).toBe(true);
+    expect(result.save.world.players.every((player) => Boolean(player.tactical))).toBe(true);
+    expect(result.save.world.market.lowSchemeFitPlayers).toBeGreaterThanOrEqual(0);
+  });
+
   it("produces the same migrated athlete for the same seed", () => {
     expect(migrateCareerSave(legacySave).save.character).toEqual(migrateCareerSave(legacySave).save.character);
   });

@@ -16,6 +16,7 @@ import { createProgramResources } from "./resources";
 import { createTalentPipeline, createTalentProfile } from "./talent";
 import { createEmptyRosterPlan, reviewRosterManagement } from "./rosterManagement";
 import { createUnifiedMovementMarket } from "./movementMarket";
+import { careerArchetypeRole, createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -143,6 +144,7 @@ function createGeneratedPlayer(
     talent,
     usagePlan: depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "developmental",
     positionHistory: [],
+    tactical: createPlayerTacticalProfile({ seed: `${team.seed}:${position}:${depthRank}`, position, overall, potential, classYear }, team.tactical, random.fork("tactical")),
   };
 }
 
@@ -201,6 +203,7 @@ function createHeroTeamPlayers(
         talent: createTalentProfile({ level: "high-school", classYear: player.year, overall: player.overall, potential: player.potential, nationalRank: random.integer(90, 1500), isHero: false }, team.stateCode, seasonYear, random.fork(`talent:${player.id}`)),
         usagePlan: index === 0 ? "starter" : "rotation",
         positionHistory: [],
+        tactical: createPlayerTacticalProfile({ seed: `${team.seed}:${player.id}`, position, overall: player.overall, potential: player.potential, classYear: player.year }, team.tactical, random.fork(`tactical:${player.id}`)),
       });
     });
   }
@@ -231,6 +234,7 @@ function createHeroTeamPlayers(
     talent: createTalentProfile({ level: "high-school", classYear: "Senior", overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: 9999, isHero: true }, team.stateCode, seasonYear, random.fork("talent:hero")),
     usagePlan: football.depthChart.rank === 1 ? "starter" : football.depthChart.rank === 2 ? "rotation" : "developmental",
     positionHistory: [],
+    tactical: createPlayerTacticalProfile({ seed: `${team.seed}:hero`, position: football.position, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), classYear: "Senior" }, team.tactical, random.fork("tactical:hero"), careerArchetypeRole(football.position, football.archetypeId)),
   });
   return players;
 }
@@ -264,6 +268,7 @@ function createHighSchoolTeams(football: FootballCareerState): EcosystemTeam[] {
       compliance: createTeamCompliance({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)) }, 0, random.fork("compliance")),
       resources: createProgramResources({ level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)), offenseStyle: opponent?.offenseStyle ?? random.pick(OFFENSE_STYLES), defenseStyle: opponent?.defenseStyle ?? random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
       rosterPlan: createEmptyRosterPlan({ level: "high-school", compliance: createTeamCompliance({ level: "high-school", prestige: isHero ? football.school.prestige : standing.rating }, 0, random.fork("plan-compliance")), positionNeeds: createNeeds(random.fork("plan-needs"), "high-school") }, 2026),
+      tactical: createTacticalIdentity({ seed: `${football.worldSeed}:${standing.teamId}`, offenseStyle: opponent?.offenseStyle ?? random.pick(OFFENSE_STYLES), defenseStyle: opponent?.defenseStyle ?? random.pick(DEFENSE_STYLES), level: "high-school", prestige: isHero ? football.school.prestige : clamp(standing.rating + random.integer(-10, 9)) }, undefined, random.fork("tactical")),
       trend: standing.streak >= 2 ? "rising" : standing.streak <= -2 ? "falling" : "stable",
     };
   });
@@ -299,6 +304,7 @@ function createCollegeTeams(football: FootballCareerState): EcosystemTeam[] {
       compliance: createTeamCompliance({ level: "college", prestige: program.prestige }, 0, random.fork("compliance")),
       resources: createProgramResources({ level: "college", prestige: program.prestige, offenseStyle: program.scheme, defenseStyle: random.pick(DEFENSE_STYLES) }, random.fork("resources"), 2026),
       rosterPlan: createEmptyRosterPlan({ level: "college", compliance: createTeamCompliance({ level: "college", prestige: program.prestige }, 0, random.fork("plan-compliance")), positionNeeds: { ...createNeeds(random.fork("plan-needs"), "college"), [football.position]: program.positionNeed } }, 2026),
+      tactical: createTacticalIdentity({ seed: program.seed, offenseStyle: program.scheme, defenseStyle: random.pick(DEFENSE_STYLES), level: "college", prestige: program.prestige }, undefined, random.fork("tactical")),
       trend: "stable",
     };
   });
@@ -374,6 +380,8 @@ function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], 
     activeNegotiations: 0,
     withdrawnOffers: 0,
     transferCandidates: players.filter((player) => player.level === "college" && player.depthRank >= 3 && player.eligibilityYears > 1).length,
+    lowSchemeFitPlayers: players.filter((player) => player.level === "college" && player.tactical.schemeFit < 55).length,
+    programsInstallingNewSystems: collegeTeams.filter((team) => team.tactical.installation < 58 || team.tactical.continuity < 48).length,
   };
 }
 
@@ -395,9 +403,6 @@ export function createFootballEcosystem(
   for (const team of teams) {
     const random = new SeededRandom(`${worldSeed}:ecosystem:${team.id}`);
     const isHeroTeam = team.id === football.school.id;
-    const teamPlayers = isHeroTeam
-      ? createHeroTeamPlayers(team, football, random.fork("players"), cycle.seasonYear).map((player) => player.isHero ? { ...player, name: character.identity.fullName, age: character.identity.age, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: football.ratings.overall >= 82 ? 120 : football.ratings.overall >= 74 ? 420 : 1100 } : player)
-      : createTeamPlayers(team, random.fork("players"), cycle.seasonYear);
     const headCoach = createCoach(
       team.id,
       "head-coach",
@@ -406,6 +411,10 @@ export function createFootballEcosystem(
       isHeroTeam ? football.staff.headCoach.name : undefined,
     );
     const coordinator = createCoach(team.id, "coordinator", team.level, random.fork("coordinator"));
+    team.tactical = createTacticalIdentity(team, headCoach, random.fork("tactical-final"));
+    const teamPlayers = isHeroTeam
+      ? createHeroTeamPlayers(team, football, random.fork("players"), cycle.seasonYear).map((player) => player.isHero ? { ...player, name: character.identity.fullName, age: character.identity.age, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: football.ratings.overall >= 82 ? 120 : football.ratings.overall >= 74 ? 420 : 1100 } : player)
+      : createTeamPlayers(team, random.fork("players"), cycle.seasonYear);
     team.rosterIds = teamPlayers.map((player) => player.id);
     team.compliance = refreshTeamCompliance(team, teamPlayers, random.fork("compliance-final"), constitution);
     team.resources = createProgramResources(team, random.fork("resources-final"), cycle.seasonYear);
@@ -430,7 +439,7 @@ export function createFootballEcosystem(
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 7,
+    moduleVersion: 8,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,
