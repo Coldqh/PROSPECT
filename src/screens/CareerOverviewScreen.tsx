@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "../components/layout/AppHeader";
 import { ScreenShell } from "../components/layout/ScreenShell";
 import { LoadingScreen } from "../components/feedback/LoadingScreen";
-import { Icon, type IconName } from "../components/ui/Icon";
+import { Icon } from "../components/ui/Icon";
 import { MetricBar } from "../components/ui/MetricBar";
 import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
@@ -13,6 +13,8 @@ import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
 import { CollegeCareerDashboard } from "../components/career/CollegeCareerDashboard";
 import { WorldDashboard } from "../components/career/WorldDashboard";
+import { CareerNavigation, type CareerPrimaryView } from "../components/career/CareerNavigation";
+import { PlayerIdentityBar } from "../components/career/PlayerIdentityBar";
 import {
   familyIncomeLabels,
   familyStructureLabels,
@@ -20,15 +22,6 @@ import {
   mindsetLabels,
 } from "../sports/football/career/catalog";
 import { useCareerSave } from "../hooks/useCareerSave";
-
-const tabs = [
-  { id: "today", label: "Сегодня", icon: "home" },
-  { id: "match", label: "Матч", icon: "football" },
-  { id: "world", label: "Мир", icon: "pulse" },
-  { id: "career", label: "Карьера", icon: "chart" },
-  { id: "team", label: "Команда", icon: "team" },
-  { id: "profile", label: "Жизнь", icon: "user" },
-] as const satisfies readonly { id: string; label: string; icon: IconName }[];
 
 const teamViews = [
   { id: "overview", label: "Сводка" },
@@ -49,22 +42,12 @@ const profileViews = [
   { id: "study", label: "Учёба" },
 ] as const;
 
-type TabId = (typeof tabs)[number]["id"];
 type TeamView = (typeof teamViews)[number]["id"];
 type ProfileView = (typeof profileViews)[number]["id"];
 type RosterView = (typeof rosterViews)[number]["id"];
 
 function heightLabel(inches: number): string {
   return `${Math.floor(inches / 12)}′${inches % 12}″`;
-}
-
-function potentialLabel(value: "role-player" | "starter" | "high-upside" | "national-ceiling"): string {
-  return {
-    "role-player": "Ролевой уровень",
-    starter: "Потенциальный стартер",
-    "high-upside": "Высокий потолок",
-    "national-ceiling": "Национальный потенциал",
-  }[value];
 }
 
 function roleLabel(value: "starter" | "rotation" | "special-teams" | "developmental"): string {
@@ -88,7 +71,8 @@ export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
   const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority, resolveCollegeHeroDecision } = useCareerSave(careerId);
-  const [activeTab, setActiveTab] = useState<TabId>("today");
+  const [activeTab, setActiveTab] = useState<CareerPrimaryView>("today");
+  const [utilityView, setUtilityView] = useState<"match" | "team" | "profile" | null>(null);
   const [teamView, setTeamView] = useState<TeamView>("overview");
   const [profileView, setProfileView] = useState<ProfileView>("people");
   const [rosterView, setRosterView] = useState<RosterView>("offense");
@@ -163,7 +147,6 @@ export default function CareerOverviewScreen() {
     );
   }
 
-  const initials = `${character.identity.firstName[0] ?? "P"}${character.identity.lastName[0] ?? "R"}`;
   const positionRivals = football.roster
     .filter((player) => player.position === football.position)
     .sort((left, right) => (right.overall * 0.72 + right.coachStanding * 0.28) - (left.overall * 0.72 + left.coachStanding * 0.28));
@@ -189,27 +172,17 @@ export default function CareerOverviewScreen() {
           }
         />
       }
-      footer={
-        <nav className="career-nav" aria-label="Разделы карьеры">
-          {tabs.map((tab) => (
-            <button key={tab.id} className={activeTab === tab.id ? "is-active" : ""} onClick={() => setActiveTab(tab.id)}>
-              <Icon name={tab.icon} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-      }
+      className="career-experience"
+      footer={<CareerNavigation active={activeTab} onChange={(view) => { setUtilityView(null); setActiveTab(view); }} />}
     >
       <div className="career-layout career-layout--compact">
         <aside className="career-sidebar career-sidebar--compact">
           <div className="career-sidebar__logo"><span>{football.position}</span><strong>#{String(football.jerseyNumber).padStart(2, "0")}</strong></div>
-          <nav>
-            {tabs.map((tab) => (
-              <button key={tab.id} className={activeTab === tab.id ? "is-active" : ""} onClick={() => setActiveTab(tab.id)}>
-                <Icon name={tab.icon} /><span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
+          <CareerNavigation variant="rail" active={activeTab} onChange={(view) => { setUtilityView(null); setActiveTab(view); }} />
+          <div className="career-sidebar__utilities">
+            <button type="button" className={utilityView === "team" ? "is-active" : ""} onClick={() => setUtilityView("team")}><Icon name="team" /><span>Команда</span></button>
+            <button type="button" className={utilityView === "profile" ? "is-active" : ""} onClick={() => setUtilityView("profile")}><Icon name="user" /><span>Профиль</span></button>
+          </div>
           <div className="career-sidebar__season">
             <small>SENIOR SEASON</small>
             <strong>W{football.season.week} · {football.season.wins}–{football.season.losses}</strong>
@@ -218,17 +191,16 @@ export default function CareerOverviewScreen() {
         </aside>
 
         <div className="career-main">
-          <section className="player-compact-header">
-            <div className="player-compact-header__avatar"><span>{initials}</span><small>{football.position}</small></div>
-            <div className="player-compact-header__identity">
-              <small>#{football.jerseyNumber} · {football.archetypeName}</small>
-              <h1>{character.identity.fullName}</h1>
-              <p>{football.school.shortName} {football.school.mascot} · {character.origin.city}, {character.origin.stateCode}</p>
-            </div>
-            <div className="player-compact-header__rating"><small>OVR</small><strong>{football.ratings.overall}</strong><span>{potentialLabel(football.ratings.potentialBand)}</span></div>
-          </section>
+          <PlayerIdentityBar save={save} onOpenTeam={() => setUtilityView("team")} onOpenProfile={() => setUtilityView("profile")} />
 
-          {activeTab === "today" && (
+          {utilityView && (
+            <header className="utility-view-head">
+              <button type="button" className="icon-button icon-button--quiet" onClick={() => setUtilityView(null)} aria-label="Вернуться"><Icon name="arrow-left" /></button>
+              <div><small>Быстрый доступ</small><strong>{utilityView === "match" ? "Матч" : utilityView === "team" ? "Команда" : "Профиль"}</strong></div>
+            </header>
+          )}
+
+          {!utilityView && activeTab === "today" && (
             <TodayDashboard
               save={save}
               mutating={mutating}
@@ -237,11 +209,11 @@ export default function CareerOverviewScreen() {
               onUpdateTrainingPlan={updateTrainingPlan}
               onAdvanceDay={advanceDay}
               onResolveRelationshipEvent={resolveRelationshipEvent}
-              onOpenMatch={() => setActiveTab("match")}
+              onOpenMatch={() => setUtilityView("match")}
             />
           )}
 
-          {activeTab === "match" && (
+          {utilityView === "match" && (
             <MatchDashboard
               save={save}
               mutating={mutating}
@@ -251,13 +223,13 @@ export default function CareerOverviewScreen() {
             />
           )}
 
-          {activeTab === "world" && <WorldDashboard save={save} />}
+          {!utilityView && activeTab === "world" && <WorldDashboard save={save} />}
 
-          {activeTab === "career" && (
-            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setActiveTab("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} onSignCollegeAgreement={signCollegeAgreement} onReportToCollege={reportToCollege} />
+          {!utilityView && activeTab === "career" && (
+            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setUtilityView("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} onSignCollegeAgreement={signCollegeAgreement} onReportToCollege={reportToCollege} />
           )}
 
-          {activeTab === "team" && (
+          {utilityView === "team" && (
             <div className="compact-section">
               <header className="compact-page-head">
                 <div><span>{football.school.city}, {football.school.stateCode}</span><h2>Команда</h2></div>
@@ -350,7 +322,7 @@ export default function CareerOverviewScreen() {
             </div>
           )}
 
-          {activeTab === "profile" && (
+          {utilityView === "profile" && (
             <div className="compact-section">
               <header className="compact-page-head">
                 <div><span>Personal life</span><h2>Жизнь</h2></div>

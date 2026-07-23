@@ -23,6 +23,7 @@
 - [x] Twenty-season autonomous stability test
 - [x] Social ecosystem
 - [x] Resume hero gameplay inside the stable world
+- [x] Mobile-first editorial interface and unified navigation
 - [ ] Interactive college match layer and full multi-year athlete progression
 
 ## v0.11 — High school to college
@@ -155,3 +156,17 @@
 - portal requests update the hero, world transactions and persistent history;
 - compact Week, Depth, People and Season views replace the temporary end-of-demo state;
 - deterministic migration from schema v21 to v22.
+
+
+## v0.24 — Editorial career interface
+
+- one navigation system for high school and college: Today, Career and World;
+- contextual match, team and profile surfaces instead of permanent top-level tabs;
+- compact player identity bar and one dominant action per mobile screen;
+- editorial world feed, quick search and contextual exploration instead of eleven visible tabs;
+- responsive career library and player creator for phone, tablet and desktop;
+- shared visual tokens for surfaces, typography, spacing, radii, shadows, controls and motion;
+- loading skeletons, empty states, errors, success feedback, disabled and selected states;
+- keyboard focus trap, Escape handling and focus restoration for bottom sheets;
+- reduced-motion support and touch targets designed around iPhone 14 Pro;
+- no save migration required because game state and domain logic remain unchanged.

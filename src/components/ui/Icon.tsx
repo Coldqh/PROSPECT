@@ -32,7 +32,8 @@ export type IconName =
   | "close"
   | "message"
   | "swap"
-  | "history";
+  | "history"
+  | "search";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
@@ -73,6 +74,7 @@ export function Icon({ name, size = 20, ...props }: IconProps) {
     message: <><path d="M4 5h16v11H8l-4 4V5Z" /><path d="M8 9h8M8 12h5" /></>,
     swap: <><path d="M7 7h11l-3-3" /><path d="m18 7-3 3" /><path d="M17 17H6l3 3" /><path d="m6 17 3-3" /></>,
     history: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></>,
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4.5-4.5" /></>,
   };
 
   return (

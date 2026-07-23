@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon, type IconName } from "../ui/Icon";
 import { BottomSheet } from "../ui/BottomSheet";
-import { SectionTabs } from "../ui/SectionTabs";
 import { addGameDays, formatGameDate, formatWeekday } from "../../core/calendar/types";
 import {
   getIntensityDescriptor,
@@ -31,14 +30,7 @@ const trainingIcons: Record<TrainingFocusId, IconName> = {
 };
 
 const weekdayLabels = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"] as const;
-const views = [
-  { id: "overview", label: "Сводка" },
-  { id: "training", label: "Трен." },
-  { id: "plan", label: "Режим" },
-  { id: "schedule", label: "День" },
-] as const;
-
-type TodayView = (typeof views)[number]["id"];
+type TodayView = "overview" | "training" | "plan" | "schedule";
 type SheetId = "condition" | "result" | "training-result" | "medical" | "event" | null;
 
 function signed(value: number, digits = 1): string {
@@ -128,9 +120,12 @@ export function TodayDashboard({
           <span>{formatWeekday(save.meta.currentDate)} · неделя {life.weekNumber}</span>
           <h2>{formatGameDate(save.meta.currentDate)}</h2>
         </div>
-        <button type="button" className={`medical-pill medical-pill--${body.medicalStatus}`} onClick={() => setSheet("medical")}>
-          {medicalLabel(body.medicalStatus)} <Icon name="chevron-down" size={15} />
-        </button>
+        <div className="today-head-actions">
+          <button type="button" className="icon-button icon-button--quiet" aria-label="Настроить недельный режим" onClick={() => setView("plan")}><Icon name="calendar" size={17} /></button>
+          <button type="button" className={`medical-pill medical-pill--${body.medicalStatus}`} onClick={() => setSheet("medical")}>
+            {medicalLabel(body.medicalStatus)} <Icon name="chevron-down" size={15} />
+          </button>
+        </div>
       </header>
 
       <div className="mini-week" aria-label="Текущая игровая неделя">
@@ -146,12 +141,17 @@ export function TodayDashboard({
         })}
       </div>
 
-      <SectionTabs<TodayView> tabs={views} active={view} onChange={setView} ariaLabel="Разделы текущего дня" />
+      {view !== "overview" && (
+        <header className="subview-head">
+          <button type="button" className="icon-button icon-button--quiet" onClick={() => setView("overview")} aria-label="К сводке дня"><Icon name="arrow-left" /></button>
+          <div><small>Сегодня</small><strong>{view === "training" ? "Тренировка" : view === "plan" ? "Недельный режим" : "Расписание"}</strong></div>
+        </header>
+      )}
 
       {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
 
       {view === "overview" && (
-        <div className="compact-view">
+        <div className={`compact-view today-overview${save.relationships.pendingEvent ? " has-event" : ""}`}>
           <div className="vital-row vital-row--body">
             <button type="button" onClick={() => setSheet("condition")}>
               <small>Энергия</small><strong>{Math.round(character.condition.energy)}</strong><i style={{ width: `${character.condition.energy}%` }} />
@@ -195,6 +195,13 @@ export function TodayDashboard({
               <Icon name="arrow-right" />
             </button>
           ) : null}
+
+
+          <button type="button" className="today-plan-teaser" onClick={() => setView("plan")}>
+            <span><Icon name="calendar" /></span>
+            <div><small>Режим недели</small><strong>{activeTemplate.shortName}</strong><p>{activeIntensity.name} · стабильность {Math.round(life.consistency)}</p></div>
+            <Icon name="arrow-right" size={17} />
+          </button>
 
           {football.training.lastSession && (
             <button type="button" className="result-teaser" onClick={() => setSheet("training-result")}>

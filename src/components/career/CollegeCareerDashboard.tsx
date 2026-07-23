@@ -5,16 +5,9 @@ import type { CareerSave } from "../../storage/saves/schema";
 import type { CollegeHeroRole } from "../../sports/football/college/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import { Icon } from "../ui/Icon";
-import { SectionTabs } from "../ui/SectionTabs";
-
-const views = [
-  { id: "week", label: "Неделя" },
-  { id: "depth", label: "Depth" },
-  { id: "people", label: "Люди" },
-  { id: "season", label: "Сезон" },
-] as const;
-
-type ViewId = (typeof views)[number]["id"];
+import { CareerNavigation, type CareerPrimaryView } from "./CareerNavigation";
+import { PlayerIdentityBar } from "./PlayerIdentityBar";
+import { WorldDashboard } from "./WorldDashboard";
 
 const focuses: readonly { id: TrainingFocusId; label: string; detail: string }[] = [
   { id: "position-craft", label: "Техника", detail: "Позиционные навыки и надёжность" },
@@ -65,7 +58,7 @@ export function CollegeCareerDashboard({
   onUpdateTrainingPlan,
   onResolveDecision,
 }: CollegeCareerDashboardProps) {
-  const [view, setView] = useState<ViewId>("week");
+  const [view, setView] = useState<CareerPrimaryView>("today");
   const [focusId, setFocusId] = useState<TrainingFocusId>(save.football.training.plan.focusId);
   const [intensity, setIntensity] = useState<TrainingIntensity>(save.football.training.plan.intensity);
   const college = save.football.college;
@@ -96,18 +89,14 @@ export function CollegeCareerDashboard({
 
   return (
     <div className="college-career-shell">
-      <header className="college-career-head">
-        <div>
-          <small>FRESHMAN · {program.city}, {program.stateCode} · W{career.week}</small>
-          <h1>{program.shortName}</h1>
-          <p>{save.character.identity.fullName} · {save.football.position} · {roleLabel(career.role)} · #{career.depthRank}</p>
-        </div>
-        <span><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong><em>{team?.wins ?? 0}–{team?.losses ?? 0}</em></span>
+      <PlayerIdentityBar save={save} compact onOpenTeam={() => setView("career")} onOpenProfile={() => setView("career")} />
+
+      <header className="college-career-context">
+        <div><small>FRESHMAN · {program.city}, {program.stateCode} · W{career.week}</small><strong>{program.shortName}</strong></div>
+        <span>{team?.wins ?? 0}–{team?.losses ?? 0}</span>
       </header>
 
-      <SectionTabs<ViewId> tabs={views} active={view} onChange={setView} ariaLabel="Университетская карьера" />
-
-      {view === "week" && (
+      {view === "today" && (
         <div className="compact-view college-week-view">
           <section className="college-week-strip">
             <span><small>Роль</small><strong>{roleLabel(career.role)}</strong></span>
@@ -175,7 +164,7 @@ export function CollegeCareerDashboard({
         </div>
       )}
 
-      {view === "depth" && (
+      {view === "career" && (
         <div className="compact-view college-active-room">
           <section className="college-room-context">
             <small>РЕАЛЬНАЯ ПОЗИЦИОННАЯ КОМНАТА</small>
@@ -198,7 +187,7 @@ export function CollegeCareerDashboard({
         </div>
       )}
 
-      {view === "people" && (
+      {view === "career" && (
         <div className="compact-view college-people-view">
           <section className="college-culture-card">
             <div><small>РАЗДЕВАЛКА</small><h3>{culture && culture.conflict >= 65 ? "Расколота" : culture && culture.cohesion >= 68 ? "Сплочена" : "Нестабильна"}</h3><p>{career.lastSummary}</p></div>
@@ -226,7 +215,7 @@ export function CollegeCareerDashboard({
         </div>
       )}
 
-      {view === "season" && (
+      {view === "career" && (
         <div className="compact-view college-season-view">
           <section className="college-season-strip">
             <span><small>Игры</small><strong>{career.gamesPlayed}</strong></span>
@@ -265,6 +254,10 @@ export function CollegeCareerDashboard({
           </section>
         </div>
       )}
+
+      {view === "world" && <WorldDashboard save={save} />}
+
+      <CareerNavigation active={view} onChange={setView} />
     </div>
   );
 }

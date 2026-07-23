@@ -3,6 +3,7 @@ import type { CareerSave } from "../../storage/saves/schema";
 import { defenseSystemLabel, offenseSystemLabel, positionRoleLabel } from "../../sports/football/ecosystem/tactics";
 import type {
   EcosystemConference,
+  EcosystemPlayer,
   EcosystemStory,
   EcosystemTeam,
   EcosystemTransaction,
@@ -12,21 +13,26 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { SectionTabs } from "../ui/SectionTabs";
 
-const views = [
-  { id: "pulse", label: "Пульс" },
-  { id: "leagues", label: "Лиги" },
-  { id: "competition", label: "Сезон" },
-  { id: "moves", label: "Движение" },
-  { id: "market", label: "Рынок" },
-  { id: "resources", label: "Ресурсы" },
-  { id: "plans", label: "Составы" },
-  { id: "tactics", label: "Схемы" },
-  { id: "social", label: "Люди" },
-  { id: "talent", label: "Таланты" },
-  { id: "history", label: "История" },
+const primaryViews = [
+  { id: "feed", label: "Лента" },
+  { id: "rankings", label: "Рейтинг" },
+  { id: "explore", label: "Обзор" },
 ] as const;
 
-type WorldView = (typeof views)[number]["id"];
+const exploreItems = [
+  { id: "leagues", label: "Конференции", detail: "Таблицы и гонки", icon: "trophy" },
+  { id: "moves", label: "Переходы", detail: "Трансферы и штабы", icon: "swap" },
+  { id: "market", label: "Рынок", detail: "Предложения и вакансии", icon: "target" },
+  { id: "resources", label: "Ресурсы", detail: "Бюджеты и NIL", icon: "database" },
+  { id: "plans", label: "Составы", detail: "Планы на три года", icon: "team" },
+  { id: "tactics", label: "Системы", detail: "Схемы и fit", icon: "brain" },
+  { id: "social", label: "Раздевалки", detail: "Доверие и конфликты", icon: "message" },
+  { id: "talent", label: "Таланты", detail: "Регионы и проспекты", icon: "spark" },
+  { id: "history", label: "История", detail: "Эпохи и результаты", icon: "history" },
+] as const satisfies readonly { id: string; label: string; detail: string; icon: import("../ui/Icon").IconName }[];
+
+type WorldPrimaryView = (typeof primaryViews)[number]["id"];
+type WorldDetailView = (typeof exploreItems)[number]["id"];
 
 function storyKindLabel(kind: EcosystemStory["kind"]): string {
   return {
@@ -116,8 +122,11 @@ function usageCount(team: EcosystemTeam): number {
 type WorldDashboardSave = Pick<CareerSave, "world" | "football">;
 
 export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
-  const [view, setView] = useState<WorldView>("pulse");
+  const [primaryView, setPrimaryView] = useState<WorldPrimaryView>("feed");
+  const [detailView, setDetailView] = useState<WorldDetailView>();
+  const [query, setQuery] = useState("");
   const [selectedStory, setSelectedStory] = useState<EcosystemStory>();
+  const [selectedPlayer, setSelectedPlayer] = useState<EcosystemPlayer>();
   const [selectedConference, setSelectedConference] = useState<EcosystemConference>();
   const [selectedTeam, setSelectedTeam] = useState<EcosystemTeam>();
   const { world, football } = save;
@@ -230,6 +239,17 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   const activeSocialBonds = world.social.bonds.filter((bond) => bond.active);
   const strainedSocialBonds = activeSocialBonds.filter((bond) => bond.tension >= 70);
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const searchTeams = normalizedQuery
+    ? world.teams.filter((team) => `${team.name} ${team.shortName} ${team.stateCode}`.toLowerCase().includes(normalizedQuery)).slice(0, 6)
+    : [];
+  const searchPlayers = normalizedQuery
+    ? world.players.filter((player) => `${player.name} ${player.position} ${player.classYear}`.toLowerCase().includes(normalizedQuery)).slice(0, 6)
+    : [];
+  const searchStories = normalizedQuery
+    ? stories.filter((story) => `${story.title} ${story.detail}`.toLowerCase().includes(normalizedQuery)).slice(0, 4)
+    : [];
+
   const topProspects = useMemo(
     () => world.players
       .filter((player) => player.level === "high-school")
@@ -261,9 +281,64 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         <strong className="compact-head-score">{world.seasonYear}</strong>
       </header>
 
-      <SectionTabs<WorldView> tabs={views} active={view} onChange={setView} ariaLabel="Разделы спортивного мира" />
+      <div className="world-command-bar">
+        <label className="world-search">
+          <Icon name="search" size={17} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Команда, игрок, событие" aria-label="Поиск по миру" />
+          {query && <button type="button" aria-label="Очистить поиск" onClick={() => setQuery("")}><Icon name="close" size={14} /></button>}
+        </label>
+        <SectionTabs<WorldPrimaryView>
+          tabs={primaryViews}
+          active={primaryView}
+          onChange={(next) => { setPrimaryView(next); if (next !== "explore") setDetailView(undefined); }}
+          ariaLabel="Основные разделы мира"
+        />
+      </div>
 
-      {view === "pulse" && (
+      {normalizedQuery && (
+        <section className="world-search-results" aria-live="polite">
+          <header><small>Быстрый поиск</small><strong>{searchTeams.length + searchPlayers.length + searchStories.length} совпадений</strong></header>
+          <div>
+            {searchTeams.map((team) => (
+              <button key={team.id} type="button" onClick={() => setSelectedTeam(team)}>
+                <span>{team.shortName.slice(0, 2)}</span><div><strong>{team.shortName}</strong><small>{team.name} · {team.stateCode}</small></div><em>{Math.round(team.rating)}</em>
+              </button>
+            ))}
+            {searchPlayers.map((player) => (
+              <button key={player.id} type="button" onClick={() => setSelectedPlayer(player)}>
+                <span>{player.position}</span><div><strong>{player.name}</strong><small>{player.classYear} · {player.level === "college" ? "College" : "High school"}</small></div><em>{Math.round(player.overall)}</em>
+              </button>
+            ))}
+            {searchStories.map((story) => (
+              <button key={story.id} type="button" onClick={() => setSelectedStory(story)}>
+                <span><Icon name="pulse" size={15} /></span><div><strong>{story.title}</strong><small>{storyKindLabel(story.kind)}</small></div><em>{story.importance}</em>
+              </button>
+            ))}
+            {searchTeams.length + searchPlayers.length + searchStories.length === 0 && <p>Ничего не найдено. Попробуй название программы, штат или событие.</p>}
+          </div>
+        </section>
+      )}
+
+      {!normalizedQuery && primaryView === "explore" && !detailView && (
+        <div className="world-explore-grid">
+          {exploreItems.map((item) => (
+            <button key={item.id} type="button" onClick={() => setDetailView(item.id)}>
+              <span><Icon name={item.icon} /></span>
+              <div><strong>{item.label}</strong><small>{item.detail}</small></div>
+              <Icon name="arrow-right" size={16} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!normalizedQuery && primaryView === "explore" && detailView && (
+        <div className="world-detail-head">
+          <button type="button" className="icon-button icon-button--quiet" onClick={() => setDetailView(undefined)} aria-label="К обзору мира"><Icon name="arrow-left" /></button>
+          <div><small>Обзор мира</small><strong>{exploreItems.find((item) => item.id === detailView)?.label}</strong></div>
+        </div>
+      )}
+
+      {!normalizedQuery && primaryView === "feed" && (
         <div className="compact-view world-pulse">
           <section className="world-cycle-card">
             <div><small>{phaseLabel(world.phase)}</small><h3>Неделя {world.seasonWeek}</h3></div>
@@ -295,7 +370,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "leagues" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "leagues" && (
         <div className="compact-view">
           <section className="world-context-card">
             <small>Реальные соревнования</small><h3>Команды играют друг против друга</h3>
@@ -324,7 +399,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "competition" && (
+      {!normalizedQuery && primaryView === "rankings" && (
         <div className="compact-view competition-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>#1</small><strong>{nationalRankings[0] ? world.teams.find((team) => team.id === nationalRankings[0]?.teamId)?.shortName ?? "—" : "—"}</strong></span>
@@ -386,7 +461,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "moves" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "moves" && (
         <div className="compact-view">
           <section className="world-context-card">
             <small>Трансферы и штабы</small><h3>Места никогда не закреплены навсегда</h3>
@@ -405,7 +480,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "market" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "market" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Переговоры</small><strong>{world.market.activeNegotiations}</strong></span>
@@ -450,7 +525,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "resources" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "resources" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Рекрутинг</small><strong>${Math.round(world.market.totalRecruitingBudget)}M</strong></span>
@@ -485,7 +560,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "plans" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "plans" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Мест в классах</small><strong>{world.market.plannedClassSpots}</strong></span>
@@ -522,7 +597,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "tactics" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "tactics" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Освоение</small><strong>{averageInstallation}</strong></span>
@@ -553,7 +628,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "social" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "social" && (
         <div className="compact-view social-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Связи</small><strong>{activeSocialBonds.length}</strong></span>
@@ -594,7 +669,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "talent" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "talent" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
             <span><small>Школьники</small><strong>{world.market.annualProspects}</strong></span>
@@ -643,7 +718,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
-      {view === "history" && (
+      {!normalizedQuery && primaryView === "explore" && detailView === "history" && (
         <div className="compact-view">
           <section className="world-context-card">
             <small>Непрерывная история</small><h3>Сезоны не исчезают после финала</h3>
@@ -685,6 +760,32 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
             <div className="info-list info-list--compact">
               <span><small>Неделя</small><strong>{selectedStory.week}</strong></span>
               <span><small>Связь с карьерой</small><strong>{selectedStory.relatedToHero ? "Прямая" : "Косвенная"}</strong></span>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet
+        open={Boolean(selectedPlayer)}
+        title={selectedPlayer?.name ?? "Игрок"}
+        {...(selectedPlayer ? { eyebrow: `${selectedPlayer.position} · ${selectedPlayer.classYear}` } : {})}
+        onClose={() => setSelectedPlayer(undefined)}
+      >
+        {selectedPlayer && (
+          <div className="player-world-sheet">
+            <section className="world-market-strip world-market-strip--four">
+              <span><small>OVR</small><strong>{Math.round(selectedPlayer.overall)}</strong></span>
+              <span><small>Потенциал</small><strong>{Math.round(selectedPlayer.potential)}</strong></span>
+              <span><small>Форма</small><strong>{Math.round(selectedPlayer.form)}</strong></span>
+              <span><small>Здоровье</small><strong>{Math.round(selectedPlayer.health)}</strong></span>
+            </section>
+            <div className="info-list info-list--compact">
+              <span><small>Статус</small><strong>{selectedPlayer.status}</strong></span>
+              <span><small>Depth</small><strong>#{selectedPlayer.depthRank}</strong></span>
+              <span><small>Scheme fit</small><strong>{Math.round(selectedPlayer.tactical.schemeFit)}</strong></span>
+              <span><small>Траектория</small><strong>{selectedPlayer.trajectory}</strong></span>
+              <span><small>Рекрутинг</small><strong>{selectedPlayer.recruitingStage}</strong></span>
+              <span><small>Трансфер</small><strong>{selectedPlayer.transferStatus}</strong></span>
             </div>
           </div>
         )}

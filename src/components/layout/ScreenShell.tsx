@@ -5,13 +5,14 @@ interface ScreenShellProps {
   header?: ReactNode;
   footer?: ReactNode;
   narrow?: boolean;
+  className?: string;
 }
 
-export function ScreenShell({ children, header, footer, narrow = false }: ScreenShellProps) {
+export function ScreenShell({ children, header, footer, narrow = false, className = "" }: ScreenShellProps) {
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${className}`.trim()}>
       {header}
-      <main className={narrow ? "screen screen--narrow" : "screen"}>{children}</main>
+      <main className={`${narrow ? "screen screen--narrow" : "screen"} page-transition`}>{children}</main>
       {footer}
     </div>
   );

@@ -200,9 +200,11 @@ export default function NewCareerScreen() {
 
   return (
     <ScreenShell
+      className="creator-experience"
       header={
         <AppHeader
           compact
+          context="Создание игрока"
           action={
             <button className="icon-button" aria-label="Закрыть создание" onClick={() => navigate("/")}>
               <Icon name="close" />
