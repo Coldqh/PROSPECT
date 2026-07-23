@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { createCompetitionState } from "./competition";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution } from "./constitution";
 import { createProgramResources } from "./resources";
 import { createEmptyRosterPlan } from "./rosterManagement";
 import { createUnifiedMovementMarket } from "./movementMarket";
+import { createSocialEcosystem } from "./social";
 import { ECOSYSTEM_MODULE_VERSION } from "./types";
 import { createTalentPipeline, createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
 import { createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
@@ -130,6 +132,8 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
     transactions: [],
     talentPipeline,
     movementMarket: createUnifiedMovementMarket([team, college], [senior], 2026),
+    competition: createCompetitionState(2026, [], [team, college], new SeededRandom("talent-test:competition")),
+    social: createSocialEcosystem([team, college], [senior], [], 2026, new SeededRandom("talent-test:social")),
   };
 }
 
