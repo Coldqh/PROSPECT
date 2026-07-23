@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   CharacterCreationInput,
@@ -26,12 +26,12 @@ import type { FootballCareerSetup, FootballPosition } from "../sports/football/c
 import { useCareerLibrary } from "../state/CareerLibraryProvider";
 
 const steps = [
-  { id: "sport", label: "Sport", title: "Выбор мира", icon: "football" },
-  { id: "identity", label: "Identity", title: "Личность", icon: "user" },
-  { id: "origin", label: "Origin", title: "Происхождение", icon: "map" },
-  { id: "role", label: "Role", title: "Позиция", icon: "target" },
-  { id: "mindset", label: "Mindset", title: "Характер", icon: "brain" },
-  { id: "review", label: "Launch", title: "Запуск", icon: "spark" },
+  { id: "sport", label: "Спорт", title: "Выбор мира", icon: "football" },
+  { id: "identity", label: "Игрок", title: "Личность", icon: "user" },
+  { id: "origin", label: "Дом", title: "Происхождение", icon: "map" },
+  { id: "role", label: "Роль", title: "Позиция", icon: "target" },
+  { id: "mindset", label: "Характер", title: "Характер", icon: "brain" },
+  { id: "review", label: "Старт", title: "Запуск", icon: "spark" },
 ] as const satisfies readonly { id: string; label: string; title: string; icon: IconName }[];
 
 type StepId = (typeof steps)[number]["id"];
@@ -216,10 +216,10 @@ export default function NewCareerScreen() {
       <div className="creator-shell">
         <aside className="creator-rail">
           <div className="creator-rail__head">
-            <span>CAREER BUILDER</span>
+            <span>СОЗДАНИЕ КАРЬЕРЫ · {steps[stepIndex]?.title}</span>
             <strong>{String(stepIndex + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")}</strong>
           </div>
-          <div className="creator-progress"><i style={{ height: `${progress}%` }} /></div>
+          <div className="creator-progress" style={{ "--progress": `${progress}%` } as CSSProperties}><i /></div>
           <nav aria-label="Этапы создания карьеры">
             {steps.map((item, index) => (
               <button
@@ -240,7 +240,7 @@ export default function NewCareerScreen() {
         <section className="creator-stage">
           <header className="creator-stage__header">
             <div>
-              <span className="eyebrow">PROSPECT // ORIGIN SEQUENCE</span>
+              <span className="eyebrow">PROSPECT · НОВАЯ КАРЬЕРА</span>
               <h1>{steps[stepIndex]?.title}</h1>
             </div>
             <span className="creator-stage__number">{String(stepIndex + 1).padStart(2, "0")}</span>
@@ -256,16 +256,16 @@ export default function NewCareerScreen() {
                 <ChoiceCard
                   active
                   icon="football"
-                  kicker="ACTIVE MODULE"
-                  title="American Football"
+                  kicker="ДОСТУПНО"
+                  title="Американский футбол"
                   description="Последний школьный сезон, борьба за состав, матчи и рекрутинг колледжей."
                   onClick={() => undefined}
                 />
                 <ChoiceCard
                   active={false}
                   icon="basketball"
-                  kicker="LOCKED"
-                  title="Basketball"
+                  kicker="ПОЗЖЕ"
+                  title="Баскетбол"
                   description="Будет подключён отдельным модулем после устойчивой футбольной карьеры."
                   onClick={() => undefined}
                   disabled
@@ -363,7 +363,7 @@ export default function NewCareerScreen() {
                     <strong>{origin.city}</strong>
                     <small>{origin.tagline}</small>
                     <div><i style={{ width: `${origin.footballCulture}%` }} /></div>
-                    <em>Football culture {origin.footballCulture}</em>
+                    <em>Футбольная культура {origin.footballCulture}</em>
                   </button>
                 ))}
               </div>

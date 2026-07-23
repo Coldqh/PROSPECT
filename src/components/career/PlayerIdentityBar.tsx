@@ -11,8 +11,8 @@ interface PlayerIdentityBarProps {
 
 function phaseLabel(save: CareerSave): string {
   if (save.meta.phase === "college-orientation") return "Прибытие в колледж";
-  if (save.meta.phase === "college-season") return "Freshman season";
-  return "Senior season";
+  if (save.meta.phase === "college-season") return "Первый сезон";
+  return "Выпускной сезон";
 }
 
 function roleLabel(save: CareerSave): string {

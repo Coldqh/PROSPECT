@@ -238,6 +238,12 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   );
   const activeSocialBonds = world.social.bonds.filter((bond) => bond.active);
   const strainedSocialBonds = activeSocialBonds.filter((bond) => bond.tension >= 70);
+  const marketSignals = [
+    { label: "Коммиты", value: world.market.committedPlayers },
+    { label: "Портал", value: world.market.portalPlayers },
+    { label: "Горячие штабы", value: world.market.coachingHotSeats },
+    { label: "Сезонов в истории", value: historyYears.length },
+  ].filter((signal) => signal.value > 0);
 
   const normalizedQuery = query.trim().toLowerCase();
   const searchTeams = normalizedQuery
@@ -277,7 +283,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   return (
     <div className="compact-section world-dashboard">
       <header className="compact-page-head world-head">
-        <div><span>Autonomous football world</span><h2>Экосистема</h2></div>
+        <div><span>Автономный футбольный мир</span><h2>Экосистема</h2></div>
         <strong className="compact-head-score">{world.seasonYear}</strong>
       </header>
 
@@ -345,19 +351,7 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
             <span>{world.conferences.length} конференции</span>
           </section>
 
-          <section className="world-market-strip world-market-strip--four">
-            <span><small>Коммиты</small><strong>{world.market.committedPlayers}</strong></span>
-            <span><small>Портал</small><strong>{world.market.portalPlayers}</strong></span>
-            <span><small>Горячие штабы</small><strong>{world.market.coachingHotSeats}</strong></span>
-            <span><small>Сезонов в истории</small><strong>{historyYears.length}</strong></span>
-          </section>
-
-          <section className="world-digest-card">
-            <header><Icon name="pulse" /><div><small>Что изменилось без тебя</small><h3>Мир продолжил движение</h3></div></header>
-            <div>{world.digest.map((item) => <p key={item}>{item}</p>)}</div>
-          </section>
-
-          <div className="world-story-list">
+          <div className="world-story-list world-story-list--lead">
             {stories.slice(0, 5).map((item) => (
               <button key={item.id} type="button" className={item.relatedToHero ? "is-relevant" : ""} onClick={() => setSelectedStory(item)}>
                 <span className={`world-story-kind world-story-kind--${item.kind}`}>{storyKindLabel(item.kind)}</span>
@@ -367,6 +361,19 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
             ))}
             {stories.length === 0 && <div className="compact-note"><Icon name="clock" /><p>Мир только запущен. Первые изменения появятся после игровых недель.</p></div>}
           </div>
+
+          {world.digest.length > 0 && (
+            <section className="world-digest-card">
+              <header><Icon name="pulse" /><div><small>Что изменилось без тебя</small><h3>Мир продолжил движение</h3></div></header>
+              <div>{world.digest.map((item) => <p key={item}>{item}</p>)}</div>
+            </section>
+          )}
+
+          {marketSignals.length > 0 && (
+            <section className={`world-market-strip world-market-strip--signals world-market-strip--${Math.min(4, marketSignals.length)}`}>
+              {marketSignals.map((signal) => <span key={signal.label}><small>{signal.label}</small><strong>{signal.value}</strong></span>)}
+            </section>
+          )}
         </div>
       )}
 

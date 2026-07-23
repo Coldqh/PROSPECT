@@ -1,3 +1,5 @@
+@layer legacy, redesign, refinement;
 @import "./tokens.css";
-@import "./legacy.css";
-@import "./redesign.css";
+@import "./legacy.css" layer(legacy);
+@import "./redesign.css" layer(redesign);
+@import "./refinement.css" layer(refinement);

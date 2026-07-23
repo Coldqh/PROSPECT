@@ -170,3 +170,13 @@
 - keyboard focus trap, Escape handling and focus restoration for bottom sheets;
 - reduced-motion support and touch targets designed around iPhone 14 Pro;
 - no save migration required because game state and domain logic remain unchanged.
+
+
+## v0.24.1 — Mobile cascade repair
+
+- legacy and redesign styles are isolated in explicit cascade layers;
+- iPhone creator uses a single-step flow instead of a full vertical navigation panel;
+- mobile header, identity bar, week strip and bottom navigation are compressed;
+- Today prioritizes condition, training, schedule and one action;
+- World prioritizes stories and hides zero-value market cards;
+- no save migration required.

@@ -190,8 +190,8 @@ export default function CareerOverviewScreen() {
           </div>
         </aside>
 
-        <div className="career-main">
-          <PlayerIdentityBar save={save} onOpenTeam={() => setUtilityView("team")} onOpenProfile={() => setUtilityView("profile")} />
+        <div className={`career-main career-main--${activeTab}${utilityView ? " career-main--utility" : ""}`}>
+          <PlayerIdentityBar compact={activeTab !== "today" || utilityView !== null} save={save} onOpenTeam={() => setUtilityView("team")} onOpenProfile={() => setUtilityView("profile")} />
 
           {utilityView && (
             <header className="utility-view-head">
