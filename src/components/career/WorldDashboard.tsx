@@ -15,6 +15,7 @@ import { SectionTabs } from "../ui/SectionTabs";
 const views = [
   { id: "pulse", label: "Пульс" },
   { id: "leagues", label: "Лиги" },
+  { id: "competition", label: "Сезон" },
   { id: "moves", label: "Движение" },
   { id: "market", label: "Рынок" },
   { id: "resources", label: "Ресурсы" },
@@ -59,11 +60,16 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "coach-vacancy": "Вакансия",
     "tactical-change": "Смена схемы",
     "scheme-fit": "Соответствие",
+    ranking: "Рейтинг",
+    playoff: "Плей-офф",
+    award: "Награда",
+    rivalry: "Rivalry",
+    bowl: "Bowl",
   }[kind];
 }
 
 function phaseLabel(phase: FootballEcosystemState["phase"]): string {
-  return phase === "regular-season" ? "Регулярный сезон" : phase === "postseason" ? "Финалы конференций" : "Межсезонье";
+  return phase === "regular-season" ? "Регулярный сезон" : phase === "postseason" ? "Национальный постсезон" : "Межсезонье";
 }
 
 function transactionLabel(kind: EcosystemTransaction["kind"]): string {
@@ -172,6 +178,30 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
   const averageInstallation = tacticalTeams.length > 0
     ? Math.round(tacticalTeams.reduce((sum, team) => sum + team.tactical.installation, 0) / tacticalTeams.length)
     : 0;
+  const nationalRankings = useMemo(
+    () => world.competition.rankings.slice(0, 12),
+    [world.competition.rankings],
+  );
+  const recentCompetitionGames = useMemo(
+    () => [...world.competition.schedule]
+      .filter((game) => game.status === "complete")
+      .sort((left, right) => right.week - left.week || right.id.localeCompare(left.id))
+      .slice(0, 8),
+    [world.competition.schedule],
+  );
+  const currentAwards = useMemo(
+    () => [...world.competition.awards]
+      .filter((award) => award.seasonYear === world.competition.seasonYear)
+      .slice(-10)
+      .reverse(),
+    [world.competition.awards, world.competition.seasonYear],
+  );
+  const legacyPrograms = useMemo(
+    () => [...world.competition.programLegacies]
+      .sort((left, right) => right.reputation - left.reputation || right.nationalTitles - left.nationalTitles)
+      .slice(0, 10),
+    [world.competition.programLegacies],
+  );
 
   const topProspects = useMemo(
     () => world.players
@@ -264,6 +294,68 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {view === "competition" && (
+        <div className="compact-view competition-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>#1</small><strong>{nationalRankings[0] ? world.teams.find((team) => team.id === nationalRankings[0]?.teamId)?.shortName ?? "—" : "—"}</strong></span>
+            <span><small>Этап</small><strong>{world.competition.playoff.stage === "regular-season" ? `W${world.seasonWeek}` : world.competition.playoff.stage}</strong></span>
+            <span><small>Плей-офф</small><strong>{world.competition.playoff.seedTeamIds.length || 8}</strong></span>
+            <span><small>Награды</small><strong>{currentAwards.length}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Национальная система</small><h3>Результаты меняют весь мир</h3>
+            <p>Рейтинг учитывает победы, силу расписания, качественные победы, выездные матчи и разницу очков. Титулы меняют престиж, бюджеты и рынок.</p>
+          </section>
+
+          <section className="competition-ranking-card">
+            <header><small>National Top 12</small><h3>Рейтинг</h3></header>
+            <div>
+              {nationalRankings.map((ranking) => {
+                const team = world.teams.find((item) => item.id === ranking.teamId);
+                const movement = ranking.previousRank ? ranking.previousRank - ranking.rank : 0;
+                return (
+                  <button key={ranking.teamId} type="button" className={team?.id === heroProgramId ? "is-hero" : ""} onClick={() => team && setSelectedTeam(team)}>
+                    <span>{ranking.rank}</span>
+                    <div><strong>{team?.shortName ?? ranking.teamId}</strong><small>{team?.wins ?? 0}–{team?.losses ?? 0} · SOS {Math.round(ranking.strengthOfSchedule)} · QW {ranking.qualityWins}</small></div>
+                    <em>{movement > 0 ? `+${movement}` : movement < 0 ? movement : "—"}</em>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="competition-split-grid">
+            <section className="competition-results-card">
+              <header><small>Последние матчи</small><h3>Результаты</h3></header>
+              {recentCompetitionGames.map((game) => {
+                const home = world.teams.find((team) => team.id === game.homeTeamId);
+                const away = world.teams.find((team) => team.id === game.awayTeamId);
+                return <article key={game.id}><span>{game.kind === "rivalry" ? "RIV" : game.kind === "playoff" ? "PO" : `W${game.week}`}</span><div><strong>{away?.shortName ?? game.awayTeamId} {game.awayScore} — {game.homeScore} {home?.shortName ?? game.homeTeamId}</strong><small>{game.upset ? "Сенсация · " : ""}{game.neutralSite ? "нейтральное поле" : "дом/выезд"}</small></div></article>;
+              })}
+              {recentCompetitionGames.length === 0 && <div className="compact-note"><Icon name="clock" /><p>Первый тур ещё не сыгран.</p></div>}
+            </section>
+
+            <section className="competition-awards-card">
+              <header><small>Признание</small><h3>Награды</h3></header>
+              {currentAwards.slice(0, 6).map((award) => {
+                const player = world.players.find((item) => item.id === award.playerId);
+                return <article key={award.id}><span>{player?.position ?? "★"}</span><div><strong>{award.title}</strong><small>{award.detail}</small></div></article>;
+              })}
+              {currentAwards.length === 0 && <div className="compact-note"><Icon name="spark" /><p>Награды появятся после первых игровых недель.</p></div>}
+            </section>
+          </div>
+
+          <section className="competition-legacy-card">
+            <header><small>Историческая репутация</small><h3>Эпохи программ</h3></header>
+            <div>{legacyPrograms.map((legacy) => {
+              const team = world.teams.find((item) => item.id === legacy.teamId);
+              return <button key={legacy.teamId} type="button" onClick={() => team && setSelectedTeam(team)}><strong>{team?.shortName ?? legacy.teamId}</strong><span>{legacy.eraLabel}</span><small>{legacy.allTimeWins}–{legacy.allTimeLosses} · титулы {legacy.nationalTitles} · best #{legacy.bestRank}</small><em>{Math.round(legacy.reputation)}</em></button>;
+            })}</div>
+          </section>
         </div>
       )}
 

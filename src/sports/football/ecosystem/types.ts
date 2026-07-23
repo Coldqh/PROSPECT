@@ -2,7 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 8 as const;
+export const ECOSYSTEM_MODULE_VERSION = 9 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -65,7 +65,12 @@ export type EcosystemStoryKind =
   | "market-chain"
   | "coach-vacancy"
   | "tactical-change"
-  | "scheme-fit";
+  | "scheme-fit"
+  | "ranking"
+  | "playoff"
+  | "award"
+  | "rivalry"
+  | "bowl";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -231,6 +236,107 @@ export interface EcosystemUnifiedMovementMarket {
   coachVacancies: EcosystemCoachVacancy[];
   acceptedMoves: number;
   withdrawnOffers: number;
+  digest: string[];
+}
+
+
+export type EcosystemGameKind = "conference" | "nonconference" | "rivalry" | "conference-championship" | "playoff" | "bowl";
+export type EcosystemGameStatus = "scheduled" | "complete";
+export type EcosystemPostseasonStage = "regular-season" | "conference-championships" | "quarterfinals" | "semifinals" | "national-championship" | "complete";
+export type EcosystemAwardKind = "player-of-week" | "conference-player" | "national-player" | "position-award" | "all-american";
+
+export interface EcosystemCompetitionGame {
+  id: string;
+  seasonYear: number;
+  week: number;
+  kind: EcosystemGameKind;
+  homeTeamId: string;
+  awayTeamId: string;
+  neutralSite: boolean;
+  conferenceGame: boolean;
+  rivalryId?: string | undefined;
+  status: EcosystemGameStatus;
+  homeScore?: number | undefined;
+  awayScore?: number | undefined;
+  winnerTeamId?: string | undefined;
+  loserTeamId?: string | undefined;
+  upset?: boolean | undefined;
+}
+
+export interface EcosystemNationalRanking {
+  seasonYear: number;
+  week: number;
+  teamId: string;
+  rank: number;
+  previousRank?: number | undefined;
+  score: number;
+  strengthOfSchedule: number;
+  qualityWins: number;
+  pointDifferential: number;
+}
+
+export interface EcosystemRankingSnapshot {
+  seasonYear: number;
+  week: number;
+  rankings: EcosystemNationalRanking[];
+}
+
+export interface EcosystemPlayoffState {
+  seasonYear: number;
+  stage: EcosystemPostseasonStage;
+  seedTeamIds: string[];
+  gameIds: string[];
+  championTeamId?: string | undefined;
+}
+
+export interface EcosystemCompetitionAward {
+  id: string;
+  seasonYear: number;
+  week?: number | undefined;
+  kind: EcosystemAwardKind;
+  playerId: string;
+  teamId: string;
+  title: string;
+  detail: string;
+}
+
+export interface EcosystemRivalry {
+  id: string;
+  name: string;
+  teamAId: string;
+  teamBId: string;
+  intensity: number;
+  meetings: number;
+  winsA: number;
+  winsB: number;
+  ties: number;
+  streak: number;
+  lastWinnerTeamId?: string | undefined;
+}
+
+export interface EcosystemProgramLegacy {
+  teamId: string;
+  allTimeWins: number;
+  allTimeLosses: number;
+  nationalTitles: number;
+  playoffAppearances: number;
+  bowlWins: number;
+  rivalryWins: number;
+  bestRank: number;
+  reputation: number;
+  eraLabel: "unknown" | "building" | "contender" | "power" | "dynasty" | "decline";
+}
+
+export interface EcosystemCompetitionState {
+  version: 1;
+  seasonYear: number;
+  schedule: EcosystemCompetitionGame[];
+  rankings: EcosystemNationalRanking[];
+  rankingHistory: EcosystemRankingSnapshot[];
+  playoff: EcosystemPlayoffState;
+  awards: EcosystemCompetitionAward[];
+  rivalries: EcosystemRivalry[];
+  programLegacies: EcosystemProgramLegacy[];
   digest: string[];
 }
 
@@ -531,5 +637,6 @@ export interface FootballEcosystemState {
   transactions: EcosystemTransaction[];
   talentPipeline: EcosystemTalentPipeline;
   movementMarket: EcosystemUnifiedMovementMarket;
+  competition: EcosystemCompetitionState;
 }
 

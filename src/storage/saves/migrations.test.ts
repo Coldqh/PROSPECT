@@ -506,6 +506,23 @@ describe("migrateCareerSave", () => {
     expect(result.save.world.market.lowSchemeFitPlayers).toBeGreaterThanOrEqual(0);
   });
 
+  it("migrates version nineteen worlds into the competition ecosystem", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { competition: _competition, ...legacyWorld } = current.world;
+    const versionNineteen = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 19 as const },
+      world: { ...legacyWorld, moduleVersion: 8 as const },
+    };
+    const result = migrateCareerSave(versionNineteen);
+    expect(result.migratedFrom).toBe(19);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    expect(result.save.world.competition.schedule).toHaveLength(120);
+    expect(result.save.world.competition.rankings).toHaveLength(24);
+    expect(result.save.world.competition.rivalries).toHaveLength(12);
+  });
+
   it("produces the same migrated athlete for the same seed", () => {
     expect(migrateCareerSave(legacySave).save.character).toEqual(migrateCareerSave(legacySave).save.character);
   });

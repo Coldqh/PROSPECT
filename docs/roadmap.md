@@ -19,7 +19,7 @@
 - [x] Multi-year roster-planning AI
 - [x] Unified recruiting, transfer and coaching labor market
 - [x] Tactical identities and scheme-driven roster value
-- [ ] National competition, rankings and program reputation
+- [x] National competition, rankings and program reputation
 - [ ] Twenty-season autonomous stability test
 - [ ] Social ecosystem
 - [ ] Resume hero gameplay inside the stable world
@@ -102,3 +102,16 @@
 - roster and market AI value players inside specific systems instead of by OVR alone;
 - compact Schemes tab inside the World dashboard;
 - deterministic migration from schema v18 to v19.
+
+
+## v0.20 — National competition and program history
+
+- coherent ten-week schedules with conference and nonconference games;
+- rivalry games with persistent series history;
+- national ranking based on record, strength of schedule, quality wins, road wins and point differential;
+- conference championships and an eight-team national playoff;
+- bowls for ranked teams outside the playoff;
+- weekly, positional, national and All-American awards;
+- program legacies with titles, playoff appearances, bowl wins, rivalry wins and historical reputation;
+- compact Competition tab inside the World dashboard;
+- deterministic migration from schema v19 to v20.

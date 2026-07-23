@@ -2123,3 +2123,94 @@ body::after {
 }
 
 .world-transaction-list button { width: 100%; color: inherit; text-align: left; cursor: pointer; }
+
+/* Competition ecosystem */
+.competition-view { display: grid; gap: 10px; }
+.competition-ranking-card,
+.competition-results-card,
+.competition-awards-card,
+.competition-legacy-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.competition-ranking-card > header,
+.competition-results-card > header,
+.competition-awards-card > header,
+.competition-legacy-card > header { margin-bottom: 9px; }
+.competition-ranking-card header small,
+.competition-results-card header small,
+.competition-awards-card header small,
+.competition-legacy-card header small { color: #ef3340; font-size: 7px; text-transform: uppercase; letter-spacing: .09em; }
+.competition-ranking-card header h3,
+.competition-results-card header h3,
+.competition-awards-card header h3,
+.competition-legacy-card header h3 { margin: 3px 0 0; font-size: 13px; }
+.competition-ranking-card > div { display: grid; gap: 5px; }
+.competition-ranking-card button {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.045);
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  background: rgba(255,255,255,.018);
+  text-align: left;
+  cursor: pointer;
+}
+.competition-ranking-card button.is-hero { border-color: rgba(239,51,64,.48); background: rgba(239,51,64,.07); }
+.competition-ranking-card button > span { color: #ef3340; font-size: 11px; font-weight: 950; }
+.competition-ranking-card button div { min-width: 0; display: grid; gap: 2px; }
+.competition-ranking-card button strong { font-size: 10px; }
+.competition-ranking-card button small { color: var(--muted); font-size: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.competition-ranking-card button em { color: #ff9ca5; font-size: 9px; font-style: normal; font-weight: 900; text-align: right; }
+.competition-split-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.competition-results-card article,
+.competition-awards-card article {
+  min-height: 48px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+}
+.competition-results-card article > span,
+.competition-awards-card article > span { color: #ef3340; font-size: 7px; font-weight: 950; }
+.competition-results-card article div,
+.competition-awards-card article div { min-width: 0; display: grid; gap: 2px; }
+.competition-results-card article strong,
+.competition-awards-card article strong { font-size: 9px; }
+.competition-results-card article small,
+.competition-awards-card article small { color: var(--muted); font-size: 7px; line-height: 1.35; }
+.competition-legacy-card > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.competition-legacy-card button {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(255,255,255,.045);
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 3px 8px;
+  color: var(--text);
+  background: rgba(255,255,255,.018);
+  text-align: left;
+  cursor: pointer;
+}
+.competition-legacy-card button strong { font-size: 10px; }
+.competition-legacy-card button span { color: #ff9ca5; font-size: 7px; text-transform: uppercase; letter-spacing: .06em; }
+.competition-legacy-card button small { grid-column: 1 / 2; color: var(--muted); font-size: 7px; }
+.competition-legacy-card button em { grid-column: 2; grid-row: 2; color: #ef3340; font-size: 11px; font-style: normal; font-weight: 950; }
+.world-story-kind--ranking,
+.world-story-kind--playoff,
+.world-story-kind--award,
+.world-story-kind--rivalry,
+.world-story-kind--bowl { color: #ffc0c6; background: rgba(239,51,64,.15); }
+@media (max-width: 430px) {
+  .competition-split-grid { grid-template-columns: 1fr; }
+  .competition-legacy-card > div { grid-template-columns: 1fr 1fr; }
+}

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 19;
+export const CURRENT_SCHEMA_VERSION = 20;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -952,6 +952,92 @@ const ecosystemMovementMarketSchema = z.object({
   digest: z.array(z.string().min(2)).max(6),
 });
 
+
+const ecosystemCompetitionGameSchema = z.object({
+  id: z.string().min(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  week: z.number().int().min(1).max(20),
+  kind: z.enum(["conference", "nonconference", "rivalry", "conference-championship", "playoff", "bowl"]),
+  homeTeamId: z.string().min(1),
+  awayTeamId: z.string().min(1),
+  neutralSite: z.boolean(),
+  conferenceGame: z.boolean(),
+  rivalryId: z.string().min(1).optional(),
+  status: z.enum(["scheduled", "complete"]),
+  homeScore: z.number().int().nonnegative().optional(),
+  awayScore: z.number().int().nonnegative().optional(),
+  winnerTeamId: z.string().min(1).optional(),
+  loserTeamId: z.string().min(1).optional(),
+  upset: z.boolean().optional(),
+});
+
+const ecosystemNationalRankingSchema = z.object({
+  seasonYear: z.number().int().min(2020).max(2200),
+  week: z.number().int().nonnegative().max(20),
+  teamId: z.string().min(1),
+  rank: z.number().int().min(1),
+  previousRank: z.number().int().min(1).optional(),
+  score: z.number().min(0).max(100),
+  strengthOfSchedule: z.number().min(0).max(100),
+  qualityWins: z.number().int().nonnegative(),
+  pointDifferential: z.number().int(),
+});
+
+const ecosystemCompetitionSchema = z.object({
+  version: z.literal(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  schedule: z.array(ecosystemCompetitionGameSchema),
+  rankings: z.array(ecosystemNationalRankingSchema),
+  rankingHistory: z.array(z.object({
+    seasonYear: z.number().int().min(2020).max(2200),
+    week: z.number().int().nonnegative().max(20),
+    rankings: z.array(ecosystemNationalRankingSchema),
+  })),
+  playoff: z.object({
+    seasonYear: z.number().int().min(2020).max(2200),
+    stage: z.enum(["regular-season", "conference-championships", "quarterfinals", "semifinals", "national-championship", "complete"]),
+    seedTeamIds: z.array(z.string().min(1)),
+    gameIds: z.array(z.string().min(1)),
+    championTeamId: z.string().min(1).optional(),
+  }),
+  awards: z.array(z.object({
+    id: z.string().min(1),
+    seasonYear: z.number().int().min(2020).max(2200),
+    week: z.number().int().min(1).max(20).optional(),
+    kind: z.enum(["player-of-week", "conference-player", "national-player", "position-award", "all-american"]),
+    playerId: z.string().min(1),
+    teamId: z.string().min(1),
+    title: z.string().min(2),
+    detail: z.string().min(2),
+  })),
+  rivalries: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(2),
+    teamAId: z.string().min(1),
+    teamBId: z.string().min(1),
+    intensity: z.number().min(0).max(100),
+    meetings: z.number().int().nonnegative(),
+    winsA: z.number().int().nonnegative(),
+    winsB: z.number().int().nonnegative(),
+    ties: z.number().int().nonnegative(),
+    streak: z.number().int().nonnegative(),
+    lastWinnerTeamId: z.string().min(1).optional(),
+  })),
+  programLegacies: z.array(z.object({
+    teamId: z.string().min(1),
+    allTimeWins: z.number().int().nonnegative(),
+    allTimeLosses: z.number().int().nonnegative(),
+    nationalTitles: z.number().int().nonnegative(),
+    playoffAppearances: z.number().int().nonnegative(),
+    bowlWins: z.number().int().nonnegative(),
+    rivalryWins: z.number().int().nonnegative(),
+    bestRank: z.number().int().min(1),
+    reputation: z.number().min(0).max(100),
+    eraLabel: z.enum(["unknown", "building", "contender", "power", "dynasty", "decline"]),
+  })),
+  digest: z.array(z.string().min(2)).max(6),
+});
+
 const ecosystemPositionRoleSchema = z.enum([
   "pocket-distributor", "dual-threat", "field-general",
   "zone-runner", "power-back", "receiving-back",
@@ -995,7 +1081,7 @@ const ecosystemPlayerTacticalProfileSchema = z.object({
 });
 
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(8),
+  moduleVersion: z.literal(9),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -1093,7 +1179,7 @@ const footballEcosystemSchema = z.object({
   })).min(10),
   stories: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit"]),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl"]),
     createdOn: gameDateSchema,
     week: z.number().int().min(1),
     title: z.string().min(2),
@@ -1158,6 +1244,7 @@ const footballEcosystemSchema = z.object({
   })),
   talentPipeline: ecosystemTalentPipelineSchema,
   movementMarket: ecosystemMovementMarketSchema,
+  competition: ecosystemCompetitionSchema,
 });
 
 const careerMetaSchema = z.object({
