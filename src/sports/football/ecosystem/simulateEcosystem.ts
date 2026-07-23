@@ -867,6 +867,34 @@ function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, s
   };
 }
 
+function ensureMinimumCollegePositionRooms(
+  players: EcosystemPlayer[],
+  teams: EcosystemTeam[],
+  seasonYear: number,
+  random: SeededRandom,
+): EcosystemPlayer[] {
+  const next = [...players];
+  for (const team of teams.filter((item) => item.level === "college")) {
+    for (const position of POSITIONS) {
+      let room = next.filter((player) => player.teamId === team.id && player.position === position);
+      while (room.length < 2) {
+        let slot = 0;
+        while (next.some((player) => player.id === `${team.id}:incoming:${seasonYear}:${position}:${slot}`)) slot += 1;
+        const incoming = createIncomingPlayer(
+          team,
+          position,
+          seasonYear,
+          slot,
+          random.fork(`${team.id}:${position}:${slot}`),
+        );
+        next.push(incoming);
+        room = [...room, incoming];
+      }
+    }
+  }
+  return next;
+}
+
 function rebuildTeamRosters(teams: EcosystemTeam[], players: EcosystemPlayer[], coaches: EcosystemCoach[], constitution: FootballEcosystemState["constitution"]): EcosystemTeam[] {
   return teams.map((team) => ({
     ...team,
@@ -1002,25 +1030,22 @@ function processCoachCarousel(
     })
     .sort((left, right) => right.prestige - left.prestige)
     .slice(0, 3);
+  const openingTeamIds = new Set(openings.map((team) => team.id));
+  const originalCoachIds = new Set(coaches.map((coach) => coach.id));
+  const movedCoachIds = new Set<string>();
+
   for (const team of openings) {
     const fired = next.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
     if (!fired) continue;
-    next = next.filter((coach) => coach.id !== fired.id);
-    const firedDetail = `${team.name} уволил ${fired.name} после сезона ${team.wins}–${team.losses}. Его рекрутинговые обещания потеряли силу.`;
-    transactions.push({
-      id: `coach-fired:${seasonYear}:${fired.id}`,
-      kind: "coach-fired",
-      seasonYear,
-      week: save.life.weekNumber,
-      createdOn: save.meta.currentDate,
-      title: `${team.shortName} открыл вакансию`,
-      detail: firedDetail,
-      coachId: fired.id,
-      fromTeamId: team.id,
-      relatedToHero: team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35),
-    });
+
     const candidate = [...next]
-      .filter((coach) => coach.teamId !== team.id)
+      .filter((coach) => (
+        coach.id !== fired.id
+        && coach.teamId !== team.id
+        && !openingTeamIds.has(coach.teamId)
+        && originalCoachIds.has(coach.id)
+        && !movedCoachIds.has(coach.id)
+      ))
       .map((coach) => {
         const candidateTeam = teams.find((item) => item.id === coach.teamId);
         const promotion = coach.role === "coordinator" ? 10 : 0;
@@ -1042,7 +1067,24 @@ function processCoachCarousel(
       })
       .sort((left, right) => right.score - left.score)[0]?.coach;
     if (!candidate) continue;
+
     const oldTeamId = candidate.teamId;
+    const oldRole = candidate.role;
+    next = next.filter((coach) => coach.id !== fired.id);
+    const firedDetail = `${team.name} уволил ${fired.name} после сезона ${team.wins}–${team.losses}. Его рекрутинговые обещания потеряли силу.`;
+    transactions.push({
+      id: `coach-fired:${seasonYear}:${fired.id}`,
+      kind: "coach-fired",
+      seasonYear,
+      week: save.life.weekNumber,
+      createdOn: save.meta.currentDate,
+      title: `${team.shortName} открыл вакансию`,
+      detail: firedDetail,
+      coachId: fired.id,
+      fromTeamId: team.id,
+      relatedToHero: team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35),
+    });
+
     next = next.map((coach) => coach.id === candidate.id ? {
       ...coach,
       teamId: team.id,
@@ -1052,15 +1094,24 @@ function processCoachCarousel(
       jobSecurity: 68,
       pressure: 24,
       status: "secure" as const,
-      reputation: clamp(coach.reputation + (candidate.role === "coordinator" ? 3 : 1)),
+      reputation: clamp(coach.reputation + (oldRole === "coordinator" ? 3 : 1)),
     } : coach);
-    const replacementRandom = random.fork(`replacement:${oldTeamId}:${seasonYear}`);
+    movedCoachIds.add(candidate.id);
+
+    const replacementRandom = random.fork(`replacement:${oldTeamId}:${seasonYear}:${candidate.id}`);
+    const replacementBaseId = `${oldTeamId}:replacement:${seasonYear}:${oldRole}:${candidate.id}`;
+    let replacementId = replacementBaseId;
+    let replacementSuffix = 1;
+    while (next.some((coach) => coach.id === replacementId)) {
+      replacementId = `${replacementBaseId}:${replacementSuffix}`;
+      replacementSuffix += 1;
+    }
     const replacement: EcosystemCoach = {
-      id: `${oldTeamId}:replacement:${seasonYear}:${candidate.role}`,
-      seed: `${oldTeamId}:replacement:${seasonYear}:${candidate.role}`,
+      id: replacementId,
+      seed: replacementId,
       name: `Coach ${replacementRandom.integer(100, 999)}`,
       teamId: oldTeamId,
-      role: candidate.role,
+      role: oldRole,
       age: replacementRandom.integer(31, 61),
       reputation: clamp(
         (teams.find((item) => item.id === oldTeamId)?.prestige ?? 60)
@@ -1079,6 +1130,7 @@ function processCoachCarousel(
       previousTeamIds: [],
     };
     next.push(replacement);
+
     const hired = next.find((coach) => coach.id === candidate.id);
     if (!hired) continue;
     const related = team.id === save.football.college.signedProgramId || oldTeamId === save.football.college.signedProgramId;
@@ -1313,15 +1365,12 @@ function processOffseason(
     relatedToHero: draft.relatedToHero,
   })));
 
-  for (const team of teams.filter((item) => item.level === "college")) {
-    for (const position of POSITIONS) {
-      const room = players.filter((player) => player.teamId === team.id && player.position === position);
-      if (room.length < 2) {
-        const missing = 2 - room.length;
-        for (let index = 0; index < missing; index += 1) players.push(createIncomingPlayer(team, position, seasonYear + 1, index, random.fork(`${team.id}:${position}:${index}`)));
-      }
-    }
-  }
+  players = ensureMinimumCollegePositionRooms(
+    players,
+    teams,
+    seasonYear + 1,
+    random.fork("minimum-position-rooms"),
+  );
   const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
@@ -1395,8 +1444,13 @@ function processOffseason(
     random.fork("final-roster-review"),
     { applyOffseasonDecisions: false, reason: "Новый штаб пересмотрел состав после зачисления класса и тренерской карусели." },
   );
-  teams = rebuildTeamRosters(finalRosterReview.teams, finalRosterReview.players, carousel.coaches, world.constitution);
-  players = finalRosterReview.players;
+  players = ensureMinimumCollegePositionRooms(
+    finalRosterReview.players,
+    finalRosterReview.teams,
+    seasonYear + 1,
+    random.fork("final-minimum-position-rooms"),
+  );
+  teams = rebuildTeamRosters(finalRosterReview.teams, players, carousel.coaches, world.constitution);
   return {
     ...world,
     players,

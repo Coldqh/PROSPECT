@@ -43,6 +43,26 @@ describe("football competition ecosystem", () => {
     expect(result.competition.schedule.filter((game) => game.week === 1 && game.status === "complete")).toHaveLength(12);
   });
 
+  it("turns sustained competitive failure into visible coach pressure", () => {
+    const world = createWorld("competition-coach-pressure");
+    const fragileCoaches = world.coaches.map((coach) => coach.role === "head-coach"
+      ? { ...coach, jobSecurity: 1, pressure: 99, status: "secure" as const }
+      : coach);
+    const result = simulateCompetitionWeek(
+      world.competition,
+      world.teams,
+      world.players,
+      fragileCoaches,
+      2026,
+      1,
+      new SeededRandom("competition-coach-pressure:round"),
+    );
+
+    const collegeTeamIds = new Set(world.teams.filter((team) => team.level === "college").map((team) => team.id));
+    expect(result.coaches.filter((coach) => coach.role === "head-coach" && collegeTeamIds.has(coach.teamId)).every((coach) => coach.status === "hot-seat")).toBe(true);
+    expect(result.stories.some((story) => story.kind === "coach-pressure")).toBe(true);
+  });
+
   it("runs conference championships and an eight-team playoff to a champion", () => {
     let world = createWorld("competition-postseason");
     let teams = world.teams;

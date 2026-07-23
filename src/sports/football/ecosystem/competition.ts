@@ -299,13 +299,47 @@ function updateTeamsFromGames(teams: EcosystemTeam[], games: EcosystemCompetitio
   return [...teamMap.values()];
 }
 
-function updateCoachesFromGames(coaches: EcosystemCoach[], games: EcosystemCompetitionGame[]): EcosystemCoach[] {
+function updateCoachesFromGames(
+  coaches: EcosystemCoach[],
+  teams: EcosystemTeam[],
+  games: EcosystemCompetitionGame[],
+  random: SeededRandom,
+): EcosystemCoach[] {
   return coaches.map((coach) => {
     if (coach.role !== "head-coach") return coach;
-    const wins = games.filter((game) => game.winnerTeamId === coach.teamId).length;
-    const losses = games.filter((game) => game.loserTeamId === coach.teamId).length;
+    const team = teams.find((item) => item.id === coach.teamId);
+    if (!team) return coach;
+    const teamGames = games.filter((game) => game.homeTeamId === coach.teamId || game.awayTeamId === coach.teamId);
+    const wins = teamGames.filter((game) => game.winnerTeamId === coach.teamId).length;
+    const losses = teamGames.filter((game) => game.loserTeamId === coach.teamId).length;
     if (wins === 0 && losses === 0) return coach;
-    return { ...coach, careerWins: coach.careerWins + wins, careerLosses: coach.careerLosses + losses };
+
+    const played = Math.max(1, team.wins + team.losses);
+    const actualRate = team.wins / played;
+    const expectedRate = team.expectation / 125;
+    const upsetWins = teamGames.filter((game) => game.winnerTeamId === coach.teamId && game.upset).length;
+    const damagingLosses = teamGames.filter((game) => game.loserTeamId === coach.teamId && game.upset).length;
+    const resultDelta = wins * 0.7 - losses * 1.05;
+    const expectationDelta = (actualRate - expectedRate) * 2.6;
+    const volatility = random.fork(`coach-security:${coach.id}:${played}`).integer(-1, 1);
+    const jobSecurity = clamp(
+      coach.jobSecurity
+        + resultDelta
+        + expectationDelta
+        + upsetWins * 1.4
+        - damagingLosses * 1.8
+        + volatility,
+    );
+    const status: EcosystemCoach["status"] = jobSecurity < 35 ? "hot-seat" : jobSecurity < 55 ? "watched" : "secure";
+
+    return {
+      ...coach,
+      careerWins: coach.careerWins + wins,
+      careerLosses: coach.careerLosses + losses,
+      jobSecurity,
+      pressure: clamp(100 - jobSecurity + team.losses * 1.6),
+      status,
+    };
   });
 }
 
@@ -388,12 +422,25 @@ export function simulateCompetitionWeek(
   const completedMap = new Map(completed.map((game) => [game.id, game]));
   const nextSchedule = competition.schedule.map((game) => completedMap.get(game.id) ?? game);
   const nextTeams = updateTeamsFromGames(teams, completed);
-  const nextCoaches = updateCoachesFromGames(coaches, completed);
+  const nextCoaches = updateCoachesFromGames(coaches, nextTeams, completed, random.fork("coach-pressure"));
   const nextRivalries = updateRivalries(competition.rivalries, completed);
   const rankings = calculateNationalRankings(nextTeams, nextSchedule, seasonYear, week, competition.rankings);
   const snapshot: EcosystemRankingSnapshot = { seasonYear, week, rankings };
   const weeklyAward = awardPlayerOfWeek(players, nextTeams, completed, seasonYear, week);
   const stories = storiesForGames(completed, nextTeams, nextRivalries);
+  for (const coach of nextCoaches.filter((item) => item.role === "head-coach" && item.status === "hot-seat")) {
+    const previous = coaches.find((item) => item.id === coach.id);
+    if (previous?.status === "hot-seat") continue;
+    const team = nextTeams.find((item) => item.id === coach.teamId);
+    stories.push({
+      kind: "coach-pressure",
+      title: `${coach.name} оказался под угрозой увольнения`,
+      detail: `${team?.name ?? coach.teamId} не выполняет ожидания. Позиция штаба, обещания игрокам и будущая схема больше не гарантированы.`,
+      importance: 4,
+      teamIds: [coach.teamId],
+      playerIds: [],
+    });
+  }
   if (weeklyAward) stories.push({ kind: "award", title: weeklyAward.title, detail: weeklyAward.detail, importance: 3, teamIds: [weeklyAward.teamId], playerIds: [weeklyAward.playerId] });
   const top = rankings[0];
   const leader = top ? nextTeams.find((team) => team.id === top.teamId) : undefined;
@@ -499,7 +546,7 @@ export function simulateCompetitionPostseason(
   const newGames = createPostseasonGames(competition, teams, conferences);
   const completed = newGames.map((game) => completeGame(game, teams, players, random.fork(game.id)));
   let nextTeams = updateTeamsFromGames(teams, completed);
-  let nextCoaches = updateCoachesFromGames(coaches, completed);
+  let nextCoaches = updateCoachesFromGames(coaches, nextTeams, completed, random.fork("coach-pressure"));
   let nextConferences = conferences;
   let nextStage: EcosystemCompetitionState["playoff"]["stage"] = competition.playoff.stage;
   const stories: CompetitionStoryDraft[] = [];

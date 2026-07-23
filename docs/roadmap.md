@@ -20,7 +20,7 @@
 - [x] Unified recruiting, transfer and coaching labor market
 - [x] Tactical identities and scheme-driven roster value
 - [x] National competition, rankings and program reputation
-- [ ] Twenty-season autonomous stability test
+- [x] Twenty-season autonomous stability test
 - [ ] Social ecosystem
 - [ ] Resume hero gameplay inside the stable world
 
@@ -115,3 +115,15 @@
 - program legacies with titles, playoff appearances, bowl wins, rivalry wins and historical reputation;
 - compact Competition tab inside the World dashboard;
 - deterministic migration from schema v19 to v20.
+
+
+## v0.21 — Twenty-season autonomous stability
+
+- deterministic observer that advances the complete football world through twenty seasons;
+- invariant audit for duplicate ids, broken references, roster and staff membership, conference coverage, compliance limits, numeric ranges and bounded histories;
+- seasonal snapshots for population, roster sizes, rankings, champions, financial pressure, transfers and coaching movement;
+- competition results now change head-coach security, pressure and hot-seat status;
+- coaching carousel protects open programs, prevents repeat hires and restores the exact vacated staff role with unique ids;
+- final offseason depth repair keeps every college roster above its minimum playable floor after market movement;
+- twenty national champions, persistent program legacies and autonomous labor markets verified without structural drift;
+- no save migration required because schema v20 remains structurally compatible.
