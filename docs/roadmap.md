@@ -21,7 +21,7 @@
 - [x] Tactical identities and scheme-driven roster value
 - [x] National competition, rankings and program reputation
 - [x] Twenty-season autonomous stability test
-- [ ] Social ecosystem
+- [x] Social ecosystem
 - [ ] Resume hero gameplay inside the stable world
 
 ## v0.11 — High school to college
@@ -127,3 +127,17 @@
 - final offseason depth repair keeps every college roster above its minimum playable floor after market movement;
 - twenty national champions, persistent program legacies and autonomous labor markets verified without structural drift;
 - no save migration required because schema v20 remains structurally compatible.
+
+
+## v0.22 — Social ecosystem
+
+- persistent player-player, coach-player and staff relationships;
+- trust, respect, chemistry, tension, influence and shared history;
+- team culture with cohesion, accountability, coach trust, leadership, conflict, morale and stability;
+- mentorship, position rivalry, locker-room conflict, reconciliation, staff friction and broken promises;
+- social support changes development and weekly form;
+- fractured rooms increase portal pressure and reduce match execution;
+- bonds survive transfers and coaching changes as inactive social history;
+- compact People tab and locker-room breakdown for every program;
+- social invariants included in the twenty-season observer;
+- deterministic migration from schema v20 to v21.

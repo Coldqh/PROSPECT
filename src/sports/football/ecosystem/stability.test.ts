@@ -51,6 +51,11 @@ describe("twenty-season autonomous stability", () => {
     expect(report.snapshots.every((snapshot) => snapshot.coaches === initial.world.coaches.length)).toBe(true);
     expect(report.snapshots.every((snapshot) => snapshot.minCollegeRoster >= 10)).toBe(true);
     expect(report.snapshots.every((snapshot) => snapshot.maxCollegeRoster <= save.world.constitution.collegeRosterLimit)).toBe(true);
+    expect(report.snapshots.every((snapshot) => snapshot.activeSocialBonds > snapshot.teams)).toBe(true);
+    expect(report.snapshots.every((snapshot) => snapshot.strainedSocialBonds >= 0)).toBe(true);
+    expect(save.world.social.teamCultures).toHaveLength(save.world.teams.length);
+    expect(save.world.social.bonds.length).toBeLessThanOrEqual(3_000);
+    expect(save.world.social.incidents.length).toBeLessThanOrEqual(180);
     expect(save.world.competition.programLegacies).toHaveLength(24);
     expect(save.world.talentPipeline.classHistory).toHaveLength(20);
   }, 60_000);

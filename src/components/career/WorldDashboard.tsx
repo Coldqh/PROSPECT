@@ -21,6 +21,7 @@ const views = [
   { id: "resources", label: "Ресурсы" },
   { id: "plans", label: "Составы" },
   { id: "tactics", label: "Схемы" },
+  { id: "social", label: "Люди" },
   { id: "talent", label: "Таланты" },
   { id: "history", label: "История" },
 ] as const;
@@ -65,6 +66,12 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     award: "Награда",
     rivalry: "Rivalry",
     bowl: "Bowl",
+    mentorship: "Наставник",
+    "locker-room-conflict": "Конфликт",
+    leadership: "Лидерство",
+    reconciliation: "Примирение",
+    "staff-friction": "Спор штаба",
+    "broken-promise": "Обещание",
   }[kind];
 }
 
@@ -202,6 +209,26 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
       .slice(0, 10),
     [world.competition.programLegacies],
   );
+
+  const socialTeams = useMemo(
+    () => world.social.teamCultures
+      .map((culture) => ({ culture, team: world.teams.find((team) => team.id === culture.teamId) }))
+      .filter((item): item is { culture: (typeof world.social.teamCultures)[number]; team: EcosystemTeam } => Boolean(item.team))
+      .sort((left, right) =>
+        Number(right.team.id === heroProgramId) - Number(left.team.id === heroProgramId)
+        || right.culture.conflict - left.culture.conflict
+        || left.culture.cohesion - right.culture.cohesion,
+      ),
+    [world.social.teamCultures, world.teams, heroProgramId],
+  );
+  const recentSocialIncidents = useMemo(
+    () => [...world.social.incidents]
+      .sort((left, right) => right.seasonYear - left.seasonYear || right.week - left.week)
+      .slice(0, 10),
+    [world.social.incidents],
+  );
+  const activeSocialBonds = world.social.bonds.filter((bond) => bond.active);
+  const strainedSocialBonds = activeSocialBonds.filter((bond) => bond.tension >= 70);
 
   const topProspects = useMemo(
     () => world.players
@@ -526,6 +553,47 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
         </div>
       )}
 
+      {view === "social" && (
+        <div className="compact-view social-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Связи</small><strong>{activeSocialBonds.length}</strong></span>
+            <span><small>Наставники</small><strong>{activeSocialBonds.filter((bond) => bond.kind === "mentor" && bond.trust >= 65).length}</strong></span>
+            <span><small>Острые конфликты</small><strong>{strainedSocialBonds.length}</strong></span>
+            <span><small>Расколотые команды</small><strong>{world.social.teamCultures.filter((culture) => culture.conflict >= 65).length}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Социальная экосистема</small><h3>Раздевалка влияет на карьеру</h3>
+            <p>Доверие, конкуренция, наставничество и конфликты меняют форму, развитие, удержание игроков, работу штаба и результат матчей.</p>
+          </section>
+
+          <div className="resource-team-list social-team-list">
+            {socialTeams.slice(0, 12).map(({ team, culture }) => (
+              <button key={team.id} type="button" className={team.id === heroProgramId ? "is-hero" : culture.conflict >= 65 ? "is-pressure" : ""} onClick={() => setSelectedTeam(team)}>
+                <div><strong>{team.shortName}</strong><small>{culture.conflict >= 65 ? "Раздевалка расколота" : culture.cohesion >= 70 ? "Сильная группа" : "Нестабильный баланс"}</small></div>
+                <span><small>Сплочённость</small><strong>{Math.round(culture.cohesion)}</strong></span>
+                <span><small>Доверие штабу</small><strong>{Math.round(culture.coachTrust)}</strong></span>
+                <em>{Math.round(culture.conflict)}</em>
+              </button>
+            ))}
+          </div>
+
+          <div className="world-transaction-list social-incident-list">
+            {recentSocialIncidents.map((incident) => {
+              const team = world.teams.find((item) => item.id === incident.teamId);
+              return (
+                <article key={incident.id}>
+                  <span>{storyKindLabel(incident.kind)}</span>
+                  <div><strong>{incident.title}</strong><small>{incident.detail}</small></div>
+                  <em>{team?.shortName ?? incident.teamId}</em>
+                </article>
+              );
+            })}
+            {recentSocialIncidents.length === 0 && <div className="compact-note"><Icon name="pulse" /><p>Первые конфликты, наставничество и лидерские эпизоды появятся по ходу сезона.</p></div>}
+          </div>
+        </div>
+      )}
+
       {view === "talent" && (
         <div className="compact-view">
           <section className="world-market-strip world-market-strip--four">
@@ -644,6 +712,28 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
               <span><small>Финансовое давление</small><strong>{Math.round(selectedTeam.resources.financialPressure)}</strong></span>
               <span><small>Текущий баланс</small><strong>${selectedTeam.resources.currentBalance.toFixed(1)}M</strong></span>
             </div>
+            {world.social.teamCultures.find((culture) => culture.teamId === selectedTeam.id) && (
+              <section className="roster-plan-sheet social-team-sheet">
+                {(() => {
+                  const culture = world.social.teamCultures.find((item) => item.teamId === selectedTeam.id);
+                  if (!culture) return null;
+                  const teamBonds = world.social.bonds.filter((bond) => bond.active && bond.teamId === selectedTeam.id);
+                  return (
+                    <>
+                      <header><small>Раздевалка</small><h3>{culture.conflict >= 65 ? "Внутренний кризис" : culture.cohesion >= 70 ? "Сильная группа" : "Рабочая, но нестабильная среда"}</h3><p>{teamBonds.filter((bond) => bond.tension >= 70).length} острых связей · {teamBonds.filter((bond) => bond.kind === "mentor").length} наставнических пар</p></header>
+                      <div className="info-list info-list--compact">
+                        <span><small>Сплочённость</small><strong>{Math.round(culture.cohesion)}</strong></span>
+                        <span><small>Мораль</small><strong>{Math.round(culture.morale)}</strong></span>
+                        <span><small>Лидерство</small><strong>{Math.round(culture.leadership)}</strong></span>
+                        <span><small>Доверие штабу</small><strong>{Math.round(culture.coachTrust)}</strong></span>
+                        <span><small>Конфликт</small><strong>{Math.round(culture.conflict)}</strong></span>
+                        <span><small>Стабильность</small><strong>{Math.round(culture.stability)}</strong></span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </section>
+            )}
             <section className="roster-plan-sheet tactical-sheet">
               <header><small>Тактическая система</small><h3>{offenseSystemLabel(selectedTeam.tactical.offenseSystem)} / {defenseSystemLabel(selectedTeam.tactical.defenseSystem)}</h3><p>{selectedTeam.offenseStyle} · {selectedTeam.defenseStyle}</p></header>
               <div className="info-list info-list--compact">

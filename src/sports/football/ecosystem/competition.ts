@@ -1,5 +1,6 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { tacticalTeamModifier } from "./tactics";
+import { teamSocialGameModifier } from "./social";
 import type {
   EcosystemCoach,
   EcosystemCompetitionAward,
@@ -11,6 +12,7 @@ import type {
   EcosystemProgramLegacy,
   EcosystemRankingSnapshot,
   EcosystemRivalry,
+  EcosystemSocialState,
   EcosystemStoryKind,
   EcosystemTeam,
 } from "./types";
@@ -250,19 +252,20 @@ export function createCompetitionState(
   };
 }
 
-function scoreGame(team: EcosystemTeam, opponent: EcosystemTeam, players: EcosystemPlayer[], random: SeededRandom, homeAdvantage: number): number {
+function scoreGame(team: EcosystemTeam, opponent: EcosystemTeam, players: EcosystemPlayer[], random: SeededRandom, homeAdvantage: number, social?: EcosystemSocialState): number {
   const tactical = tacticalTeamModifier(team, players);
+  const socialModifier = teamSocialGameModifier(social, team.id);
   const trend = team.trend === "rising" ? 2.5 : team.trend === "falling" ? -2.5 : 0;
   const matchup = (team.rating - opponent.rating) * 0.2;
-  return Math.max(3, Math.min(55, Math.round(23 + tactical + trend + matchup + homeAdvantage + random.integer(-10, 11))));
+  return Math.max(3, Math.min(55, Math.round(23 + tactical + socialModifier + trend + matchup + homeAdvantage + random.integer(-10, 11))));
 }
 
-function completeGame(game: EcosystemCompetitionGame, teams: EcosystemTeam[], players: EcosystemPlayer[], random: SeededRandom): EcosystemCompetitionGame {
+function completeGame(game: EcosystemCompetitionGame, teams: EcosystemTeam[], players: EcosystemPlayer[], random: SeededRandom, social?: EcosystemSocialState): EcosystemCompetitionGame {
   const home = teams.find((team) => team.id === game.homeTeamId);
   const away = teams.find((team) => team.id === game.awayTeamId);
   if (!home || !away) return game;
-  let homeScore = scoreGame(home, away, players, random.fork("home"), game.neutralSite ? 0 : 2);
-  let awayScore = scoreGame(away, home, players, random.fork("away"), 0);
+  let homeScore = scoreGame(home, away, players, random.fork("home"), game.neutralSite ? 0 : 2, social);
+  let awayScore = scoreGame(away, home, players, random.fork("away"), 0, social);
   if (homeScore === awayScore) homeScore += random.chance(0.5) ? 3 : -3;
   const homeWon = homeScore > awayScore;
   const winnerTeamId = homeWon ? home.id : away.id;
@@ -416,9 +419,10 @@ export function simulateCompetitionWeek(
   seasonYear: number,
   week: number,
   random: SeededRandom,
+  social?: EcosystemSocialState,
 ): CompetitionWeekResult {
   const scheduled = competition.schedule.filter((game) => game.seasonYear === seasonYear && game.week === week && game.status === "scheduled");
-  const completed = scheduled.map((game) => completeGame(game, teams, players, random.fork(game.id)));
+  const completed = scheduled.map((game) => completeGame(game, teams, players, random.fork(game.id), social));
   const completedMap = new Map(completed.map((game) => [game.id, game]));
   const nextSchedule = competition.schedule.map((game) => completedMap.get(game.id) ?? game);
   const nextTeams = updateTeamsFromGames(teams, completed);
@@ -541,10 +545,11 @@ export function simulateCompetitionPostseason(
   coaches: EcosystemCoach[],
   conferences: EcosystemConference[],
   random: SeededRandom,
+  social?: EcosystemSocialState,
 ): CompetitionPostseasonResult {
   if (competition.playoff.stage === "complete") return { competition, teams, coaches, conferences, stories: [], playedTeamIds: [], complete: true };
   const newGames = createPostseasonGames(competition, teams, conferences);
-  const completed = newGames.map((game) => completeGame(game, teams, players, random.fork(game.id)));
+  const completed = newGames.map((game) => completeGame(game, teams, players, random.fork(game.id), social));
   let nextTeams = updateTeamsFromGames(teams, completed);
   let nextCoaches = updateCoachesFromGames(coaches, nextTeams, completed, random.fork("coach-pressure"));
   let nextConferences = conferences;

@@ -2,7 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 9 as const;
+export const ECOSYSTEM_MODULE_VERSION = 10 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -70,7 +70,13 @@ export type EcosystemStoryKind =
   | "playoff"
   | "award"
   | "rivalry"
-  | "bowl";
+  | "bowl"
+  | "mentorship"
+  | "locker-room-conflict"
+  | "leadership"
+  | "reconciliation"
+  | "staff-friction"
+  | "broken-promise";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -615,6 +621,64 @@ export interface EcosystemMarketState {
 }
 
 
+export type EcosystemSocialEntityKind = "player" | "coach";
+export type EcosystemSocialBondKind = "teammate" | "position-rival" | "mentor" | "coach-player" | "staff";
+export type EcosystemSocialIncidentKind = "mentorship" | "locker-room-conflict" | "leadership" | "reconciliation" | "staff-friction" | "broken-promise";
+
+export interface EcosystemSocialBond {
+  id: string;
+  entityAId: string;
+  entityBId: string;
+  entityAKind: EcosystemSocialEntityKind;
+  entityBKind: EcosystemSocialEntityKind;
+  teamId?: string | undefined;
+  kind: EcosystemSocialBondKind;
+  trust: number;
+  respect: number;
+  chemistry: number;
+  tension: number;
+  influence: number;
+  familiarityWeeks: number;
+  active: boolean;
+  lastSeasonYear: number;
+  lastWeek: number;
+}
+
+export interface EcosystemTeamCulture {
+  teamId: string;
+  cohesion: number;
+  accountability: number;
+  coachTrust: number;
+  leadership: number;
+  conflict: number;
+  morale: number;
+  stability: number;
+  lastSeasonYear: number;
+  lastWeek: number;
+}
+
+export interface EcosystemSocialIncident {
+  id: string;
+  kind: EcosystemSocialIncidentKind;
+  seasonYear: number;
+  week: number;
+  teamId: string;
+  participantIds: string[];
+  title: string;
+  detail: string;
+  impact: number;
+}
+
+export interface EcosystemSocialState {
+  version: 1;
+  seasonYear: number;
+  lastProcessedDay: number;
+  bonds: EcosystemSocialBond[];
+  teamCultures: EcosystemTeamCulture[];
+  incidents: EcosystemSocialIncident[];
+  digest: string[];
+}
+
 export interface FootballEcosystemState {
   moduleVersion: typeof ECOSYSTEM_MODULE_VERSION;
   constitution: WorldConstitution;
@@ -638,5 +702,6 @@ export interface FootballEcosystemState {
   talentPipeline: EcosystemTalentPipeline;
   movementMarket: EcosystemUnifiedMovementMarket;
   competition: EcosystemCompetitionState;
+  social: EcosystemSocialState;
 }
 

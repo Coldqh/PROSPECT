@@ -34,6 +34,7 @@ import {
 import { reviewRosterManagement } from "./rosterManagement";
 import { advanceUnifiedMovementMarket, applyCoachMovementConsequences } from "./movementMarket";
 import { resetCompetitionForSeason, simulateCompetitionPostseason, simulateCompetitionWeek } from "./competition";
+import { playerSocialDevelopmentMultiplier, playerTransferPressure, simulateSocialWeek } from "./social";
 
 
 interface EcosystemCareerState {
@@ -178,7 +179,8 @@ function updatePlayersDaily(
             ) * Math.min(1, developmentRoom / 18)
           : 0;
         const tacticalMultiplier = team ? tacticalDevelopmentMultiplier(player, team) : 1;
-        overall = clamp(overall + development * tacticalMultiplier, 40, 99);
+        const socialMultiplier = playerSocialDevelopmentMultiplier(save.world.social, player.id);
+        overall = clamp(overall + development * tacticalMultiplier * socialMultiplier, 40, 99);
       }
     }
 
@@ -921,7 +923,7 @@ function processTransfers(
     if (moves >= 10 || player.level !== "college" || player.isHero || player.eligibilityYears <= 1 || player.depthRank < 3) return player;
     const source = teams.find((team) => team.id === player.teamId);
     const coach = save.world.coaches.find((item) => item.teamId === player.teamId && item.role === "head-coach");
-    const desire = 0.08 + Math.max(0, 55 - player.form) * 0.003 + (coach?.status === "hot-seat" ? 0.12 : 0);
+    const desire = 0.08 + Math.max(0, 55 - player.form) * 0.003 + (coach?.status === "hot-seat" ? 0.12 : 0) + playerTransferPressure(save.world.social, player.id);
     const playerRandom = random.fork(player.id);
     if (!playerRandom.chance(desire)) return player;
     const target = collegeTeams
@@ -943,6 +945,7 @@ function processTransfers(
             + team.prestige * 0.14
             + resourceRecruitingPower(team.resources) * 0.22
             + Math.max(0, availableNilCapacity(team.resources) - reserved.nil) * 0.7
+            + (save.world.social.teamCultures.find((culture) => culture.teamId === team.id)?.coachTrust ?? 50) * 0.08
             + playerRandom.integer(-8, 8),
         };
       })
@@ -1451,6 +1454,23 @@ function processOffseason(
     random.fork("final-minimum-position-rooms"),
   );
   teams = rebuildTeamRosters(finalRosterReview.teams, players, carousel.coaches, world.constitution);
+  const socialRefresh = simulateSocialWeek(
+    world.social,
+    teams,
+    players,
+    carousel.coaches,
+    seasonYear + 1,
+    1,
+    day,
+    random.fork("social-offseason"),
+  );
+  players = socialRefresh.players;
+  stories.push(...socialRefresh.stories.map((draft) => {
+    const related = draft.teamIds.includes(save.football.college.signedProgramId ?? "")
+      || draft.playerIds.some((playerId) => players.find((player) => player.id === playerId)?.isHero);
+    return story(save, day, draft.kind, draft.title, draft.detail, related ? 5 : draft.importance, draft.teamIds, draft.playerIds, draft.coachIds, related);
+  }));
+  teams = rebuildTeamRosters(teams, players, carousel.coaches, world.constitution);
   return {
     ...world,
     players,
@@ -1464,6 +1484,7 @@ function processOffseason(
     market: { ...market(players, carousel.coaches, teams, postCoachMarket.talentPipeline, postCoachMarket.movementMarket), coachOpenings: postCoachMarket.movementMarket.coachVacancies.filter((vacancy) => vacancy.status === "open").length },
     talentPipeline: postCoachMarket.talentPipeline,
     movementMarket: postCoachMarket.movementMarket,
+    social: socialRefresh.social,
   };
 }
 
@@ -1478,6 +1499,7 @@ function resetForNewSeason(world: FootballEcosystemState, nextYear: number): Foo
     players: world.players.map((player) => ({ ...player, transferStatus: "none", eligibility: { ...player.eligibility, gamesPlayedThisSeason: 0 } })),
     coaches: world.coaches.map((coach) => ({ ...coach, age: Math.min(80, coach.age + 1), tenureYears: coach.tenureYears + 1 })),
     competition: resetCompetitionForSeason(world.competition, nextYear, world.conferences, teams, new SeededRandom(`competition:${nextYear}`)),
+    social: { ...world.social, seasonYear: nextYear },
   };
 }
 
@@ -1497,11 +1519,13 @@ function updateHeroPrograms(
     const positionNeed = clamp(team.positionNeeds[save.football.position]);
     const depthCompetition = clamp(100 - positionNeed * 0.55 + team.rating * 0.22 + competingCommits * 8);
     const recruitingPower = resourceRecruitingPower(team.resources);
+    const culture = save.world.social.teamCultures.find((item) => item.teamId === team.id);
     const staffTrust = clamp(
       22
         + (headCoach?.reputation ?? 50) * 0.32
         + (headCoach?.jobSecurity ?? 55) * 0.24
         + team.resources.boardPatience * 0.1
+        + (culture?.coachTrust ?? 50) * 0.12
         - team.resources.financialPressure * 0.12
         - (headCoach?.status === "hot-seat" ? 12 : 0),
     );
@@ -1510,6 +1534,7 @@ function updateHeroPrograms(
         + positionNeed * 0.31
         + (100 - depthCompetition) * 0.18
         + recruitingPower * 0.08
+        + (culture?.stability ?? 50) * 0.08
         - team.resources.financialPressure * 0.08
         - (headCoach?.status === "hot-seat" ? 8 : 0),
     );
@@ -1576,6 +1601,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   let programs = save.football.recruitment.programs;
   let movementMarket = world.movementMarket;
   let competition = world.competition;
+  let social = world.social;
   const generatedStories: EcosystemStory[] = [];
   const generatedTransactions: EcosystemTransaction[] = [];
   const targetDay = save.life.completedDays;
@@ -1689,8 +1715,26 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       generatedStories.push(...unifiedMarket.stories);
       generatedTransactions.push(...unifiedMarket.transactions);
 
+      const socialWeek = simulateSocialWeek(
+        social,
+        teams,
+        players,
+        coaches,
+        cycle.seasonYear,
+        Math.max(1, cycle.phaseWeek),
+        day,
+        random.fork("social-week"),
+      );
+      social = socialWeek.social;
+      players = socialWeek.players;
+      generatedStories.push(...socialWeek.stories.map((draft) => {
+        const related = draft.teamIds.includes(save.football.college.signedProgramId ?? "")
+          || draft.playerIds.some((playerId) => players.find((player) => player.id === playerId)?.isHero);
+        return story(daySave, day, draft.kind, draft.title, draft.detail, related ? 5 : draft.importance, draft.teamIds, draft.playerIds, draft.coachIds, related);
+      }));
+
       if (cycle.phase === "regular-season" && world.seasonYear === cycle.seasonYear && world.seasonWeek <= 10) {
-        const round = simulateCompetitionWeek(competition, teams, players, coaches, cycle.seasonYear, world.seasonWeek, random.fork("competition-week"));
+        const round = simulateCompetitionWeek(competition, teams, players, coaches, cycle.seasonYear, world.seasonWeek, random.fork("competition-week"), social);
         competition = round.competition;
         teams = round.teams;
         coaches = round.coaches;
@@ -1705,7 +1749,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         teams = recalculateTeamStrength(teams, players);
         world = { ...world, seasonWeek: Math.min(11, world.seasonWeek + 1), phase: world.seasonWeek >= 10 ? "postseason" : "regular-season" };
       } else if (cycle.phase === "postseason" && competition.playoff.stage !== "complete") {
-        const postseason = simulateCompetitionPostseason(competition, teams, players, coaches, conferences, random.fork(`postseason:${competition.playoff.stage}`));
+        const postseason = simulateCompetitionPostseason(competition, teams, players, coaches, conferences, random.fork(`postseason:${competition.playoff.stage}`), social);
         competition = postseason.competition;
         teams = postseason.teams;
         coaches = postseason.coaches;
@@ -1728,6 +1772,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         talentPipeline = offseasonWorld.talentPipeline;
         movementMarket = offseasonWorld.movementMarket;
         competition = offseasonWorld.competition;
+        social = offseasonWorld.social;
         conferences = offseasonWorld.conferences;
       } else if (cycle.phase === "preseason" && world.seasonYear < cycle.seasonYear) {
         world = resetForNewSeason({ ...world, teams, players, coaches }, cycle.seasonYear);
@@ -1736,6 +1781,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         coaches = world.coaches;
         movementMarket = world.movementMarket;
         competition = world.competition;
+        social = world.social;
         conferences = world.conferences;
       }
     }
@@ -1753,6 +1799,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       talentPipeline,
       movementMarket,
       competition,
+      social,
       market: market(players, coaches, teams, talentPipeline, movementMarket),
     };
   }

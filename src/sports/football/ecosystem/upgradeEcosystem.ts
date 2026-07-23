@@ -16,6 +16,7 @@ import { createEmptyRosterPlan, reviewRosterManagement } from "./rosterManagemen
 import { createUnifiedMovementMarket } from "./movementMarket";
 import { createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 import { createCompetitionState } from "./competition";
+import { createSocialEcosystem } from "./social";
 
 type LegacyTeam = Omit<
   EcosystemTeam,
@@ -41,7 +42,7 @@ type LegacyV2Market = Omit<
 
 export interface LegacyFootballEcosystemStateV2 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "constitution" | "cycle" | "teams" | "players" | "market" | "talentPipeline" | "competition"
+  "moduleVersion" | "constitution" | "cycle" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social"
 > {
   moduleVersion: 2;
   teams: LegacyV2Team[];
@@ -58,7 +59,7 @@ type LegacyV3Market = Omit<
 
 export interface LegacyFootballEcosystemStateV3 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition"
+  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social"
 > {
   moduleVersion: 3;
   teams: LegacyV3Team[];
@@ -75,7 +76,7 @@ type LegacyV4Market = Omit<
 
 export interface LegacyFootballEcosystemStateV4 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition"
+  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social"
 > {
   moduleVersion: 4;
   teams: LegacyV4Team[];
@@ -89,7 +90,7 @@ type LegacyV5Market = Omit<FootballEcosystemState["market"], "plannedClassSpots"
 
 export interface LegacyFootballEcosystemStateV5 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "competition"
+  "moduleVersion" | "teams" | "players" | "market" | "competition" | "social"
 > {
   moduleVersion: 5;
   teams: LegacyV5Team[];
@@ -97,22 +98,26 @@ export interface LegacyFootballEcosystemStateV5 extends Omit<
   market: LegacyV5Market;
 }
 
-export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "movementMarket" | "market" | "competition"> {
+export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "movementMarket" | "market" | "competition" | "social"> {
   moduleVersion: 6;
   teams: Array<Omit<EcosystemTeam, "tactical">>;
   players: Array<Omit<EcosystemPlayer, "tactical">>;
   market: Omit<FootballEcosystemState["market"], "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 }
 
-export interface LegacyFootballEcosystemStateV7 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "competition"> {
+export interface LegacyFootballEcosystemStateV7 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "competition" | "social"> {
   moduleVersion: 7;
   teams: Array<Omit<EcosystemTeam, "tactical">>;
   players: Array<Omit<EcosystemPlayer, "tactical">>;
   market: Omit<FootballEcosystemState["market"], "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 }
 
-export interface LegacyFootballEcosystemStateV8 extends Omit<FootballEcosystemState, "moduleVersion" | "competition"> {
+export interface LegacyFootballEcosystemStateV8 extends Omit<FootballEcosystemState, "moduleVersion" | "competition" | "social"> {
   moduleVersion: 8;
+}
+
+export interface LegacyFootballEcosystemStateV9 extends Omit<FootballEcosystemState, "moduleVersion" | "social"> {
+  moduleVersion: 9;
 }
 
 export interface LegacyFootballEcosystemStateV1 {
@@ -136,7 +141,7 @@ export interface LegacyFootballEcosystemStateV1 {
 const CLASS_INDEX = { Freshman: 0, Sophomore: 1, Junior: 2, Senior: 3 } as const;
 
 type PreRosterMarket = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
-type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition"> & {
+type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition" | "social"> & {
   teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">>;
   players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">>;
   market: PreRosterMarket;
@@ -199,7 +204,7 @@ function finalizeRosterUpgrade(base: PreRosterWorld, currentDate: GameDate): Foo
   const collegeTeams = planning.teams.filter((team) => team.level === "college");
   return {
     ...base,
-    moduleVersion: 9,
+    moduleVersion: 10,
     teams: planning.teams,
     players: planning.players,
     market: {
@@ -215,6 +220,7 @@ function finalizeRosterUpgrade(base: PreRosterWorld, currentDate: GameDate): Foo
     },
     movementMarket: createUnifiedMovementMarket(planning.teams, planning.players, base.seasonYear),
     competition: createCompetitionState(base.seasonYear, base.conferences, planning.teams, new SeededRandom(`upgrade:competition:${base.seasonYear}`)),
+    social: createSocialEcosystem(planning.teams, planning.players, base.coaches, base.seasonYear, new SeededRandom(`upgrade:social:${base.seasonYear}`), base.lastSimulatedDay),
   };
 }
 
@@ -488,7 +494,7 @@ export function upgradeFootballEcosystemV6(
   const movementMarket = createUnifiedMovementMarket(tactical.teams, tactical.players, input.seasonYear);
   return {
     ...input,
-    moduleVersion: 9,
+    moduleVersion: 10,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
     teams: tactical.teams,
     players: tactical.players,
@@ -502,6 +508,7 @@ export function upgradeFootballEcosystemV6(
     },
     movementMarket,
     competition: createCompetitionState(input.seasonYear, input.conferences, tactical.teams, new SeededRandom(`upgrade:competition:v18:${input.seasonYear}`)),
+    social: createSocialEcosystem(tactical.teams, tactical.players, input.coaches, input.seasonYear, new SeededRandom(`upgrade:social:v18:${input.seasonYear}`), input.lastSimulatedDay),
   };
 }
 
@@ -512,7 +519,7 @@ export function upgradeFootballEcosystemV7(
   const tactical = addTacticalLayer(input.teams, input.players, input.coaches, input.seasonYear);
   return {
     ...input,
-    moduleVersion: 9,
+    moduleVersion: 10,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
     teams: tactical.teams,
     players: tactical.players,
@@ -522,6 +529,7 @@ export function upgradeFootballEcosystemV7(
       programsInstallingNewSystems: tactical.teams.filter((team) => team.level === "college" && (team.tactical.installation < 58 || team.tactical.continuity < 48)).length,
     },
     competition: createCompetitionState(input.seasonYear, input.conferences, tactical.teams, new SeededRandom(`upgrade:competition:v19:${input.seasonYear}`)),
+    social: createSocialEcosystem(tactical.teams, tactical.players, input.coaches, input.seasonYear, new SeededRandom(`upgrade:social:v19:${input.seasonYear}`), input.lastSimulatedDay),
   };
 }
 
@@ -531,8 +539,29 @@ export function upgradeFootballEcosystemV8(
 ): FootballEcosystemState {
   return {
     ...input,
-    moduleVersion: 9,
+    moduleVersion: 10,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
     competition: createCompetitionState(input.seasonYear, input.conferences, input.teams, new SeededRandom(`upgrade:competition:v20:${input.seasonYear}`)),
+    social: createSocialEcosystem(input.teams, input.players, input.coaches, input.seasonYear, new SeededRandom(`upgrade:social:v20:${input.seasonYear}`), input.lastSimulatedDay),
+  };
+}
+
+
+export function upgradeFootballEcosystemV9(
+  input: LegacyFootballEcosystemStateV9,
+  currentDate: GameDate,
+): FootballEcosystemState {
+  return {
+    ...input,
+    moduleVersion: 10,
+    cycle: input.cycle ?? resolveWorldCycle(currentDate),
+    social: createSocialEcosystem(
+      input.teams,
+      input.players,
+      input.coaches,
+      input.seasonYear,
+      new SeededRandom(`upgrade:social:v21:${input.seasonYear}`),
+      input.lastSimulatedDay,
+    ),
   };
 }

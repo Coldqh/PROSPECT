@@ -18,6 +18,7 @@ export type EcosystemInvariantCode =
   | "invalid-range"
   | "competition-balance"
   | "competition-reference"
+  | "social-reference"
   | "history-bound";
 
 export interface EcosystemInvariantIssue {
@@ -55,6 +56,9 @@ export interface EcosystemSeasonSnapshot {
   movedCoaches: number;
   coachingChanges: number;
   transfers: number;
+  activeSocialBonds: number;
+  strainedSocialBonds: number;
+  fracturedTeams: number;
 }
 
 export interface EcosystemStabilityReport {
@@ -225,6 +229,8 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
   issues.push(...uniqueIssues(world.players, (player) => player.id, "players"));
   issues.push(...uniqueIssues(world.coaches, (coach) => coach.id, "coaches"));
   issues.push(...uniqueIssues(world.competition.schedule, (game) => game.id, "competition.schedule"));
+  issues.push(...uniqueIssues(world.social.bonds, (bond) => bond.id, "social.bonds"));
+  issues.push(...uniqueIssues(world.social.incidents, (incident) => incident.id, "social.incidents"));
 
   for (const player of world.players) {
     if (!teamIds.has(player.teamId)) {
@@ -285,6 +291,57 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     }
   }
 
+  const cultureTeamIds = world.social.teamCultures.map((culture) => culture.teamId);
+  if (!sameMembers(cultureTeamIds, world.teams.map((team) => team.id))) {
+    issues.push({
+      code: "social-reference",
+      scope: "social.teamCultures",
+      detail: `Культура команд покрывает ${cultureTeamIds.length} из ${world.teams.length} программ.`,
+    });
+  }
+  for (const culture of world.social.teamCultures) {
+    if (!teamIds.has(culture.teamId)) {
+      issues.push({ code: "social-reference", scope: culture.teamId, detail: `Социальная культура ссылается на отсутствующую команду ${culture.teamId}.` });
+    }
+    for (const [value, key] of [
+      [culture.cohesion, "cohesion"],
+      [culture.accountability, "accountability"],
+      [culture.coachTrust, "coachTrust"],
+      [culture.leadership, "leadership"],
+      [culture.conflict, "conflict"],
+      [culture.morale, "morale"],
+      [culture.stability, "stability"],
+    ] as Array<[number, string]>) {
+      const issue = rangeIssue(value, 0, 100, `${culture.teamId}.social.${key}`);
+      if (issue) issues.push(issue);
+    }
+  }
+  for (const bond of world.social.bonds) {
+    const entityExists = (id: string, kind: "player" | "coach") => kind === "player" ? playerIds.has(id) : coachIds.has(id);
+    if (bond.entityAId === bond.entityBId || !entityExists(bond.entityAId, bond.entityAKind) || !entityExists(bond.entityBId, bond.entityBKind)) {
+      issues.push({ code: "social-reference", scope: bond.id, detail: `${bond.id}: связь содержит отсутствующего участника или замкнута на одного человека.` });
+    }
+    if (bond.active) {
+      const teamId = bond.teamId;
+      const playerTeams = [bond.entityAId, bond.entityBId]
+        .map((id) => world.players.find((player) => player.id === id)?.teamId)
+        .filter((id): id is string => Boolean(id));
+      const coachTeams = [bond.entityAId, bond.entityBId]
+        .map((id) => world.coaches.find((coach) => coach.id === id)?.teamId)
+        .filter((id): id is string => Boolean(id));
+      if (!teamId || !teamIds.has(teamId) || [...playerTeams, ...coachTeams].some((id) => id !== teamId)) {
+        issues.push({ code: "social-reference", scope: bond.id, detail: `${bond.id}: активная связь не совпадает с текущей командой участников.` });
+      }
+    }
+    for (const [value, key] of [
+      [bond.trust, "trust"], [bond.respect, "respect"], [bond.chemistry, "chemistry"],
+      [bond.tension, "tension"], [bond.influence, "influence"],
+    ] as Array<[number, string]>) {
+      const issue = rangeIssue(value, 0, 100, `${bond.id}.${key}`);
+      if (issue) issues.push(issue);
+    }
+  }
+
   const collegeWins = collegeTeams.reduce((sum, team) => sum + team.wins, 0);
   const collegeLosses = collegeTeams.reduce((sum, team) => sum + team.losses, 0);
   if (collegeWins !== collegeLosses) {
@@ -304,6 +361,8 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     [world.talentPipeline.classHistory.length, 20, "talentPipeline.classHistory"],
     [world.movementMarket.negotiations.length, 180, "movementMarket.negotiations"],
     [world.movementMarket.coachVacancies.length, 60, "movementMarket.coachVacancies"],
+    [world.social.bonds.length, 3000, "social.bonds"],
+    [world.social.incidents.length, 180, "social.incidents"],
   ];
   for (const [actual, maximum, scope] of bounds) {
     if (actual > maximum) {
@@ -348,6 +407,9 @@ function snapshot(
     movedCoaches: world.coaches.filter((coach) => coach.previousTeamIds.length > 0).length,
     coachingChanges,
     transfers,
+    activeSocialBonds: world.social.bonds.filter((bond) => bond.active).length,
+    strainedSocialBonds: world.social.bonds.filter((bond) => bond.active && bond.tension >= 70).length,
+    fracturedTeams: world.social.teamCultures.filter((culture) => culture.conflict >= 65).length,
   };
 }
 

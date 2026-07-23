@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 20;
+export const CURRENT_SCHEMA_VERSION = 21;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -1080,8 +1080,57 @@ const ecosystemPlayerTacticalProfileSchema = z.object({
   lastCoachFingerprint: z.string().min(1).optional(),
 });
 
+
+const ecosystemSocialSchema = z.object({
+  version: z.literal(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  lastProcessedDay: z.number().int().nonnegative(),
+  bonds: z.array(z.object({
+    id: z.string().min(1),
+    entityAId: z.string().min(1),
+    entityBId: z.string().min(1),
+    entityAKind: z.enum(["player", "coach"]),
+    entityBKind: z.enum(["player", "coach"]),
+    teamId: z.string().min(1).optional(),
+    kind: z.enum(["teammate", "position-rival", "mentor", "coach-player", "staff"]),
+    trust: z.number().min(0).max(100),
+    respect: z.number().min(0).max(100),
+    chemistry: z.number().min(0).max(100),
+    tension: z.number().min(0).max(100),
+    influence: z.number().min(0).max(100),
+    familiarityWeeks: z.number().int().nonnegative().max(999),
+    active: z.boolean(),
+    lastSeasonYear: z.number().int().min(2020).max(2200),
+    lastWeek: z.number().int().min(1).max(60),
+  })).max(3000),
+  teamCultures: z.array(z.object({
+    teamId: z.string().min(1),
+    cohesion: z.number().min(0).max(100),
+    accountability: z.number().min(0).max(100),
+    coachTrust: z.number().min(0).max(100),
+    leadership: z.number().min(0).max(100),
+    conflict: z.number().min(0).max(100),
+    morale: z.number().min(0).max(100),
+    stability: z.number().min(0).max(100),
+    lastSeasonYear: z.number().int().min(2020).max(2200),
+    lastWeek: z.number().int().min(1).max(60),
+  })),
+  incidents: z.array(z.object({
+    id: z.string().min(1),
+    kind: z.enum(["mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise"]),
+    seasonYear: z.number().int().min(2020).max(2200),
+    week: z.number().int().min(1).max(60),
+    teamId: z.string().min(1),
+    participantIds: z.array(z.string().min(1)).min(1),
+    title: z.string().min(2),
+    detail: z.string().min(2),
+    impact: z.number().min(-10).max(10),
+  })).max(180),
+  digest: z.array(z.string().min(2)).max(6),
+});
+
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(9),
+  moduleVersion: z.literal(10),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -1179,7 +1228,7 @@ const footballEcosystemSchema = z.object({
   })).min(10),
   stories: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl"]),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl", "mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise"]),
     createdOn: gameDateSchema,
     week: z.number().int().min(1),
     title: z.string().min(2),
@@ -1245,6 +1294,7 @@ const footballEcosystemSchema = z.object({
   talentPipeline: ecosystemTalentPipelineSchema,
   movementMarket: ecosystemMovementMarketSchema,
   competition: ecosystemCompetitionSchema,
+  social: ecosystemSocialSchema,
 });
 
 const careerMetaSchema = z.object({

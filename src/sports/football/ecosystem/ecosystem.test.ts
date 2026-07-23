@@ -54,6 +54,9 @@ describe("football ecosystem", () => {
     expect(left.world.market.plannedClassSpots).toBeGreaterThan(0);
     expect(left.world.talentPipeline.regions.length).toBeGreaterThanOrEqual(8);
     expect(left.world.players.every((player) => Boolean(player.talent.regionId))).toBe(true);
+    expect(left.world.social.teamCultures).toHaveLength(left.world.teams.length);
+    expect(left.world.social.bonds.length).toBeGreaterThan(left.world.teams.length);
+    expect(left.world.social.bonds.some((bond) => bond.kind === "mentor")).toBe(true);
   });
 
   it("advances the market and synchronizes college needs with hero recruiting", () => {
