@@ -10,7 +10,7 @@ import { createFootballRelationships } from "../../sports/football/relationships
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
 import { createInitialCollegeState } from "../../sports/football/college/createCollegeState";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
-import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -98,6 +98,16 @@ interface LegacyWorldConstitutionSave {
   football: FootballCareerState;
   relationships: CareerSave["relationships"];
   world: LegacyFootballEcosystemStateV3;
+  history: HistoryEntry[];
+}
+
+interface LegacyRosterPlanningSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 17 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV6;
   history: HistoryEntry[];
 }
 
@@ -298,6 +308,24 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
       playerRead: "Программа ещё не проверена личным разговором и официальным визитом.",
     })),
   };
+}
+
+function migrateVersionSeventeen(input: LegacyRosterPlanningSave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV6(input.world, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v18`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Рынки движения объединены",
+        description: "Школьные рекруты, JUCO, walk-on, трансферы и тренерские вакансии теперь конкурируют за общие места, стипендии, NIL и кадровые бюджеты.",
+      },
+    ],
+  });
 }
 
 function migrateVersionSixteen(input: LegacyAnnualTalentSave): CareerSave {
@@ -757,6 +785,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 17) return { save: migrateVersionSeventeen(input as LegacyRosterPlanningSave), migratedFrom: 17 };
   if (schemaVersion === 16) return { save: migrateVersionSixteen(input as LegacyAnnualTalentSave), migratedFrom: 16 };
   if (schemaVersion === 15) return { save: migrateVersionFifteen(input as LegacyFiniteResourcesSave), migratedFrom: 15 };
   if (schemaVersion === 14) return { save: migrateVersionFourteen(input as LegacyWorldConstitutionSave), migratedFrom: 14 };

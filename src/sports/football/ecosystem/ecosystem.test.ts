@@ -6,6 +6,7 @@ import { createFootballEcosystem } from "./createEcosystem";
 import { advanceFootballEcosystem } from "./simulateEcosystem";
 import { placeHeroInCollegeEcosystem } from "./heroIntegration";
 import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
+import { ECOSYSTEM_MODULE_VERSION } from "./types";
 
 function createSave(seed = "ecosystem-test-seed"): CareerSave {
   const generated = createFootballCareerState(seed, createLegacyFootballSetup(seed));
@@ -42,7 +43,7 @@ describe("football ecosystem", () => {
     expect(left.world.coaches.length).toBeGreaterThan(30);
     expect(left.world.conferences).toHaveLength(4);
     expect(left.world.players.some((player) => player.isHero)).toBe(true);
-    expect(left.world.moduleVersion).toBe(6);
+    expect(left.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(left.world.constitution.collegeRosterLimit).toBe(105);
     expect(left.world.teams.every((team) => team.compliance.estimatedRosterSize <= team.compliance.rosterLimit)).toBe(true);
     expect(left.world.players.every((player) => Boolean(player.eligibility.model))).toBe(true);

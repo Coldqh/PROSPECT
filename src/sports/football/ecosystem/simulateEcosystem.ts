@@ -31,6 +31,7 @@ import {
   simulateWeeklyResources,
 } from "./resources";
 import { reviewRosterManagement } from "./rosterManagement";
+import { advanceUnifiedMovementMarket, applyCoachMovementConsequences } from "./movementMarket";
 
 
 interface EcosystemCareerState {
@@ -1188,12 +1189,6 @@ function processOffseason(
     }
     return { ...team, resources };
   });
-  const transferResult = processTransfers(players, teams, save, random.fork("transfers"), day, seasonYear);
-  players = transferResult.players;
-  teams = transferResult.teams;
-  transactions.push(...transferResult.transactions);
-  stories.push(...transferResult.stories);
-
   const rosterManagement = reviewRosterManagement(
     teams,
     players,
@@ -1293,6 +1288,49 @@ function processOffseason(
   const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
+  const coachReaction = applyCoachMovementConsequences({
+    movementMarket: world.movementMarket,
+    coachTransactions: carousel.transactions,
+    players,
+    teams,
+    coaches: carousel.coaches,
+    context: {
+      seasonYear: seasonYear + 1,
+      week: Math.max(1, save.life.weekNumber),
+      day,
+      date: save.meta.currentDate,
+      phase: "offseason",
+      heroProgramId: save.football.college.signedProgramId,
+      heroPosition: save.football.position,
+      relevantProgramIds: save.football.recruitment.programs.filter((program) => program.interest >= 25).map((program) => program.id),
+    },
+    random: random.fork("coach-market-reaction"),
+  });
+  players = coachReaction.players;
+  transactions.push(...coachReaction.transactions);
+  stories.push(...coachReaction.stories);
+  const postCoachMarket = advanceUnifiedMovementMarket({
+    teams,
+    players,
+    coaches: carousel.coaches,
+    talentPipeline: talentFlow.pipeline,
+    movementMarket: coachReaction.movementMarket,
+    context: {
+      seasonYear: seasonYear + 1,
+      week: Math.max(1, save.life.weekNumber),
+      day,
+      date: save.meta.currentDate,
+      phase: "offseason",
+      heroProgramId: save.football.college.signedProgramId,
+      heroPosition: save.football.position,
+      relevantProgramIds: save.football.recruitment.programs.filter((program) => program.interest >= 25).map((program) => program.id),
+    },
+    random: random.fork("post-coach-market"),
+  });
+  teams = postCoachMarket.teams;
+  players = postCoachMarket.players;
+  transactions.push(...postCoachMarket.transactions);
+  stories.push(...postCoachMarket.stories);
   teams = rebuildTeamRosters(teams, players, carousel.coaches, world.constitution);
   const finalRosterReview = reviewRosterManagement(
     teams,
@@ -1316,8 +1354,9 @@ function processOffseason(
     teamHistory: [...world.teamHistory, ...archived].slice(-240),
     lastOffseasonYear: seasonYear,
     seasonWeek: 13,
-    market: { ...market(players, carousel.coaches, teams, talentFlow.pipeline), coachOpenings: 0 },
-    talentPipeline: talentFlow.pipeline,
+    market: { ...market(players, carousel.coaches, teams, postCoachMarket.talentPipeline, postCoachMarket.movementMarket), coachOpenings: postCoachMarket.movementMarket.coachVacancies.filter((vacancy) => vacancy.status === "open").length },
+    talentPipeline: postCoachMarket.talentPipeline,
+    movementMarket: postCoachMarket.movementMarket,
   };
 }
 
@@ -1379,7 +1418,7 @@ function updateHeroPrograms(
   });
 }
 
-function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[], talentPipeline: FootballEcosystemState["talentPipeline"]) {
+function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: EcosystemTeam[], talentPipeline: FootballEcosystemState["talentPipeline"], movementMarket: FootballEcosystemState["movementMarket"]) {
   const seniors = players.filter((player) => player.level === "high-school" && player.classYear === "Senior");
   const committedPlayers = seniors.filter((player) => player.recruitingStage === "committed").length;
   const collegeTeams = teams.filter((team) => team.level === "college");
@@ -1400,6 +1439,9 @@ function market(players: EcosystemPlayer[], coaches: EcosystemCoach[], teams: Ec
     plannedClassSpots: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.targetClassSize, 0),
     developmentalPlayers: players.filter((player) => player.usagePlan === "developmental" || player.usagePlan === "redshirt").length,
     plannedPositionChanges: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.positionChanges.filter((change) => !change.applied).length, 0),
+    activeNegotiations: movementMarket.negotiations.filter((negotiation) => negotiation.status === "offered").length,
+    withdrawnOffers: movementMarket.withdrawnOffers,
+    transferCandidates: players.filter((player) => player.level === "college" && (player.transferStatus === "portal" || player.depthRank >= 3) && player.eligibilityYears > 1).length,
   };
 }
 
@@ -1413,7 +1455,7 @@ function buildDigest(stories: EcosystemStory[], world: FootballEcosystemState): 
   return [
     `${world.market.activeRecruitments} выпускников остаются в активном рекрутинге.`,
     `${world.market.coachingHotSeats} тренерских штабов работают под угрозой перемен.`,
-    "Depth chart команд продолжает меняться из-за формы, здоровья и конкуренции.",
+    `${world.market.activeNegotiations} предложений остаются активными на едином рынке движения.`,
   ];
 }
 
@@ -1421,7 +1463,9 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   let world = save.world;
   let talentPipeline = world.talentPipeline;
   let programs = save.football.recruitment.programs;
+  let movementMarket = world.movementMarket;
   const generatedStories: EcosystemStory[] = [];
+  const generatedTransactions: EcosystemTransaction[] = [];
   const targetDay = save.life.completedDays;
   const startDay = world.lastSimulatedDay;
   const startDate = world.lastUpdatedOn;
@@ -1504,6 +1548,31 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       teams = resourceUpdate.teams;
       generatedStories.push(...resourceUpdate.stories);
 
+      const unifiedMarket = advanceUnifiedMovementMarket({
+        teams,
+        players,
+        coaches,
+        talentPipeline,
+        movementMarket,
+        context: {
+          seasonYear: cycle.seasonYear,
+          week: Math.max(1, cycle.phaseWeek),
+          day,
+          date: simulatedDate,
+          phase: cycle.phase,
+          heroProgramId: save.football.college.signedProgramId,
+          heroPosition: save.football.position,
+          relevantProgramIds: save.football.recruitment.programs.filter((program) => program.interest >= 25).map((program) => program.id),
+        },
+        random: random.fork("unified-movement-market"),
+      });
+      teams = unifiedMarket.teams;
+      players = unifiedMarket.players;
+      talentPipeline = unifiedMarket.talentPipeline;
+      movementMarket = unifiedMarket.movementMarket;
+      generatedStories.push(...unifiedMarket.stories);
+      generatedTransactions.push(...unifiedMarket.transactions);
+
       if (cycle.phase === "regular-season" && world.seasonYear === cycle.seasonYear && world.seasonWeek <= 10) {
         const round = simulateConferenceRound(teams, coaches, world.conferences, daySave, random.fork("conference-round"), day, world.seasonWeek);
         teams = round.teams;
@@ -1514,10 +1583,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
           ? { ...player, eligibility: { ...player.eligibility, gamesPlayedThisSeason: player.eligibility.gamesPlayedThisSeason + 1 } }
           : player);
         generatedStories.push(...round.stories);
-        const recruiting = simulateRecruitingMarket(players, teams, daySave, random.fork("market"), day);
-        players = recruiting.players;
-        teams = recalculateTeamStrength(recruiting.teams, players);
-        generatedStories.push(...recruiting.stories);
+        teams = recalculateTeamStrength(teams, players);
         world = { ...world, seasonWeek: Math.min(11, world.seasonWeek + 1), phase: world.seasonWeek >= 10 ? "postseason" : "regular-season" };
       } else if (cycle.phase === "postseason" && world.phase !== "offseason") {
         const alreadyCrowned = world.conferences.every((conference) => conference.champions.some((champion) => champion.seasonYear === cycle.seasonYear));
@@ -1529,17 +1595,19 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
           generatedStories.push(...finals.stories);
         }
       } else if (cycle.phase === "winter-evaluation" && world.lastOffseasonYear < cycle.seasonYear) {
-        const offseasonWorld = processOffseason({ ...world, teams, players, coaches }, daySave, random.fork("offseason"), day);
+        const offseasonWorld = processOffseason({ ...world, teams, players, coaches, movementMarket }, daySave, random.fork("offseason"), day);
         teams = offseasonWorld.teams;
         players = offseasonWorld.players;
         coaches = offseasonWorld.coaches;
         world = offseasonWorld;
         talentPipeline = offseasonWorld.talentPipeline;
+        movementMarket = offseasonWorld.movementMarket;
       } else if (cycle.phase === "preseason" && world.seasonYear < cycle.seasonYear) {
         world = resetForNewSeason({ ...world, teams, players, coaches }, cycle.seasonYear);
         teams = world.teams;
         players = world.players;
         coaches = world.coaches;
+        movementMarket = world.movementMarket;
       }
     }
 
@@ -1553,7 +1621,8 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       players,
       coaches,
       talentPipeline,
-      market: market(players, coaches, teams, talentPipeline),
+      movementMarket,
+      market: market(players, coaches, teams, talentPipeline, movementMarket),
     };
   }
 
@@ -1568,7 +1637,8 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     save.meta.currentDate,
   );
   const stories = [...world.stories, ...generatedStories].slice(-90);
-  world = { ...world, stories, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
+  const transactions = [...world.transactions, ...generatedTransactions].slice(-220);
+  world = { ...world, stories, transactions, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
   const important = generatedStories.filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
 
   return {

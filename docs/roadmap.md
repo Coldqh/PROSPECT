@@ -17,7 +17,7 @@
 - [x] Finite program resources and institutional economics
 - [x] Annual talent pipeline and geographic recruiting classes
 - [x] Multi-year roster-planning AI
-- [ ] Unified recruiting, transfer and coaching labor market
+- [x] Unified recruiting, transfer and coaching labor market
 - [ ] Tactical identities and scheme-driven roster value
 - [ ] National competition, rankings and program reputation
 - [ ] Twenty-season autonomous stability test
@@ -78,3 +78,15 @@
 - position changes when one room is overloaded and another loses depth;
 - automatic replanning after transfers, enrollment and coaching changes;
 - deterministic migration from schema v16 to v17.
+
+
+## v0.18 — Unified movement market
+
+- shared roster openings for high-school recruits, JUCO, walk-on and transfer candidates;
+- finite scholarships, NIL and recruiting budgets consumed by the same negotiations;
+- offers, expiration, acceptance and withdrawal recorded as persistent market objects;
+- an experienced transfer can close a position and reopen a displaced school recruit's market;
+- coaching vacancies are tracked and staff changes can trigger decommitments and portal entries;
+- independent prospects no longer choose destinations outside the common market;
+- compact Market tab inside the autonomous World dashboard;
+- deterministic migration from schema v17 to v18.

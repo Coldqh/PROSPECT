@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createFootballCareerState, createLegacyFootballSetup } from "../../sports/football/career/createFootballCareer";
 import { migrateCareerSave } from "./migrations";
 import { CURRENT_SCHEMA_VERSION } from "./schema";
+import { ECOSYSTEM_MODULE_VERSION } from "../../sports/football/ecosystem/types";
 
 const legacySave = {
   meta: {
@@ -369,7 +370,7 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionThirteen);
     expect(result.migratedFrom).toBe(13);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(6);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(result.save.world.constitution.collegeRosterLimit).toBe(105);
     expect(result.save.world.players.every((player) => player.eligibility.athleticallyEligible !== undefined)).toBe(true);
     expect(result.save.world.teams.every((team) => team.compliance.rosterLimit > 0)).toBe(true);
@@ -406,7 +407,7 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionFourteen);
     expect(result.migratedFrom).toBe(14);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(6);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(result.save.world.teams.every((team) => team.resources.annualBudget > 0)).toBe(true);
     expect(result.save.world.market.totalRecruitingBudget).toBeGreaterThan(0);
   });
@@ -424,7 +425,7 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionFifteen);
     expect(result.migratedFrom).toBe(15);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(6);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(result.save.world.talentPipeline.regions.length).toBeGreaterThanOrEqual(8);
     expect(result.save.world.players.every((player) => Boolean(player.talent.regionId))).toBe(true);
   });
@@ -437,13 +438,16 @@ describe("migrateCareerSave", () => {
       plannedClassSpots: _plannedClassSpots,
       developmentalPlayers: _developmentalPlayers,
       plannedPositionChanges: _plannedPositionChanges,
+      activeNegotiations: _activeNegotiations,
+      withdrawnOffers: _withdrawnOffers,
+      transferCandidates: _transferCandidates,
       ...legacyMarket
     } = current.world.market;
     const versionSixteen = {
       ...current,
       meta: { ...current.meta, schemaVersion: 16 as const },
       world: {
-        ...current.world,
+        ...(() => { const { movementMarket: _movementMarket, ...legacyWorld } = current.world; return legacyWorld; })(),
         moduleVersion: 5 as const,
         teams: legacyTeams,
         players: legacyPlayers,
@@ -453,10 +457,28 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionSixteen);
     expect(result.migratedFrom).toBe(16);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(6);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(result.save.world.teams.every((team) => team.rosterPlan.planningHorizonYears === 3)).toBe(true);
     expect(result.save.world.players.every((player) => Boolean(player.usagePlan))).toBe(true);
     expect(result.save.world.market.plannedClassSpots).toBeGreaterThan(0);
+  });
+
+  it("migrates version seventeen worlds into the unified movement market", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { movementMarket: _movementMarket, ...legacyWorld } = current.world;
+    const { activeNegotiations: _activeNegotiations, withdrawnOffers: _withdrawnOffers, transferCandidates: _transferCandidates, ...legacyMarket } = current.world.market;
+    const versionSeventeen = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 17 as const },
+      world: { ...legacyWorld, moduleVersion: 6 as const, market: legacyMarket },
+    };
+    const result = migrateCareerSave(versionSeventeen);
+    expect(result.migratedFrom).toBe(17);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    expect(result.save.world.movementMarket.version).toBe(1);
+    expect(result.save.world.movementMarket.openings.length).toBeGreaterThan(0);
+    expect(result.save.world.market.activeNegotiations).toBe(0);
   });
 
   it("produces the same migrated athlete for the same seed", () => {

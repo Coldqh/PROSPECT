@@ -2,6 +2,8 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
+export const ECOSYSTEM_MODULE_VERSION = 7 as const;
+
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
 export type EcosystemPlayerTrajectory = "surging" | "steady" | "slipping";
@@ -16,6 +18,11 @@ export type EcosystemResourceTier = "local" | "regional" | "power" | "elite";
 export type EcosystemSpendingPriority = "balanced" | "recruiting" | "development" | "medical" | "facilities";
 export type EcosystemRosterStrategy = "contend" | "balanced" | "develop" | "rebuild";
 export type EcosystemUsagePlan = "starter" | "rotation" | "special-teams" | "developmental" | "redshirt";
+export type EcosystemCandidateKind = "high-school" | "juco" | "walk-on" | "transfer";
+export type EcosystemNegotiationStatus = "offered" | "accepted" | "withdrawn" | "expired";
+export type EcosystemPromiseRole = "starter-path" | "rotation" | "developmental";
+export type EcosystemOpeningStatus = "open" | "filled" | "closed";
+export type EcosystemCoachVacancyStatus = "open" | "filled" | "cancelled";
 export type EcosystemStoryKind =
   | "breakout"
   | "injury"
@@ -41,7 +48,11 @@ export type EcosystemStoryKind =
   | "roster-plan"
   | "position-change"
   | "redshirt"
-  | "scholarship";
+  | "scholarship"
+  | "offer"
+  | "offer-withdrawn"
+  | "market-chain"
+  | "coach-vacancy";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -58,7 +69,11 @@ export type EcosystemTransactionKind =
   | "talent-enrolled"
   | "position-change"
   | "scholarship-awarded"
-  | "redshirt-assigned";
+  | "redshirt-assigned"
+  | "offer-issued"
+  | "offer-withdrawn"
+  | "commitment"
+  | "coach-vacancy";
 
 export interface EcosystemPositionNeeds {
   QB: number;
@@ -145,6 +160,63 @@ export interface EcosystemTalentPipeline {
   camps: EcosystemCamp[];
   independentProspects: EcosystemIndependentProspect[];
   classHistory: EcosystemTalentClassRecord[];
+}
+
+
+export interface EcosystemRosterOpening {
+  id: string;
+  teamId: string;
+  position: FootballPosition;
+  seasonYear: number;
+  slots: number;
+  scholarshipSlots: number;
+  nilAvailable: number;
+  recruitingAvailable: number;
+  filledByCandidateIds: string[];
+  status: EcosystemOpeningStatus;
+  reason: string;
+}
+
+export interface EcosystemMarketNegotiation {
+  id: string;
+  candidateId: string;
+  candidateKind: EcosystemCandidateKind;
+  candidateName: string;
+  position: FootballPosition;
+  teamId: string;
+  status: EcosystemNegotiationStatus;
+  scholarship: "none" | "partial" | "full";
+  nilOffer: number;
+  promisedRole: EcosystemPromiseRole;
+  score: number;
+  createdWeek: number;
+  expiresWeek: number;
+  reason: string;
+}
+
+export interface EcosystemCoachVacancy {
+  id: string;
+  teamId: string;
+  role: EcosystemCoachRole;
+  status: EcosystemCoachVacancyStatus;
+  openedSeasonYear: number;
+  openedWeek: number;
+  salaryBudget: number;
+  reason: string;
+  formerCoachId?: string | undefined;
+  hiredCoachId?: string | undefined;
+}
+
+export interface EcosystemUnifiedMovementMarket {
+  version: 1;
+  seasonYear: number;
+  lastProcessedDay: number;
+  openings: EcosystemRosterOpening[];
+  negotiations: EcosystemMarketNegotiation[];
+  coachVacancies: EcosystemCoachVacancy[];
+  acceptedMoves: number;
+  withdrawnOffers: number;
+  digest: string[];
 }
 
 export interface EcosystemConferenceChampion {
@@ -379,10 +451,14 @@ export interface EcosystemMarketState {
   plannedClassSpots: number;
   developmentalPlayers: number;
   plannedPositionChanges: number;
+  activeNegotiations: number;
+  withdrawnOffers: number;
+  transferCandidates: number;
 }
 
+
 export interface FootballEcosystemState {
-  moduleVersion: 6;
+  moduleVersion: typeof ECOSYSTEM_MODULE_VERSION;
   constitution: WorldConstitution;
   cycle: WorldCycleState;
   lastSimulatedDay: number;
@@ -402,4 +478,6 @@ export interface FootballEcosystemState {
   teamHistory: EcosystemTeamSeasonRecord[];
   transactions: EcosystemTransaction[];
   talentPipeline: EcosystemTalentPipeline;
+  movementMarket: EcosystemUnifiedMovementMarket;
 }
+

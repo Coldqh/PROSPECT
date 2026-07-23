@@ -3,6 +3,8 @@ import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution } from "./constitution";
 import { createProgramResources } from "./resources";
 import { createEmptyRosterPlan } from "./rosterManagement";
+import { createUnifiedMovementMarket } from "./movementMarket";
+import { ECOSYSTEM_MODULE_VERSION } from "./types";
 import { createTalentPipeline, createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
 import type { EcosystemPlayer, EcosystemTeam, FootballEcosystemState } from "./types";
 
@@ -82,7 +84,7 @@ function createSenior(team: EcosystemTeam): EcosystemPlayer {
 function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: EcosystemPlayer): FootballEcosystemState {
   const talentPipeline = createTalentPipeline([senior], 2026);
   return {
-    moduleVersion: 6,
+    moduleVersion: ECOSYSTEM_MODULE_VERSION,
     constitution: createWorldConstitution(),
     cycle: { academicYear: 2026, seasonYear: 2026, phase: "winter-evaluation", phaseWeek: 1 },
     lastSimulatedDay: 0,
@@ -115,10 +117,14 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
       plannedClassSpots: college.rosterPlan.targetClassSize,
       developmentalPlayers: 0,
       plannedPositionChanges: 0,
+      activeNegotiations: 0,
+      withdrawnOffers: 0,
+      transferCandidates: 0,
     },
     teamHistory: [],
     transactions: [],
     talentPipeline,
+    movementMarket: createUnifiedMovementMarket([team, college], [senior], 2026),
   };
 }
 

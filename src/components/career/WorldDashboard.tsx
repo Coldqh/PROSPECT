@@ -15,6 +15,7 @@ const views = [
   { id: "pulse", label: "Пульс" },
   { id: "leagues", label: "Лиги" },
   { id: "moves", label: "Движение" },
+  { id: "market", label: "Рынок" },
   { id: "resources", label: "Ресурсы" },
   { id: "plans", label: "Составы" },
   { id: "talent", label: "Таланты" },
@@ -50,6 +51,10 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     "position-change": "Смена позиции",
     redshirt: "Redshirt",
     scholarship: "Стипендия",
+    offer: "Предложение",
+    "offer-withdrawn": "Отзыв",
+    "market-chain": "Цепочка рынка",
+    "coach-vacancy": "Вакансия",
   }[kind];
 }
 
@@ -74,6 +79,10 @@ function transactionLabel(kind: EcosystemTransaction["kind"]): string {
     "position-change": "Позиция",
     "scholarship-awarded": "Стипендия",
     "redshirt-assigned": "Redshirt",
+    "offer-issued": "Предложение",
+    "offer-withdrawn": "Отзыв",
+    commitment: "Коммит",
+    "coach-vacancy": "Вакансия",
   }[kind];
 }
 
@@ -105,6 +114,19 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
       .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.seasonYear - left.seasonYear || right.week - left.week)
       .slice(0, 18),
     [world.transactions],
+  );
+  const marketNegotiations = useMemo(
+    () => [...world.movementMarket.negotiations]
+      .sort((left, right) => {
+        const statusWeight = { offered: 3, accepted: 2, withdrawn: 1, expired: 0 } as const;
+        return statusWeight[right.status] - statusWeight[left.status] || right.score - left.score;
+      })
+      .slice(0, 16),
+    [world.movementMarket.negotiations],
+  );
+  const openVacancies = useMemo(
+    () => world.movementMarket.coachVacancies.filter((vacancy) => vacancy.status === "open"),
+    [world.movementMarket.coachVacancies],
   );
   const historyYears = useMemo(
     () => [...new Set(world.teamHistory.map((record) => record.seasonYear))].sort((left, right) => right - left),
@@ -241,6 +263,51 @@ export function WorldDashboard({ save }: { save: WorldDashboardSave }) {
             ))}
             {transactions.length === 0 && <div className="compact-note"><Icon name="swap" /><p>Первые переходы и назначения происходят в межсезонье.</p></div>}
           </div>
+        </div>
+      )}
+
+      {view === "market" && (
+        <div className="compact-view">
+          <section className="world-market-strip world-market-strip--four">
+            <span><small>Переговоры</small><strong>{world.market.activeNegotiations}</strong></span>
+            <span><small>Отозвано</small><strong>{world.market.withdrawnOffers}</strong></span>
+            <span><small>Трансферы</small><strong>{world.market.transferCandidates}</strong></span>
+            <span><small>Вакансии штабов</small><strong>{openVacancies.length}</strong></span>
+          </section>
+
+          <section className="world-context-card">
+            <small>Единый рынок движения</small><h3>Все кандидаты борются за одни места</h3>
+            <p>Школьники, JUCO, walk-on и трансферы используют общие вакансии, стипендии, NIL и бюджет набора. Один переход может закрыть оффер другому игроку.</p>
+          </section>
+
+          <div className="world-transaction-list">
+            {marketNegotiations.map((negotiation) => {
+              const team = world.teams.find((item) => item.id === negotiation.teamId);
+              return (
+                <button
+                  key={negotiation.id}
+                  type="button"
+                  className={team?.id === heroProgramId ? "is-relevant" : ""}
+                  onClick={() => team && setSelectedTeam(team)}
+                >
+                  <span>{negotiation.status}</span>
+                  <div><strong>{negotiation.candidateName} · {team?.shortName ?? negotiation.teamId}</strong><small>{negotiation.position} · {negotiation.candidateKind} · {negotiation.promisedRole} · {negotiation.reason}</small></div>
+                  <em>{Math.round(negotiation.score)}</em>
+                </button>
+              );
+            })}
+            {marketNegotiations.length === 0 && <div className="compact-note"><Icon name="swap" /><p>Рынок только открылся. Переговоры появятся после следующей недельной симуляции.</p></div>}
+          </div>
+
+          {openVacancies.length > 0 && (
+            <section className="independent-route-list">
+              <header><small>Тренерский рынок</small><h3>Открытые вакансии</h3></header>
+              {openVacancies.slice(0, 5).map((vacancy) => {
+                const team = world.teams.find((item) => item.id === vacancy.teamId);
+                return <article key={vacancy.id}><span>HC</span><div><strong>{team?.name ?? vacancy.teamId}</strong><small>${vacancy.salaryBudget.toFixed(1)}M · {vacancy.reason}</small></div></article>;
+              })}
+            </section>
+          )}
         </div>
       )}
 

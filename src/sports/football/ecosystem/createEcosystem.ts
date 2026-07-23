@@ -15,6 +15,7 @@ import { createPlayerEligibility, createTeamCompliance, createWorldConstitution,
 import { createProgramResources } from "./resources";
 import { createTalentPipeline, createTalentProfile } from "./talent";
 import { createEmptyRosterPlan, reviewRosterManagement } from "./rosterManagement";
+import { createUnifiedMovementMarket } from "./movementMarket";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -370,6 +371,9 @@ function calculateMarket(players: EcosystemPlayer[], coaches: EcosystemCoach[], 
     plannedClassSpots: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.targetClassSize, 0),
     developmentalPlayers: players.filter((player) => player.usagePlan === "developmental" || player.usagePlan === "redshirt").length,
     plannedPositionChanges: collegeTeams.reduce((sum, team) => sum + team.rosterPlan.positionChanges.filter((change) => !change.applied).length, 0),
+    activeNegotiations: 0,
+    withdrawnOffers: 0,
+    transferCandidates: players.filter((player) => player.level === "college" && player.depthRank >= 3 && player.eligibilityYears > 1).length,
   };
 }
 
@@ -426,7 +430,7 @@ export function createFootballEcosystem(
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 6,
+    moduleVersion: 7,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,
@@ -450,5 +454,6 @@ export function createFootballEcosystem(
     teamHistory: [],
     transactions: [],
     talentPipeline,
+    movementMarket: createUnifiedMovementMarket(teams, players, cycle.seasonYear),
   };
 }

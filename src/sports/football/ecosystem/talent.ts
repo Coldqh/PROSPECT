@@ -470,16 +470,7 @@ export function processAnnualTalentFlow(
       academicProjection: clamp(prospect.academicProjection + (prospect.route === "juco" ? routeRandom.integer(3, 10) : routeRandom.integer(0, 5))),
     };
     if (developed.yearsInRoute <= 2) {
-      const destination = chooseIndependentDestination(developed, teams, routeRandom.fork("destination"));
-      if (destination && routeRandom.chance(developed.route === "juco" ? 0.62 : 0.38)) {
-        const teamIndex = teams.findIndex((team) => team.id === destination.id);
-        const recruitingCost = developed.route === "juco" ? 0.055 : 0.02;
-        const nilCost = developed.route === "juco" ? Math.max(0.02, developed.overall * 0.0012) : 0;
-        teams[teamIndex] = { ...destination, resources: reserveRecruitingResources(destination.resources, recruitingCost, nilCost) };
-        nextIndependent.push({ ...developed, status: "committed", committedTeamId: destination.id });
-      } else {
-        nextIndependent.push({ ...developed, status: destination ? "contacted" : "available" });
-      }
+      nextIndependent.push({ ...developed, status: "available", committedTeamId: undefined });
     }
   }
 

@@ -1983,13 +1983,13 @@ body::after {
 .conference-grid footer strong { color: #d7d9dd; }
 
 .world-transaction-list { display: grid; gap: 7px; }
-.world-transaction-list article { min-height: 66px; padding: 10px; border: 1px solid var(--line); border-radius: 15px; display: grid; grid-template-columns: 62px minmax(0,1fr) auto; align-items: center; gap: 9px; background: var(--surface); }
-.world-transaction-list article.is-relevant { border-color: rgba(239,51,64,.35); box-shadow: inset 3px 0 #ef3340; }
-.world-transaction-list article > span { padding: 6px 7px; border-radius: 8px; color: #ffb6bd; background: rgba(239,51,64,.11); font-size: 7px; font-weight: 900; text-transform: uppercase; text-align: center; }
-.world-transaction-list article div { min-width: 0; display: grid; gap: 4px; }
-.world-transaction-list article strong { font-size: 11px; }
-.world-transaction-list article small { color: var(--muted); font-size: 8px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.world-transaction-list article em { color: var(--muted); font-size: 8px; font-style: normal; }
+.world-transaction-list article, .world-transaction-list button { min-height: 66px; padding: 10px; border: 1px solid var(--line); border-radius: 15px; display: grid; grid-template-columns: 62px minmax(0,1fr) auto; align-items: center; gap: 9px; background: var(--surface); }
+.world-transaction-list article.is-relevant, .world-transaction-list button.is-relevant { border-color: rgba(239,51,64,.35); box-shadow: inset 3px 0 #ef3340; }
+.world-transaction-list article > span, .world-transaction-list button > span { padding: 6px 7px; border-radius: 8px; color: #ffb6bd; background: rgba(239,51,64,.11); font-size: 7px; font-weight: 900; text-transform: uppercase; text-align: center; }
+.world-transaction-list article div, .world-transaction-list button div { min-width: 0; display: grid; gap: 4px; }
+.world-transaction-list article strong, .world-transaction-list button strong { font-size: 11px; }
+.world-transaction-list article small, .world-transaction-list button small { color: var(--muted); font-size: 8px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.world-transaction-list article em, .world-transaction-list button em { color: var(--muted); font-size: 8px; font-style: normal; }
 
 .world-history-list { display: grid; gap: 8px; }
 .world-history-list > article { padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
@@ -2121,3 +2121,5 @@ body::after {
   .roster-plan-list > button { grid-template-columns: minmax(0,1fr) repeat(3,auto) 25px; gap: 5px; padding: 8px; }
   .roster-plan-list em { width: 25px; height: 25px; }
 }
+
+.world-transaction-list button { width: 100%; color: inherit; text-align: left; cursor: pointer; }
