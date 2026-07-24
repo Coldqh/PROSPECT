@@ -1,6 +1,8 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import type { CareerSave } from "../../../storage/saves/schema";
 import type { FootballPosition } from "../career/types";
+import type { EcosystemCompetitionGame } from "../ecosystem/types";
 import type { FootballSeasonState } from "../season/types";
 import type { FootballMatchState, MatchStatLine, MatchUnit } from "./types";
 
@@ -70,6 +72,62 @@ export function createInitialMatchState(
     coachGrade: 55,
     episodeIndex: 0,
     totalEpisodes: 6,
+    completedEpisodes: [],
+    stats: createEmptyMatchStats(),
+  };
+}
+
+export function createCollegeMatchState(
+  save: CareerSave,
+  game: EcosystemCompetitionGame,
+): FootballMatchState {
+  const career = save.football.college.heroCareer;
+  const teamId = career?.teamId ?? save.football.college.signedProgramId;
+
+  if (!teamId) {
+    throw new Error("College team is missing");
+  }
+
+  const heroIsHome = game.homeTeamId === teamId;
+  const heroIsAway = game.awayTeamId === teamId;
+
+  if (!heroIsHome && !heroIsAway) {
+    throw new Error(`Game ${game.id} does not include the hero team`);
+  }
+
+  const opponentId = heroIsHome ? game.awayTeamId : game.homeTeamId;
+  const opponent = save.world.teams.find((team) => team.id === opponentId);
+  const random = new SeededRandom(`${save.meta.worldSeed}:college-match:${game.id}`);
+  const role = career?.role ?? "developmental";
+  const totalEpisodes = role === "starter"
+    ? 10
+    : role === "rotation"
+      ? 7
+      : role === "special-teams"
+        ? 5
+        : 3;
+
+  return {
+    moduleVersion: 1,
+    gameId: game.id,
+    status: "upcoming",
+    scheduledWeek: game.week,
+    scheduledDate: save.meta.currentDate,
+    opponentId,
+    opponentName: opponent?.shortName ?? opponentId,
+    opponentRecord: opponent ? `${opponent.wins}–${opponent.losses}` : "0–0",
+    opponentThreat: opponent
+      ? `${opponent.offenseStyle} / ${opponent.defenseStyle}`
+      : "Нет данных",
+    heroUnit: matchUnitForPosition(save.football.position),
+    heroScore: 0,
+    opponentScore: 0,
+    quarter: 1,
+    clockSeconds: 12 * 60,
+    heroFatigue: random.integer(4, 12),
+    coachGrade: Math.max(45, Math.min(70, Math.round((career?.coachTrust ?? 55) * 0.35 + 36))),
+    episodeIndex: 0,
+    totalEpisodes,
     completedEpisodes: [],
     stats: createEmptyMatchStats(),
   };
