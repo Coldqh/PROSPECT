@@ -1,7 +1,6 @@
 import type { CareerSave } from "../../storage/saves/schema";
 import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../../sports/football/pro/types";
 import { Icon } from "../ui/Icon";
-import { PlayerIdentityBar } from "./PlayerIdentityBar";
 
 interface ProfessionalTransitionDashboardProps {
   save: CareerSave;
@@ -36,6 +35,11 @@ function statusLabel(status: CareerSave["football"]["professional"]["status"]): 
   }[status];
 }
 
+
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
 function gradeClass(value: number): string {
   return value >= 82 ? "is-elite" : value >= 68 ? "is-solid" : "is-risk";
 }
@@ -61,19 +65,19 @@ export function ProfessionalTransitionDashboard({
 
   return (
     <div className="professional-shell">
-      <PlayerIdentityBar save={save} compact />
-
-      <header className="professional-header">
-        <div>
-          <small>DRAFT {professional.draftYear} · {statusLabel(professional.status).toUpperCase()}</small>
-          <h1>{professional.projectedRange}</h1>
+      <header className="elite-draft-header">
+        <div className="elite-draft-header__title">
+          <span className="elite-draft-shield">DRAFT</span>
+          <div><small>ПРОФЕССИОНАЛЬНЫЙ ДРАФТ</small><h1>{professional.draftYear}</h1><p>{statusLabel(professional.status)}</p></div>
         </div>
-        <div className={`professional-stock ${gradeClass(professional.draftStock)}`}>
-          <small>Draft stock</small>
-          <strong>{Math.round(professional.draftStock)}</strong>
-          <span>{professional.projectedRound ? `R${professional.projectedRound}` : "UDFA"}</span>
-        </div>
+        <span className="elite-live-chip">LIVE</span>
       </header>
+
+      <section className="elite-draft-candidate">
+        <div className="elite-draft-candidate__art" aria-hidden="true"><span>{initials(save.character.identity.fullName)}</span><strong>#{save.football.jerseyNumber}</strong></div>
+        <div className="elite-draft-candidate__copy"><small>{save.football.college.program?.shortName ?? save.football.school.shortName}</small><h2>{save.character.identity.fullName}</h2><p>{save.football.position}</p><div><span><small>Проекция</small><strong>{professional.projectedRange}</strong></span><span><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong></span></div></div>
+        <div className={`professional-stock ${gradeClass(professional.draftStock)}`}><small>Draft stock</small><strong>{Math.round(professional.draftStock)}</strong><span>{professional.projectedRound ? `R${professional.projectedRound}` : "UDFA"}</span></div>
+      </section>
 
       <section className="professional-market-strip">
         <span><small>Класс</small><strong>#{heroRank || "—"}</strong></span>

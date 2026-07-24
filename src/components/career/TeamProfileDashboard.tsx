@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { defenseSystemLabel, offenseSystemLabel } from "../../sports/football/ecosystem/tactics";
+import type { EcosystemTeam } from "../../sports/football/ecosystem/types";
 import { Icon } from "../ui/Icon";
 
 type TeamView = "overview" | "roster" | "staff" | "system" | "resources";
@@ -57,6 +58,12 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
     : save.football.season.schedule;
   const nextGame = games.find((game) => game.status === "scheduled");
   const lastGames = games.filter((game) => game.status === "complete").slice(-4).reverse();
+  const headCoach = teamCoaches.find((coach) => coach.role === "head-coach");
+  const leaders = [...teamPlayers].sort((left, right) => right.overall - left.overall).slice(0, 4);
+  const upcomingGames = games.filter((game) => game.status === "scheduled").slice(0, 5);
+  const conferenceTeams = conference
+    ? conference.teamIds.map((id) => save.world.teams.find((team) => team.id === id)).filter((team): team is EcosystemTeam => Boolean(team)).sort((left, right) => right.conferenceWins - left.conferenceWins || left.conferenceLosses - right.conferenceLosses || right.wins - left.wins)
+    : [];
 
   const teamStyle = worldTeam ? undefined : ({
     "--team-primary": save.football.school.primaryColor,
@@ -65,14 +72,22 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
 
   return (
     <div className="team-profile" {...(teamStyle ? { style: teamStyle } : {})}>
-      <header className="team-profile__hero">
-        <span className="team-profile__mark">{shortName.slice(0, 3).toUpperCase()}</span>
-        <div>
+      <header className="elite-team-hero">
+        <div className="elite-team-crest" aria-hidden="true"><span>{shortName.slice(0, 3).toUpperCase()}</span></div>
+        <div className="elite-team-hero__identity">
           <small>{conference?.shortName ?? save.football.school.city}</small>
           <h1>{teamName}</h1>
-          <p>{worldTeam ? `${worldTeam.wins}–${worldTeam.losses}` : `${save.football.season.wins}–${save.football.season.losses}`} · OVR {Math.round(worldTeam?.rating ?? save.football.school.prestige)}</p>
+          <p>{shortName.toUpperCase()}</p>
         </div>
-        <strong>{ranking ? `#${ranking.rank}` : Math.round(worldTeam?.prestige ?? save.football.school.prestige)}</strong>
+        <div className="elite-team-hero__record">
+          <span><small>Рекорд</small><strong>{worldTeam ? `${worldTeam.wins}–${worldTeam.losses}` : `${save.football.season.wins}–${save.football.season.losses}`}</strong></span>
+          <span><small>Рейтинг</small><strong>{ranking ? `#${ranking.rank}` : "—"}</strong></span>
+        </div>
+        <div className="elite-team-hero__facts">
+          <span><small>Престиж</small><strong>{Math.round(worldTeam?.prestige ?? save.football.school.prestige)}</strong></span>
+          <span><small>OVR</small><strong>{Math.round(worldTeam?.rating ?? save.football.school.prestige)}</strong></span>
+          <span><small>Химия</small><strong>{Math.round(culture?.cohesion ?? save.football.teamDynamics.cohesion)}</strong></span>
+        </div>
       </header>
 
       <nav className="team-profile__tabs" aria-label="Профиль команды">
@@ -80,35 +95,65 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
       </nav>
 
       {view === "overview" && (
-        <div className="team-profile__body">
-          <section className="team-profile__metrics">
-            <article><small>Рейтинг</small><strong>{Math.round(worldTeam?.rating ?? save.football.school.prestige)}</strong></article>
-            <article><small>Престиж</small><strong>{Math.round(worldTeam?.prestige ?? save.football.school.prestige)}</strong></article>
-            <article><small>Мораль</small><strong>{Math.round(culture?.morale ?? save.football.teamDynamics.morale)}</strong></article>
-            <article><small>Сыгранность</small><strong>{Math.round(culture?.cohesion ?? save.football.teamDynamics.cohesion)}</strong></article>
+        <div className="elite-team-overview">
+          <section className="elite-team-rating-strip">
+            <article><small>Атака</small><strong>{Math.round(worldTeam?.rating ?? save.football.school.prestige)}</strong><i><b style={{ width: `${worldTeam?.rating ?? save.football.school.prestige}%` }} /></i></article>
+            <article><small>Защита</small><strong>{Math.round((worldTeam?.rating ?? save.football.school.prestige) * .97)}</strong><i><b style={{ width: `${Math.min(100, (worldTeam?.rating ?? save.football.school.prestige) * .97)}%` }} /></i></article>
+            <article><small>Мораль</small><strong>{Math.round(culture?.morale ?? save.football.teamDynamics.morale)}</strong><i><b style={{ width: `${culture?.morale ?? save.football.teamDynamics.morale}%` }} /></i></article>
           </section>
-          {nextGame && (
-            <section className="team-profile__next">
-              <small>Следующий матч · W{nextGame.week}</small>
-              {"opponentName" in nextGame ? (
-                <><strong>{nextGame.opponentName}</strong><span>{nextGame.home ? "Дома" : "В гостях"} · {nextGame.opponentRating} OVR</span></>
-              ) : (
-                <><strong>{save.world.teams.find((team) => team.id === (nextGame.homeTeamId === worldTeam?.id ? nextGame.awayTeamId : nextGame.homeTeamId))?.name ?? "TBD"}</strong><span>{nextGame.homeTeamId === worldTeam?.id ? "Дома" : "В гостях"}</span></>
-              )}
+
+          <div className="elite-team-duo">
+            <section className="elite-team-coach">
+              <header><small>Главный тренер</small></header>
+              <div className="elite-coach-avatar" aria-hidden="true">HC</div>
+              <div><strong>{headCoach?.name ?? save.football.staff.headCoach.name}</strong><small>{"careerWins" in (headCoach ?? {}) ? `${(headCoach as { careerWins: number }).careerWins} побед` : `DEV ${save.football.staff.headCoach.development}`}</small></div>
             </section>
-          )}
-          <section className="team-profile__results">
-            <header><span>Последние матчи</span><strong>{lastGames.length}</strong></header>
-            {lastGames.length === 0 ? <div className="data-empty">Нет результатов</div> : lastGames.map((game) => {
-              if ("opponentName" in game) {
-                return <article key={game.id}><span>{game.won ? "W" : "L"}</span><div><strong>{game.opponentName}</strong><small>W{game.week}</small></div><em>{game.heroScore}:{game.opponentScore}</em></article>;
-              }
-              const home = save.world.teams.find((team) => team.id === game.homeTeamId);
-              const away = save.world.teams.find((team) => team.id === game.awayTeamId);
-              const won = game.winnerTeamId === worldTeam?.id;
-              return <article key={game.id}><span>{won ? "W" : "L"}</span><div><strong>{home?.shortName} — {away?.shortName}</strong><small>W{game.week}</small></div><em>{game.homeScore}:{game.awayScore}</em></article>;
-            })}
+            <section className="elite-team-next">
+              <header><small>Следующий соперник</small></header>
+              {nextGame ? ("opponentName" in nextGame ? (
+                <><div className="elite-opponent-mark">{nextGame.opponentName.slice(0, 2).toUpperCase()}</div><strong>{nextGame.opponentName}</strong><small>W{nextGame.week} · {nextGame.home ? "Дома" : "В гостях"}</small></>
+              ) : (
+                <><div className="elite-opponent-mark">{(save.world.teams.find((team) => team.id === (nextGame.homeTeamId === worldTeam?.id ? nextGame.awayTeamId : nextGame.homeTeamId))?.shortName ?? "TBD").slice(0, 2)}</div><strong>{save.world.teams.find((team) => team.id === (nextGame.homeTeamId === worldTeam?.id ? nextGame.awayTeamId : nextGame.homeTeamId))?.name ?? "TBD"}</strong><small>W{nextGame.week} · {nextGame.homeTeamId === worldTeam?.id ? "Дома" : "В гостях"}</small></>
+              )) : <div className="elite-empty">Нет ближайшего матча</div>}
+            </section>
+          </div>
+
+          <section className="elite-section elite-team-leaders">
+            <header className="elite-section__head"><h2>Лидеры состава</h2><span>{teamPlayers.length}</span></header>
+            <div>
+              {leaders.map((player) => <article key={player.id}><span>#{player.depthRank}</span><div className="elite-roster-silhouette" aria-hidden="true">{player.position}</div><small>{player.position}</small><strong>{player.name}</strong><em>OVR {Math.round(player.overall)}</em></article>)}
+            </div>
           </section>
+
+          <section className="elite-section">
+            <header className="elite-section__head"><h2>Ближайшие матчи</h2><span>{upcomingGames.length}</span></header>
+            <div className="elite-schedule-rail">
+              {upcomingGames.map((game) => {
+                if ("opponentName" in game) return <article key={game.id}><small>W{game.week}</small><strong>{game.opponentName.slice(0, 3).toUpperCase()}</strong><span>{game.home ? "Дома" : "В гостях"}</span></article>;
+                const opponent = save.world.teams.find((team) => team.id === (game.homeTeamId === worldTeam?.id ? game.awayTeamId : game.homeTeamId));
+                return <article key={game.id}><small>W{game.week}</small><strong>{opponent?.shortName ?? "TBD"}</strong><span>{game.homeTeamId === worldTeam?.id ? "Дома" : "В гостях"}</span></article>;
+              })}
+            </div>
+          </section>
+
+          <div className="elite-team-tables">
+            <section className="elite-section">
+              <header className="elite-section__head"><h2>Конференция</h2><span>{conference?.shortName ?? "—"}</span></header>
+              <div className="elite-standings-list">{conferenceTeams.slice(0, 5).map((team, index) => <article key={team.id} className={team.id === worldTeam?.id ? "is-current" : ""}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.conferenceWins}–{team.conferenceLosses}</em><b>{team.wins}–{team.losses}</b></article>)}</div>
+            </section>
+            <section className="elite-section">
+              <header className="elite-section__head"><h2>Национальный рейтинг</h2><span>TOP 25</span></header>
+              <div className="elite-standings-list">{save.world.competition.rankings.slice(0, 5).map((item) => { const team = save.world.teams.find((candidate) => candidate.id === item.teamId); return <article key={item.teamId} className={item.teamId === worldTeam?.id ? "is-current" : ""}><span>{item.rank}</span><strong>{team?.shortName ?? item.teamId}</strong><em>{team?.wins ?? 0}–{team?.losses ?? 0}</em><b>{Math.round(item.score)}</b></article>; })}</div>
+            </section>
+          </div>
+
+          {lastGames.length > 0 && <section className="team-profile__results">
+            <header><span>Последние матчи</span><strong>{lastGames.length}</strong></header>
+            {lastGames.map((game) => {
+              if ("opponentName" in game) return <article key={game.id}><span>{game.won ? "W" : "L"}</span><div><strong>{game.opponentName}</strong><small>W{game.week}</small></div><em>{game.heroScore}:{game.opponentScore}</em></article>;
+              const home = save.world.teams.find((team) => team.id === game.homeTeamId); const away = save.world.teams.find((team) => team.id === game.awayTeamId); const won = game.winnerTeamId === worldTeam?.id; return <article key={game.id}><span>{won ? "W" : "L"}</span><div><strong>{home?.shortName} — {away?.shortName}</strong><small>W{game.week}</small></div><em>{game.homeScore}:{game.awayScore}</em></article>;
+            })}
+          </section>}
         </div>
       )}
 

@@ -33,6 +33,11 @@ function teamName(save: CareerSave): string {
   return save.football.school.shortName;
 }
 
+
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
 function classLabel(save: CareerSave): string {
   if (save.meta.phase === "college-season" && save.football.college.heroCareer) return save.football.college.heroCareer.classYear;
   if (save.meta.phase === "professional-draft" || save.meta.phase === "professional-career") return `Draft ${save.football.professional.draftYear}`;
@@ -97,32 +102,37 @@ export function PlayerProfileDashboard({ save, mutating, actionError, onResolveC
   const { character, football } = save;
   const collegeCareer = football.college.heroCareer;
   const stats = save.meta.phase === "college-season" ? collegeStats(save) : playerStatCards(save);
-  const heroBonds = save.world.social.bonds
-    .filter((bond) => bond.active && (bond.entityAId === "hero" || bond.entityBId === "hero"))
-    .sort((left, right) => right.influence - left.influence)
-    .slice(0, 4);
-  const counterpartName = (entityId: string) => save.world.players.find((player) => player.id === entityId)?.name
-    ?? save.world.coaches.find((coach) => coach.id === entityId)?.name
-    ?? entityId;
+
 
   return (
     <div className="player-profile-page">
-      <header className="player-profile-hero">
-        <div className="player-profile-hero__number">{String(football.jerseyNumber).padStart(2, "0")}</div>
-        <div className="player-profile-hero__copy">
-          <small>{football.position} · {classLabel(save)} · {teamName(save)}</small>
+      <header className="elite-player-card">
+        <div className="elite-player-card__copy">
+          <div className="elite-player-card__line"><strong>#{football.jerseyNumber}</strong><span>{football.position} · {classLabel(save)}</span></div>
           <h1>{character.identity.fullName}</h1>
-          <span>{football.archetypeName}</span>
+          <p>{teamName(save)}</p>
+          <div className="elite-player-card__meta">
+            <span><small>OVR</small><strong>{Math.round(football.ratings.overall)}</strong></span>
+            <span><small>Потенциал</small><strong>{potentialLabel(football.ratings.potentialBand)}</strong></span>
+            <span><small>Роль</small><strong>{collegeCareer?.role ?? football.depthChart.projectedRole}</strong></span>
+          </div>
         </div>
-        <div className="player-profile-hero__overall"><strong>{Math.round(football.ratings.overall)}</strong><small>OVR</small></div>
+        <div className="elite-player-art" aria-hidden="true">
+          <span className="elite-player-art__halo" />
+          <span className="elite-player-art__head">{initials(character.identity.fullName)}</span>
+          <span className="elite-player-art__jersey">{football.jerseyNumber}</span>
+        </div>
       </header>
 
-      <section className="player-profile-ratings" aria-label="Рейтинги игрока">
-        <article><small>Потенциал</small><strong>{potentialLabel(football.ratings.potentialBand)}</strong></article>
-        <article><small>Техника</small><strong>{Math.round(football.ratings.technique)}</strong></article>
-        <article><small>Атлетизм</small><strong>{Math.round(football.ratings.athleticism)}</strong></article>
-        <article><small>Football IQ</small><strong>{Math.round(football.ratings.footballIq)}</strong></article>
-        <article><small>Характер</small><strong>{Math.round(football.ratings.competitiveness)}</strong></article>
+      <section className="elite-rating-list" aria-label="Рейтинги игрока">
+        {[
+          ["Техника", football.ratings.technique],
+          ["Атлетизм", football.ratings.athleticism],
+          ["Игровое мышление", football.ratings.footballIq],
+          ["Характер", football.ratings.competitiveness],
+        ].map(([label, value]) => (
+          <article key={String(label)}><span>{label}</span><i><b style={{ width: `${Number(value)}%` }} /></i><strong>{Math.round(Number(value))}</strong></article>
+        ))}
       </section>
 
       <section className="profile-section-block">
@@ -150,18 +160,6 @@ export function PlayerProfileDashboard({ save, mutating, actionError, onResolveC
         <article><small>Учёба</small><strong>GPA {character.education.gpa.toFixed(2)}</strong><span>{character.education.eligibilityStatus} · посещаемость {Math.round(character.education.attendance)}</span></article>
         <article><small>Состояние</small><strong>{Math.round(character.condition.health)} HP</strong><span>Энергия {Math.round(character.condition.energy)} · стресс {Math.round(character.condition.stress)}</span></article>
       </section>
-
-      {heroBonds.length > 0 && (
-        <section className="profile-section-block">
-          <header><span>Связи</span><strong>{heroBonds.length}</strong></header>
-          <div className="profile-bond-list">
-            {heroBonds.map((bond) => {
-              const otherId = bond.entityAId === "hero" ? bond.entityBId : bond.entityAId;
-              return <article key={bond.id}><div><strong>{counterpartName(otherId)}</strong><small>{bond.kind}</small></div><span>Доверие {Math.round(bond.trust)}</span><span>Напряжение {Math.round(bond.tension)}</span></article>;
-            })}
-          </div>
-        </section>
-      )}
 
       {collegeCareer?.pendingDecision && onResolveCollegeDecision && (
         <section className="profile-decision-block">

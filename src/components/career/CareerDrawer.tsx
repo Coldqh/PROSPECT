@@ -2,7 +2,7 @@ import { useEffect, type MouseEvent as ReactMouseEvent } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { Icon, type IconName } from "../ui/Icon";
 
-export type CareerSecondaryView = "overview" | "season" | "matches" | "standings" | "recruiting" | "feed" | "rankings";
+export type CareerSecondaryView = "overview" | "season" | "matches" | "standings" | "recruiting" | "social" | "feed" | "rankings";
 
 interface DrawerItem {
   id: CareerSecondaryView;
@@ -19,6 +19,7 @@ const careerItems: readonly DrawerItem[] = [
 ];
 
 const worldItems: readonly DrawerItem[] = [
+  { id: "social", label: "Социальная жизнь", code: "SOC", icon: "team" },
   { id: "feed", label: "Лента", code: "FED", icon: "pulse" },
   { id: "rankings", label: "Рейтинг", code: "RNK", icon: "chart" },
 ];
@@ -109,7 +110,7 @@ export function CareerDrawer({ open, save, active, showRecruiting = false, onSel
 
         <footer className="game-drawer__footer">
           <button type="button" onClick={onExit}><Icon name="database" size={18} /><span>Сохранения</span></button>
-          <span>v0.27</span>
+          <span>v0.29</span>
         </footer>
       </aside>
     </div>

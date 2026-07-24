@@ -40,6 +40,16 @@ function daysUntilMatch(dayIndex: number): number {
   return Math.max(0, 5 - dayIndex);
 }
 
+function optionSuccess(save: CareerSave, difficulty: number): number {
+  const ratings = save.football.ratings;
+  const base = ratings.technique * .34 + ratings.footballIq * .26 + ratings.athleticism * .2 + ratings.competitiveness * .12 + save.character.condition.confidence * .08;
+  return Math.max(18, Math.min(94, Math.round(base - difficulty * .35 + 27)));
+}
+
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
 function statLine(save: CareerSave): Array<{ label: string; value: string }> {
   const stats = save.football.match.stats;
   switch (save.football.position) {
@@ -122,6 +132,15 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
         </div>
       </section>
 
+      {match.status === "in-progress" && (
+        <section className="elite-match-player-strip">
+          <span className="elite-match-player-strip__avatar">{initials(save.character.identity.fullName)}</span>
+          <div><small>#{football.jerseyNumber} · {football.position}</small><strong>{save.character.identity.fullName}</strong><span>{collegeCareer ? collegeRoleLabel(collegeCareer.role) : `Depth #${football.depthChart.rank}`}</span></div>
+          <article><small>Оценка</small><strong>{Math.round(match.coachGrade)}</strong></article>
+          <article><small>Энергия</small><strong>{Math.round(100 - match.heroFatigue)}%</strong></article>
+        </section>
+      )}
+
       {match.status === "upcoming" && (
         <div className="compact-view match-upcoming">
           <section className="opponent-card">
@@ -154,36 +173,43 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
       )}
 
       {match.status === "in-progress" && episode && (
-        <div className="compact-view match-live-view">
-          <section className="match-situation-card">
-            <header>
-              <div><small>{episode.down} & {episode.distance} · FIELD {episode.fieldPosition}</small><h3>{episode.title}</h3></div>
-              <span>{football.position}</span>
-            </header>
-            <p>{episode.situation}</p>
-            <div className="match-read-grid">
-              <span><small>ЗАДАЧА</small><strong>{episode.assignment}</strong></span>
-              <span><small>КЛЮЧ</small><strong>{episode.read}</strong></span>
+        <div className="compact-view match-live-view elite-match-live">
+          <section className="elite-match-situation">
+            <header><div><small>ТЕКУЩАЯ СИТУАЦИЯ</small><h3>{episode.title}</h3></div><strong>{episode.down} & {episode.distance}</strong></header>
+            <div className="elite-match-facts">
+              <span><small>Поле</small><strong>{episode.fieldPosition} yd</strong></span>
+              <span><small>Давление</small><strong>{episode.scoreMargin < 0 ? "Высокое" : "Рабочее"}</strong></span>
+              <span><small>Задача</small><strong>{episode.assignment}</strong></span>
             </div>
           </section>
 
-          <div className="match-options">
-            {episode.options.map((decision, index) => (
-              <button type="button" key={decision.id} disabled={mutating} onClick={() => void onResolveDecision(decision.id)}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <div><small>{riskLabel(decision.risk)}</small><strong>{decision.label}</strong><p>{decision.detail}</p></div>
-                <Icon name="arrow-right" />
-              </button>
-            ))}
-          </div>
+          <section className="elite-match-choice">
+            <header><h2>Выбор розыгрыша</h2><span>{episode.read}</span></header>
+            <div className="elite-match-options">
+              {episode.options.map((decision) => {
+                const success = optionSuccess(save, decision.difficulty);
+                return (
+                  <button type="button" key={decision.id} className={`is-${decision.risk}`} disabled={mutating} onClick={() => void onResolveDecision(decision.id)}>
+                    <span className="elite-route-diagram" aria-hidden="true"><i /><b /></span>
+                    <div><small>{riskLabel(decision.risk)}</small><strong>{decision.label}</strong><p>{decision.detail}</p><footer><span><em>Успех</em><b>{success}%</b></span><span><em>Потенциал</em><b>{decision.upside} yd</b></span></footer></div>
+                    <span className="elite-match-option-action">Выбрать</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-          {match.completedEpisodes.at(-1) && (
-            <button type="button" className="last-play-strip" onClick={() => setSheetOpen(true)}>
-              <span className={`result-grade result-grade--${match.completedEpisodes.at(-1)?.grade.toLowerCase()}`}>{match.completedEpisodes.at(-1)?.grade}</span>
-              <div><small>Последний эпизод</small><strong>{match.completedEpisodes.at(-1)?.headline}</strong></div>
-              <Icon name="chevron-down" />
-            </button>
-          )}
+          <div className="elite-match-lower">
+            <section className="elite-field-map" aria-label="Позиция на поле">
+              <header><small>Позиция на поле</small><strong>{episode.fieldPosition}</strong></header>
+              <div><span style={{ left: `${Math.max(4, Math.min(96, episode.fieldPosition))}%` }}>#{football.jerseyNumber}</span></div>
+            </section>
+            <section className="elite-play-log">
+              <header><small>Последние розыгрыши</small><strong>{match.completedEpisodes.length}</strong></header>
+              {[...match.completedEpisodes].slice(-4).reverse().map((item) => <article key={item.id}><span>{item.grade}</span><strong>{item.headline}</strong><em>{item.yards > 0 ? "+" : ""}{item.yards}</em></article>)}
+              {match.completedEpisodes.length === 0 && <div className="elite-empty">Матч только начался</div>}
+            </section>
+          </div>
         </div>
       )}
 

@@ -14,6 +14,7 @@ import { PlayerProfileDashboard } from "./PlayerProfileDashboard";
 import { TeamProfileDashboard } from "./TeamProfileDashboard";
 import { CareerOverviewDashboard } from "./CareerOverviewDashboard";
 import { CollegeSectionsDashboard } from "./CollegeSectionsDashboard";
+import { SocialLifeDashboard } from "./SocialLifeDashboard";
 
 const dayLabels = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"] as const;
 
@@ -86,6 +87,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
     if (secondaryView === "season") return <CollegeSectionsDashboard save={save} view="season" />;
     if (secondaryView === "matches") return <CollegeSectionsDashboard save={save} view="matches" />;
     if (secondaryView === "standings") return <CollegeSectionsDashboard save={save} view="standings" />;
+    if (secondaryView === "social") return <SocialLifeDashboard save={save} />;
     if (secondaryView === "feed") return <WorldDashboard save={save} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     if (secondaryView === "rankings") return <WorldDashboard save={save} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     return null;
@@ -95,7 +97,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
     <div className="college-career-shell college-career-shell--v27">
       <main className="college-career-main">
         {secondaryView ? (
-          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{secondaryContent()}</>
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{secondaryContent()}</>
         ) : primaryView === "profile" ? (
           <PlayerProfileDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveCollegeDecision={onResolveDecision} />
         ) : primaryView === "team" ? (
