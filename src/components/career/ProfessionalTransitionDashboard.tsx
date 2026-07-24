@@ -67,7 +67,6 @@ export function ProfessionalTransitionDashboard({
         <div>
           <small>DRAFT {professional.draftYear} · {statusLabel(professional.status).toUpperCase()}</small>
           <h1>{professional.projectedRange}</h1>
-          <p>{professional.lastSummary}</p>
         </div>
         <div className={`professional-stock ${gradeClass(professional.draftStock)}`}>
           <small>Draft stock</small>
@@ -86,16 +85,15 @@ export function ProfessionalTransitionDashboard({
       {professional.status === "decision" && (
         <section className="professional-decision">
           <small>КАРЬЕРНОЕ РЕШЕНИЕ</small>
-          <h2>Остаться или выйти на рынок</h2>
-          <p>Оценка уже существует. После декларации eligibility закрывается, клубы получают медицинскую карту, интервью и результаты тестов.</p>
+          <h2>Декларация</h2>
           <div>
             {save.football.college.heroCareer && save.football.college.heroCareer.eligibilityYears > 0 && save.football.college.heroCareer.status !== "complete" && (
               <button type="button" disabled={mutating} onClick={() => void onResolveDeclaration("return-college")}>
-                <Icon name="history" /><span><strong>Вернуться в колледж</strong><small>Сохранить eligibility и сыграть ещё сезон</small></span>
+                <Icon name="history" /><span><strong>Вернуться в колледж</strong><small>Eligibility {save.football.college.heroCareer?.eligibilityYears ?? 0}</small></span>
               </button>
             )}
             <button type="button" className="is-primary" disabled={mutating} onClick={() => void onResolveDeclaration("declare")}>
-              <Icon name="arrow-right" /><span><strong>Подать декларацию</strong><small>Закрыть университетскую карьеру и войти в драфт</small></span>
+              <Icon name="arrow-right" /><span><strong>Подать декларацию</strong><small>Draft {professional.draftYear}</small></span>
             </button>
           </div>
         </section>
@@ -103,12 +101,12 @@ export function ProfessionalTransitionDashboard({
 
       {professional.status === "agent-selection" && (
         <section className="professional-section">
-          <header><div><small>ПРЕДСТАВИТЕЛЬ</small><h2>Выбери агента</h2></div><p>Доступ к клубам, переговоры, медиа и риск влияют на реальную оценку.</p></header>
+          <header><div><small>ПРЕДСТАВИТЕЛЬ</small><h2>Агенты</h2></div></header>
           <div className="professional-agent-grid">
             {professional.agents.map((agent) => (
               <button type="button" key={agent.id} disabled={mutating} onClick={() => void onSelectAgent(agent.id)}>
-                <div><small>{agent.agency}</small><strong>{agent.name}</strong><p>{agent.summary}</p></div>
-                <section><span><small>Доступ</small><b>{agent.teamAccess}</b></span><span><small>Сделки</small><b>{agent.negotiation}</b></span><span><small>Комиссия</small><b>{agent.commission}%</b></span></section>
+                <div><small>{agent.agency}</small><strong>{agent.name}</strong></div>
+                <section><span><small>Доступ</small><b>{agent.teamAccess}</b></span><span><small>Сделки</small><b>{agent.negotiation}</b></span><span><small>Медиа</small><b>{agent.mediaReach}</b></span><span><small>Риск</small><b>{agent.risk}</b></span><span><small>Комиссия</small><b>{agent.commission}%</b></span></section>
               </button>
             ))}
           </div>
@@ -117,11 +115,11 @@ export function ProfessionalTransitionDashboard({
 
       {professional.status === "evaluation" && selectedAgent && (
         <section className="professional-section">
-          <header><div><small>COMBINE · PRO DAY</small><h2>Что показать клубам</h2></div><p>{selectedAgent.name} ведёт интервью. Один приоритет изменит итоговые тесты.</p></header>
+          <header><div><small>{selectedAgent.name.toUpperCase()}</small><h2>Combine · Pro Day</h2></div></header>
           <div className="professional-focus-grid">
-            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("athletic")}><Icon name="bolt" /><strong>Атлетизм</strong><small>40 ярдов, shuttle, vertical и взрыв</small></button>
-            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("technical")}><Icon name="target" /><strong>Техника</strong><small>Позиционные упражнения и работа с мячом</small></button>
-            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("interview")}><Icon name="message" /><strong>Интервью</strong><small>Доска, характер и встречи с клубами</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("athletic")}><Icon name="bolt" /><strong>Атлетизм</strong><small>40 · SHUT · VERT</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("technical")}><Icon name="target" /><strong>Техника</strong><small>DRILL · TEC</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onCompleteEvaluation("interview")}><Icon name="message" /><strong>Интервью</strong><small>INT · IQ</small></button>
           </div>
         </section>
       )}
@@ -137,7 +135,6 @@ export function ProfessionalTransitionDashboard({
             <span><small>Drills</small><strong>{Math.round(professional.evaluation.positionDrill)}</strong></span>
             <span><small>Interview</small><strong>{Math.round(professional.evaluation.interview)}</strong></span>
           </div>
-          <p>{professional.evaluation.summary}</p>
         </section>
       )}
 
@@ -159,7 +156,7 @@ export function ProfessionalTransitionDashboard({
 
       {(professional.status === "drafted" || professional.status === "undrafted") && (
         <section className="professional-section">
-          <header><div><small>{professional.status === "drafted" ? "ROOKIE CONTRACT" : "UNDRAFTED FREE AGENCY"}</small><h2>{professional.heroSelection ? `Выбор №${professional.heroSelection.overallPick}` : "Телефоны открыты"}</h2></div><p>{professional.lastSummary}</p></header>
+          <header><div><small>{professional.status === "drafted" ? "ROOKIE CONTRACT" : "UNDRAFTED FREE AGENCY"}</small><h2>{professional.heroSelection ? `Выбор №${professional.heroSelection.overallPick}` : "UDFA"}</h2></div></header>
           {professional.contract && (
             <div className="professional-contract-card">
               <div><small>{professional.contract.teamName}</small><strong>{money(professional.contract.totalValue)}</strong><span>{professional.contract.years} года</span></div>
@@ -169,7 +166,7 @@ export function ProfessionalTransitionDashboard({
           <div className="professional-invite-list">
             {professional.campInvites.map((invite) => (
               <button type="button" key={invite.teamId} disabled={mutating} onClick={() => void onAcceptCampInvite(invite.teamId)}>
-                <span>{invite.shortName}</span><div><strong>{invite.teamName}</strong><small>{invite.summary}</small></div><em>{Math.round(invite.rosterOpportunity)}</em>
+                <span>{invite.shortName}</span><div><strong>{invite.teamName}</strong><small>FIT {Math.round(invite.schemeFit)} · COMP {Math.round(invite.positionCompetition)} · ${Math.round(invite.signingBonus / 1000)}K</small></div><em>{Math.round(invite.rosterOpportunity)}</em>
               </button>
             ))}
           </div>
@@ -178,17 +175,17 @@ export function ProfessionalTransitionDashboard({
 
       {professional.status === "training-camp" && professional.camp && selectedTeam && (
         <section className="professional-section professional-camp">
-          <header><div><small>{selectedTeam.shortName} TRAINING CAMP</small><h2>День {professional.camp.day} из {professional.camp.totalDays}</h2></div><p>Ранг #{professional.camp.rosterRank} из {professional.camp.playersAtPosition}. Доверие штаба {Math.round(professional.camp.coachTrust)}.</p></header>
+          <header><div><small>{selectedTeam.shortName} TRAINING CAMP</small><h2>День {professional.camp.day} / {professional.camp.totalDays}</h2></div><strong>#{professional.camp.rosterRank} · TRUST {Math.round(professional.camp.coachTrust)}</strong></header>
           <div className="professional-camp-track">
             {Array.from({ length: professional.camp.totalDays }, (_, index) => <span key={index} className={index < professional.camp!.sessions.length ? "is-complete" : index === professional.camp!.sessions.length ? "is-current" : ""}>{index + 1}</span>)}
           </div>
           <div className="professional-focus-grid">
-            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("controlled")}><Icon name="shield" /><strong>Контроль</strong><small>Низкий риск, надёжные повторы</small></button>
-            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("balanced")}><Icon name="target" /><strong>Баланс</strong><small>Работа на роль без лишнего риска</small></button>
-            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("aggressive")}><Icon name="flame" /><strong>Атака</strong><small>Шанс взлететь и шанс получить травму</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("controlled")}><Icon name="shield" /><strong>Контроль</strong><small>RISK − · CEIL −</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("balanced")}><Icon name="target" /><strong>Баланс</strong><small>RISK = · CEIL =</small></button>
+            <button type="button" disabled={mutating} onClick={() => void onAdvanceCamp("aggressive")}><Icon name="flame" /><strong>Атака</strong><small>RISK + · CEIL +</small></button>
           </div>
           {professional.camp.sessions.length > 0 && (
-            <div className="professional-camp-log">{[...professional.camp.sessions].reverse().map((session) => <article key={session.id}><span>{session.grade}</span><div><strong>День {session.day} · {session.approach}</strong><small>{session.summary}</small></div><em>{Math.round(session.performance)}</em></article>)}</div>
+            <div className="professional-camp-log">{[...professional.camp.sessions].reverse().map((session) => <article key={session.id}><span>{session.grade}</span><div><strong>День {session.day} · {session.approach}</strong><small>HP {session.healthDelta >= 0 ? "+" : ""}{session.healthDelta} · TRUST {session.coachTrustDelta >= 0 ? "+" : ""}{session.coachTrustDelta}</small></div><em>{Math.round(session.performance)}</em></article>)}</div>
           )}
         </section>
       )}
@@ -198,14 +195,13 @@ export function ProfessionalTransitionDashboard({
           <Icon name={professional.status === "roster" ? "trophy" : professional.status === "practice-squad" ? "team" : "close"} />
           <small>РЕШЕНИЕ КЛУБА</small>
           <h2>{professional.status === "roster" ? "Активный состав" : professional.status === "practice-squad" ? "Тренировочный состав" : "Контракт расторгнут"}</h2>
-          <p>{professional.lastSummary}</p>
           {professional.contract && <strong>{professional.contract.teamName} · {money(professional.contract.totalValue)}</strong>}
         </section>
       )}
 
       {recentDraft.length > 0 && (
         <section className="professional-draft-feed">
-          <header><small>ПЕРВЫЕ РАУНДЫ</small><h2>Как выбирали клубы</h2></header>
+          <header><small>ПЕРВЫЕ РАУНДЫ</small><h2>Драфт</h2></header>
           {recentDraft.map((pick) => {
             const team = professional.teams.find((item) => item.id === pick.teamId);
             return <article key={pick.id} className={pick.isHero ? "is-hero" : ""}><span>{pick.overallPick}</span><div><strong>{pick.prospectName}</strong><small>{team?.shortName} · {pick.position} · {pick.collegeName}</small></div><em>R{pick.round}</em></article>;

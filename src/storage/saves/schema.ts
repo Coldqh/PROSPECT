@@ -1607,6 +1607,7 @@ export interface CareerIndexRecord {
   position: "QB" | "RB" | "WR" | "LB" | "CB";
   jerseyNumber: number;
   schoolName: string;
+  seasonLabel: string;
   stateCode: string;
   overall: number;
   potentialBand: "role-player" | "starter" | "high-upside" | "national-ceiling";

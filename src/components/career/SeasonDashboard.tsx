@@ -19,6 +19,7 @@ type ViewId = (typeof views)[number]["id"];
 interface SeasonDashboardProps {
   save: CareerSave;
   onOpenMatch(): void;
+  lockedView?: ViewId;
 }
 
 function recordLabel(wins: number, losses: number): string {
@@ -30,7 +31,7 @@ function streakLabel(value: number): string {
   return `${value > 0 ? "W" : "L"}${Math.abs(value)}`;
 }
 
-function statCards(save: CareerSave): Array<{ label: string; value: string; detail: string }> {
+export function playerStatCards(save: CareerSave): Array<{ label: string; value: string; detail: string }> {
   const stats = save.football.season.heroTotals;
   switch (save.football.position) {
     case "QB":
@@ -71,8 +72,9 @@ function statCards(save: CareerSave): Array<{ label: string; value: string; deta
   }
 }
 
-export function SeasonDashboard({ save, onOpenMatch }: SeasonDashboardProps) {
-  const [view, setView] = useState<ViewId>("season");
+export function SeasonDashboard({ save, onOpenMatch, lockedView }: SeasonDashboardProps) {
+  const [internalView, setInternalView] = useState<ViewId>("season");
+  const view = lockedView ?? internalView;
   const [scoutingOpen, setScoutingOpen] = useState(false);
   const [leadersOpen, setLeadersOpen] = useState(false);
   const { football } = save;
@@ -87,10 +89,10 @@ export function SeasonDashboard({ save, onOpenMatch }: SeasonDashboardProps) {
   return (
     <div className="compact-section season-dashboard">
       <header className="compact-page-head">
-        <div><span>Senior season {season.year}</span><h2>Карьера</h2></div>
+        <div><span>{season.year}</span><h2>{view === "schedule" ? "Матчи" : view === "standings" ? "Таблица" : view === "stats" ? "Статистика" : view === "history" ? "История" : "Сезон"}</h2></div>
         <strong className="compact-head-score">{recordLabel(season.wins, season.losses)}</strong>
       </header>
-      <SectionTabs<ViewId> tabs={views} active={view} onChange={setView} ariaLabel="Разделы школьного сезона" />
+      {!lockedView && <SectionTabs<ViewId> tabs={views} active={view} onChange={setInternalView} ariaLabel="Разделы школьного сезона" />}
 
       {view === "season" && (
         <div className="compact-view">
@@ -114,7 +116,7 @@ export function SeasonDashboard({ save, onOpenMatch }: SeasonDashboardProps) {
               <button type="button" onClick={() => setScoutingOpen(true)} aria-label="Открыть скаутский отчёт"><Icon name="target" /></button>
             </section>
           ) : (
-            <section className="season-finished-card"><Icon name="trophy" /><div><small>СЕЗОН ЗАВЕРШЁН</small><h3>{recordLabel(season.wins, season.losses)}</h3><p>Все матчи сыграны. Итоги готовы.</p></div></section>
+            <section className="season-finished-card"><Icon name="trophy" /><div><small>СЕЗОН ЗАВЕРШЁН</small><h3>{recordLabel(season.wins, season.losses)}</h3></div></section>
           )}
 
           <div className="season-quick-grid">
@@ -161,7 +163,7 @@ export function SeasonDashboard({ save, onOpenMatch }: SeasonDashboardProps) {
       {view === "stats" && (
         <div className="compact-view">
           <div className="season-stat-grid">
-            {statCards(save).map((stat) => <article key={stat.label}><small>{stat.label}</small><strong>{stat.value}</strong><span>{stat.detail}</span></article>)}
+            {playerStatCards(save).map((stat) => <article key={stat.label}><small>{stat.label}</small><strong>{stat.value}</strong><span>{stat.detail}</span></article>)}
           </div>
           {season.awards.length > 0 && (
             <section className="season-awards-card"><Icon name="trophy" /><div><small>НАГРАДЫ</small><strong>{season.awards.at(-1)?.title}</strong><span>{season.awards.at(-1)?.detail}</span></div><em>{season.awards.length}</em></section>
@@ -173,7 +175,7 @@ export function SeasonDashboard({ save, onOpenMatch }: SeasonDashboardProps) {
       {view === "history" && (
         <div className="compact-view season-history-list">
           {completed.length === 0 ? (
-            <div className="compact-note"><Icon name="clock" /><p>История сезона появится после первого сыгранного матча.</p></div>
+            <div className="compact-note"><Icon name="clock" /><p>Нет матчей.</p></div>
           ) : [...completed].reverse().map((game) => (
             <article key={game.id}>
               <span className={game.won ? "is-win" : "is-loss"}>{game.won ? "W" : "L"}</span>

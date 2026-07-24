@@ -209,3 +209,16 @@
 - draft slot or UDFA demand creates a rookie contract and concrete training-camp opportunity;
 - four camp sessions determine active roster, practice squad or release from actual performance, health and coach trust;
 - deterministic migration from schema v23 to v24.
+
+
+## v0.27 — Compact career hierarchy
+
+- primary navigation contains Profile, Home and Team;
+- season, matches, standings, overview, recruiting, feed and rankings open from one drawer;
+- player statistics and blocking decisions live in Profile;
+- every team opens as a full page with roster, staff, system and resources;
+- World contains only event feed, rankings and search;
+- recruiting contains programs, offers, visits and activity on one page;
+- career saves use compact rows with player, team, season, OVR, continue and delete actions;
+- player creation and training choices show numeric skill effects instead of descriptive copy;
+- career-index metadata is repaired automatically without changing save schema.

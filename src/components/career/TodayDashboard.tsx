@@ -38,9 +38,6 @@ function signed(value: number, digits = 1): string {
   return value > 0 ? `+${rounded}` : rounded;
 }
 
-function riskLabel(risk: "low" | "medium" | "high"): string {
-  return { low: "Низкий риск", medium: "Средний риск", high: "Высокий риск" }[risk];
-}
 
 function medicalLabel(status: MedicalStatus): string {
   return {
@@ -170,7 +167,7 @@ export function TodayDashboard({
             return (
               <button type="button" className="relationship-event-teaser" onClick={() => setSheet("event")}>
                 <span><Icon name="message" /></span>
-                <div><small>{npc?.name ?? "Важный разговор"}</small><strong>{event.title}</strong><p>{event.scene}</p></div>
+                <div><small>{npc?.name ?? "Разговор"}</small><strong>{event.title}</strong></div>
                 <Icon name="arrow-right" />
               </button>
             );
@@ -213,7 +210,7 @@ export function TodayDashboard({
 
           {save.relationships.pendingEvent ? (
             <button type="button" className="primary-action-bar primary-action-bar--conversation" disabled={mutating} onClick={() => setSheet("event")}>
-              <span><small>Ситуацию нельзя пропустить</small><strong>Ответить</strong></span>
+              <span><small>Требуется решение</small><strong>Ответить</strong></span>
               <Icon name="message" />
             </button>
           ) : life.dayIndex === 5 && football.match.status !== "complete" ? (
@@ -223,7 +220,7 @@ export function TodayDashboard({
             </button>
           ) : (
             <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceDay()}>
-              <span><small>План и тренировка применятся автоматически</small><strong>{mutating ? "Расчёт дня…" : "Завершить день"}</strong></span>
+              <span><small>{formatGameDate(save.meta.currentDate)}</small><strong>{mutating ? "Расчёт…" : "Завершить день"}</strong></span>
               <Icon name="arrow-right" />
             </button>
           )}
@@ -248,7 +245,7 @@ export function TodayDashboard({
                 key={focus.id}
               >
                 <span><Icon name={trainingIcons[focus.id]} /></span>
-                <div><strong>{focus.name}</strong><small>{focus.summary}</small></div>
+                <div><strong>{focus.name}</strong><small>TEC {focus.multipliers.technique.toFixed(2)} · ATH {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)} · REC {focus.multipliers.recovery.toFixed(2)}</small></div>
                 <em>{focus.load}</em>
               </button>
             ))}
@@ -267,11 +264,11 @@ export function TodayDashboard({
 
           <button
             type="button"
-            className="primary-action-bar"
+            className="training-apply-row"
             disabled={!trainingPlanChanged || mutating}
             onClick={() => void onUpdateTrainingPlan(selectedTrainingFocus, selectedTrainingIntensity)}
           >
-            <span><small>{activeTrainingFocus.coachValue}</small><strong>{mutating ? "Сохранение…" : trainingPlanChanged ? "Применить тренировку" : "Тренировка активна"}</strong></span>
+            <span><small>{activeTrainingFocus.shortName} · {getIntensityDescriptor(selectedTrainingIntensity).name}</small><strong>{mutating ? "Сохранение…" : trainingPlanChanged ? "Применить" : "Выбрано"}</strong></span>
             <Icon name={trainingPlanChanged ? "arrow-right" : "check"} />
           </button>
         </div>
@@ -283,14 +280,14 @@ export function TodayDashboard({
             {weeklyPlanTemplates.map((template) => (
               <button type="button" className={selectedTemplate === template.id ? "is-active" : ""} onClick={() => setSelectedTemplate(template.id)} key={template.id}>
                 <span className="plan-list-compact__mark"><Icon name={selectedTemplate === template.id ? "check" : "target"} /></span>
-                <div><strong>{template.shortName}</strong><small>{template.identity} · {riskLabel(template.risk)}</small></div>
+                <div><strong>{template.shortName}</strong><small>TRN {template.focus.training} · REC {template.focus.recovery} · STUDY {template.focus.study}</small></div>
                 <em>{template.focus.training}</em>
               </button>
             ))}
           </div>
 
           <section className="compact-control-card">
-            <header><div><small>Интенсивность недели</small><strong>{activeIntensity.description}</strong></div><span>{activeIntensity.loadMultiplier.toFixed(2)}×</span></header>
+            <header><div><small>Интенсивность недели</small><strong>Нагрузка</strong></div><span>{activeIntensity.loadMultiplier.toFixed(2)}×</span></header>
             <div className="compact-segmented">
               {intensityDescriptors.map((item) => (
                 <button type="button" className={selectedIntensity === item.id ? "is-active" : ""} onClick={() => setSelectedIntensity(item.id)} key={item.id}>{item.name}</button>
@@ -304,8 +301,8 @@ export function TodayDashboard({
             <span><small>Стабильность</small><strong>{Math.round(life.consistency)}</strong></span>
           </div>
 
-          <button type="button" className="primary-action-bar" disabled={!planChanged || mutating} onClick={() => void onUpdatePlan(selectedTemplate, selectedIntensity)}>
-            <span><small>{activeTemplate.name}</small><strong>{mutating ? "Сохранение…" : planChanged ? "Применить режим" : "Режим активен"}</strong></span>
+          <button type="button" className="training-apply-row" disabled={!planChanged || mutating} onClick={() => void onUpdatePlan(selectedTemplate, selectedIntensity)}>
+            <span><small>{activeTemplate.shortName} · {activeIntensity.name}</small><strong>{mutating ? "Сохранение…" : planChanged ? "Применить" : "Выбрано"}</strong></span>
             <Icon name={planChanged ? "arrow-right" : "check"} />
           </button>
         </div>
@@ -397,7 +394,7 @@ export function TodayDashboard({
         {football.training.lastSession && (
           <div className="sheet-result">
             <div className={`sheet-result__grade result-grade--${football.training.lastSession.grade.toLowerCase()}`}>{football.training.lastSession.grade}</div>
-            <p>{football.training.lastSession.note}</p>
+
             <div className="sheet-deltas">
               <span><small>Техника</small><strong>{signed(football.training.lastSession.gains.technique, 2)}</strong></span>
               <span><small>Атлетизм</small><strong>{signed(football.training.lastSession.gains.athleticism, 2)}</strong></span>
@@ -418,10 +415,7 @@ export function TodayDashboard({
         {life.lastOutcome && (
           <div className="sheet-result">
             <div className={`sheet-result__grade result-grade--${life.lastOutcome.grade.toLowerCase()}`}>{life.lastOutcome.grade}</div>
-            <p>{life.lastOutcome.summary}</p>
-            <div className="sheet-highlights">
-              {life.lastOutcome.highlights.map((highlight) => <span key={highlight}><i />{highlight}</span>)}
-            </div>
+
             <div className="sheet-deltas">
               <span><small>Энергия</small><strong>{signed(life.lastOutcome.deltas.energy)}</strong></span>
               <span><small>Усталость</small><strong>{signed(life.lastOutcome.deltas.fatigue)}</strong></span>

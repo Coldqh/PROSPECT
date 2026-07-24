@@ -44,6 +44,17 @@ function snapshotId(careerId: string, revision: number): string {
   return `${careerId}:${revision.toString().padStart(8, "0")}`;
 }
 
+function careerSeasonLabel(save: CareerSave): string {
+  if (save.meta.phase === "college-season" && save.football.college.heroCareer) {
+    return `${save.football.college.heroCareer.seasonYear} · ${save.football.college.heroCareer.classYear}`;
+  }
+  if (save.meta.phase === "college-orientation") return `${save.meta.currentDate.year} · Arrival`;
+  if (save.meta.phase === "professional-draft" || save.meta.phase === "professional-career") {
+    return `${save.football.professional.draftYear} · Pro`;
+  }
+  return `${save.football.season.year} · Senior`;
+}
+
 function toIndexRecord(save: CareerSave): CareerIndexRecord {
   return {
     id: save.meta.id,
@@ -60,6 +71,7 @@ function toIndexRecord(save: CareerSave): CareerIndexRecord {
       : (save.football.college.status === "orientation" || save.football.college.status === "active") && save.football.college.program
         ? save.football.college.program.name
         : save.football.school.name,
+    seasonLabel: careerSeasonLabel(save),
     stateCode: save.character.origin.stateCode,
     overall: save.football.ratings.overall,
     potentialBand: save.football.ratings.potentialBand,
@@ -96,13 +108,17 @@ export class CareerRepository {
     const normalized: CareerIndexRecord[] = [];
 
     for (const record of records) {
-      if ("position" in record && typeof record.position === "string") {
+      if ("position" in record && typeof record.position === "string" && "seasonLabel" in record && typeof record.seasonLabel === "string") {
         normalized.push(record);
         continue;
       }
 
       const migrated = await this.load(record.id);
-      normalized.push(toIndexRecord(migrated));
+      const index = toIndexRecord(migrated);
+      const transaction = database.transaction("careerIndex", "readwrite");
+      await transaction.store.put(index);
+      await transaction.done;
+      normalized.push(index);
     }
 
     return normalized.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));

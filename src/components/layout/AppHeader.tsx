@@ -12,7 +12,6 @@ export function AppHeader({ action, compact = false, context }: AppHeaderProps) 
       <ProspectLogo compact={compact} />
       <div className="app-header__right">
         {context && <span className="app-header__context">{context}</span>}
-        <span className="sync-status" title="Сохранения находятся на этом устройстве"><i /> Сохранено локально</span>
         {action}
       </div>
     </header>

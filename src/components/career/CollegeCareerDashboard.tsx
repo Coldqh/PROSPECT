@@ -1,22 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { TrainingIntensity } from "../../core/life/types";
 import { formatGameDate } from "../../core/calendar/types";
 import type { CareerSave } from "../../storage/saves/schema";
 import { isCollegeMatchAwaitingResolution } from "../../sports/football/college/heroCareer";
-import type { CollegeHeroRole } from "../../sports/football/college/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
+import { getTrainingFocusCatalog } from "../../sports/football/training/catalog";
 import { Icon } from "../ui/Icon";
 import { CareerNavigation, type CareerPrimaryView } from "./CareerNavigation";
-import { PlayerIdentityBar } from "./PlayerIdentityBar";
+import { CareerDrawer, type CareerSecondaryView } from "./CareerDrawer";
 import { WorldDashboard } from "./WorldDashboard";
 import { MatchDashboard } from "./MatchDashboard";
-
-const focuses: readonly { id: TrainingFocusId; label: string; detail: string }[] = [
-  { id: "position-craft", label: "Техника", detail: "Позиционные навыки и надёжность" },
-  { id: "explosive-power", label: "Атлетизм", detail: "Сила, скорость и взрыв" },
-  { id: "film-install", label: "Система", detail: "Плёнка и освоение схемы" },
-  { id: "recovery-reset", label: "Восстановление", detail: "Сброс нагрузки и лечение" },
-];
+import { PlayerProfileDashboard } from "./PlayerProfileDashboard";
+import { TeamProfileDashboard } from "./TeamProfileDashboard";
+import { CareerOverviewDashboard } from "./CareerOverviewDashboard";
+import { CollegeSectionsDashboard } from "./CollegeSectionsDashboard";
 
 const dayLabels = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"] as const;
 
@@ -24,6 +21,9 @@ interface CollegeCareerDashboardProps {
   save: CareerSave;
   mutating: boolean;
   actionError?: string;
+  drawerOpen: boolean;
+  onDrawerOpenChange(open: boolean): void;
+  onExit(): void;
   onAdvanceDay(): Promise<void>;
   onUpdateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
@@ -33,282 +33,97 @@ interface CollegeCareerDashboardProps {
   onOpenProfessionalDraft(): Promise<void>;
 }
 
-function roleLabel(role: CollegeHeroRole): string {
-  return {
-    starter: "Стартер",
-    rotation: "Ротация",
-    "special-teams": "Спецкоманды",
-    developmental: "Развитие",
-  }[role];
+function roleLabel(role: string): string {
+  return { starter: "Стартер", rotation: "Ротация", "special-teams": "Спецкоманды", developmental: "Развитие" }[role] ?? role;
 }
 
-function bondKindLabel(kind: CareerSave["world"]["social"]["bonds"][number]["kind"]): string {
-  return {
-    teammate: "Партнёр",
-    "position-rival": "Конкурент",
-    mentor: "Наставник",
-    "coach-player": "Тренер",
-    staff: "Штаб",
-  }[kind];
-}
-
-function promiseLabel(status: "active" | "kept" | "broken"): string {
-  return { active: "На проверке", kept: "Выполнено", broken: "Нарушено" }[status];
-}
-
-export function CollegeCareerDashboard({
-  save,
-  mutating,
-  actionError,
-  onAdvanceDay,
-  onUpdateTrainingPlan,
-  onResolveDecision,
-  onStartMatch,
-  onResolveMatchDecision,
-  onFinalizeMatch,
-  onOpenProfessionalDraft,
-}: CollegeCareerDashboardProps) {
-  const [view, setView] = useState<CareerPrimaryView>("today");
+export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen, onDrawerOpenChange, onExit, onAdvanceDay, onUpdateTrainingPlan, onResolveDecision, onStartMatch, onResolveMatchDecision, onFinalizeMatch, onOpenProfessionalDraft }: CollegeCareerDashboardProps) {
+  const [primaryView, setPrimaryView] = useState<CareerPrimaryView>("home");
+  const [secondaryView, setSecondaryView] = useState<CareerSecondaryView>();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>();
   const [focusId, setFocusId] = useState<TrainingFocusId>(save.football.training.plan.focusId);
   const [intensity, setIntensity] = useState<TrainingIntensity>(save.football.training.plan.intensity);
-  const college = save.football.college;
-  const career = college.heroCareer;
-  const program = college.program;
+  const career = save.football.college.heroCareer;
+  const program = save.football.college.program;
+
+  useEffect(() => {
+    setFocusId(save.football.training.plan.focusId);
+    setIntensity(save.football.training.plan.intensity);
+  }, [save.football.training.plan.focusId, save.football.training.plan.intensity]);
+
   if (!career || !program) return null;
 
   const team = save.world.teams.find((item) => item.id === career.teamId);
   const hero = save.world.players.find((player) => player.isHero);
-  const culture = save.world.social.teamCultures.find((item) => item.teamId === career.teamId);
-  const nextGame = [...save.world.competition.schedule]
-    .filter((game) => game.status === "scheduled" && (game.homeTeamId === career.teamId || game.awayTeamId === career.teamId))
-    .sort((left, right) => left.week - right.week)[0];
-  const nextOpponentId = nextGame
-    ? nextGame.homeTeamId === career.teamId ? nextGame.awayTeamId : nextGame.homeTeamId
-    : undefined;
-  const nextOpponent = nextOpponentId ? save.world.teams.find((item) => item.id === nextOpponentId) : undefined;
+  const focuses = getTrainingFocusCatalog(save.football.position);
+  const nextGame = save.world.competition.schedule.filter((game) => game.status === "scheduled" && (game.homeTeamId === career.teamId || game.awayTeamId === career.teamId)).sort((a, b) => a.week - b.week)[0];
+  const nextOpponentId = nextGame ? (nextGame.homeTeamId === career.teamId ? nextGame.awayTeamId : nextGame.homeTeamId) : undefined;
+  const nextOpponent = save.world.teams.find((item) => item.id === nextOpponentId);
   const trainingChanged = focusId !== save.football.training.plan.focusId || intensity !== save.football.training.plan.intensity;
   const canExploreDraft = career.status === "complete" || career.classYear === "Junior" || career.classYear === "Senior" || career.seasonHistory.length >= 2;
 
-  const heroBonds = save.world.social.bonds
-    .filter((bond) => bond.active && bond.teamId === career.teamId && (bond.entityAId === "hero" || bond.entityBId === "hero"))
-    .sort((left, right) => Number(right.kind === "position-rival") - Number(left.kind === "position-rival") || right.influence - left.influence)
-    .slice(0, 8);
+  function openTeam(teamId?: string) {
+    setSelectedTeamId(teamId);
+    setPrimaryView("team");
+    setSecondaryView(undefined);
+  }
 
-  const counterpartName = (entityId: string): string => save.world.players.find((player) => player.id === entityId)?.name
-    ?? save.world.coaches.find((coach) => coach.id === entityId)?.name
-    ?? entityId;
+  function selectPrimary(view: CareerPrimaryView) {
+    setPrimaryView(view);
+    setSecondaryView(undefined);
+    if (view !== "team") setSelectedTeamId(undefined);
+  }
 
-  if (isCollegeMatchAwaitingResolution(save)) {
-    return (
-      <div className="college-career-shell college-career-shell--match">
-        <PlayerIdentityBar save={save} compact />
-        <MatchDashboard
-          save={save}
-          mutating={mutating}
-          {...(actionError ? { actionError } : {})}
-          onStartMatch={onStartMatch}
-          onResolveDecision={onResolveMatchDecision}
-          onFinalizeMatch={onFinalizeMatch}
-        />
-      </div>
-    );
+  if (isCollegeMatchAwaitingResolution(save)) return (
+    <div className="college-game-page">
+      <MatchDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onStartMatch={onStartMatch} onResolveDecision={onResolveMatchDecision} onFinalizeMatch={onFinalizeMatch} />
+      <CareerDrawer open={drawerOpen} save={save} onSelect={(view) => { setSecondaryView(view); onDrawerOpenChange(false); }} onClose={() => onDrawerOpenChange(false)} onExit={onExit} />
+    </div>
+  );
+
+  function secondaryContent() {
+    if (secondaryView === "overview") return <CareerOverviewDashboard save={save} />;
+    if (secondaryView === "season") return <CollegeSectionsDashboard save={save} view="season" />;
+    if (secondaryView === "matches") return <CollegeSectionsDashboard save={save} view="matches" />;
+    if (secondaryView === "standings") return <CollegeSectionsDashboard save={save} view="standings" />;
+    if (secondaryView === "feed") return <WorldDashboard save={save} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
+    if (secondaryView === "rankings") return <WorldDashboard save={save} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
+    return null;
   }
 
   return (
-    <div className="college-career-shell">
-      <PlayerIdentityBar save={save} compact onOpenTeam={() => setView("career")} onOpenProfile={() => setView("career")} />
+    <div className="college-career-shell college-career-shell--v27">
+      <main className="college-career-main">
+        {secondaryView ? (
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{secondaryContent()}</>
+        ) : primaryView === "profile" ? (
+          <PlayerProfileDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveCollegeDecision={onResolveDecision} />
+        ) : primaryView === "team" ? (
+          <TeamProfileDashboard save={save} {...(selectedTeamId ? { teamId: selectedTeamId } : {})} />
+        ) : (
+          <div className="college-home-page">
+            <header className="college-home-head"><div><small>{career.classYear} · W{career.week}</small><h1>{program.shortName}</h1></div><strong>{team?.wins ?? 0}–{team?.losses ?? 0}</strong></header>
+            <section className="college-home-metrics"><article><small>Роль</small><strong>{roleLabel(career.role)}</strong></article><article><small>Depth</small><strong>#{career.depthRank}</strong></article><article><small>Trust</small><strong>{Math.round(career.coachTrust)}</strong></article><article><small>Reps</small><strong>{Math.round(career.practiceReps)}</strong></article></section>
 
-      <header className="college-career-context">
-        <div><small>{career.classYear.toUpperCase()} · {program.city}, {program.stateCode} · W{career.week}</small><strong>{program.shortName}</strong></div>
-        <span>{team?.wins ?? 0}–{team?.losses ?? 0}</span>
-      </header>
+            <section className="college-home-game"><div><small>{nextGame ? `W${nextGame.week} · ${nextGame.homeTeamId === career.teamId ? "ДОМА" : "В ГОСТЯХ"}` : "КАЛЕНДАРЬ"}</small><strong>{nextOpponent?.name ?? "Нет матча"}</strong></div><span>{nextOpponent ? Math.round(nextOpponent.rating) : "—"}</span></section>
 
-      {view === "today" && (
-        <div className="compact-view college-week-view">
-          <section className="college-week-strip">
-            <span><small>Роль</small><strong>{roleLabel(career.role)}</strong></span>
-            <span><small>Depth</small><strong>#{career.depthRank}</strong></span>
-            <span><small>Доверие</small><strong>{Math.round(career.coachTrust)}</strong></span>
-            <span><small>Повторы</small><strong>{Math.round(career.practiceReps)}</strong></span>
-          </section>
-
-          {career.pendingDecision && (
-            <section className="college-decision-card">
-              <small>РЕШЕНИЕ НУЖНО СЕЙЧАС</small>
-              <h3>{career.pendingDecision.title}</h3>
-              <p>{career.pendingDecision.detail}</p>
-              <div>
-                {career.pendingDecision.options.map((option) => (
-                  <button type="button" key={option.id} disabled={mutating} onClick={() => void onResolveDecision(option.id)}>
-                    <strong>{option.label}</strong><small>{option.detail}</small>
-                  </button>
-                ))}
-              </div>
+            <section className="college-training-card college-training-card--data">
+              <header><div><small>ТРЕНИРОВКА</small><h3>{focuses.find((item) => item.id === focusId)?.name}</h3></div><span>{intensity}</span></header>
+              <div className="college-training-focuses">{focuses.map((focus) => <button type="button" key={focus.id} className={focusId === focus.id ? "is-active" : ""} onClick={() => setFocusId(focus.id)}><strong>{focus.shortName}</strong><small>TEC {focus.multipliers.technique.toFixed(2)} · ATH {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)} · REC {focus.multipliers.recovery.toFixed(2)}</small></button>)}</div>
+              <div className="compact-segmented">{(["controlled", "standard", "aggressive"] as const).map((item) => <button type="button" key={item} className={intensity === item ? "is-active" : ""} onClick={() => setIntensity(item)}>{item}</button>)}</div>
+              <button type="button" className="training-apply-row" disabled={!trainingChanged || mutating} onClick={() => void onUpdateTrainingPlan(focusId, intensity)}><span><small>{focuses.find((item) => item.id === focusId)?.shortName} · {intensity}</small><strong>{mutating ? "Сохранение…" : trainingChanged ? "Применить" : "Выбрано"}</strong></span><Icon name={trainingChanged ? "arrow-right" : "check"} /></button>
             </section>
-          )}
 
-          <section className="college-next-game-card">
-            <div>
-              <small>{nextGame ? `НЕДЕЛЯ ${nextGame.week} · ${nextGame.homeTeamId === career.teamId ? "ДОМА" : "В ГОСТЯХ"}` : "КАЛЕНДАРЬ"}</small>
-              <h3>{nextOpponent?.shortName ?? "Матч пока не назначен"}</h3>
-              <p>{nextGame ? `${nextGame.kind === "rivalry" ? "Rivalry" : nextGame.conferenceGame ? "Конференция" : "Вне конференции"}. Игровое время определяется ролью, здоровьем и качеством недели.` : "Программа находится между игровыми неделями."}</p>
-            </div>
-            <span>{nextOpponent ? Math.round(nextOpponent.rating) : "—"}</span>
-          </section>
+            <section className="college-depth-strip"><article><small>OVR</small><strong>{Math.round(hero?.overall ?? save.football.ratings.overall)}</strong></article><article><small>Форма</small><strong>{Math.round(hero?.form ?? 0)}</strong></article><article><small>Здоровье</small><strong>{Math.round(hero?.health ?? 0)}</strong></article><article><small>Fit</small><strong>{Math.round(hero?.tactical.schemeFit ?? 0)}</strong></article></section>
 
-          <section className="college-training-card">
-            <header><div><small>ПЛАН ТРЕНИРОВКИ</small><h3>{focuses.find((item) => item.id === focusId)?.label}</h3></div><span>{intensity}</span></header>
-            <div className="college-training-focuses">
-              {focuses.map((focus) => (
-                <button type="button" key={focus.id} className={focusId === focus.id ? "is-active" : ""} onClick={() => setFocusId(focus.id)}>
-                  <strong>{focus.label}</strong><small>{focus.detail}</small>
-                </button>
-              ))}
-            </div>
-            <div className="compact-segmented">
-              {(["controlled", "standard", "aggressive"] as const).map((item) => (
-                <button type="button" key={item} className={intensity === item ? "is-active" : ""} onClick={() => setIntensity(item)}>{item}</button>
-              ))}
-            </div>
-            <button type="button" className="primary-action-bar" disabled={!trainingChanged || mutating} onClick={() => void onUpdateTrainingPlan(focusId, intensity)}>
-              <span><small>Текущий план: {save.football.training.plan.focusId}</small><strong>{trainingChanged ? "Применить изменения" : "План активен"}</strong></span>
-              <Icon name={trainingChanged ? "arrow-right" : "check"} />
-            </button>
-          </section>
-
-          {save.life.lastOutcome && (
-            <section className="college-last-day-card">
-              <span>{save.life.lastOutcome.grade}</span>
-              <div><small>{formatGameDate(save.life.lastOutcome.date)}</small><strong>{save.life.lastOutcome.title}</strong><p>{career.lastSummary}</p></div>
-            </section>
-          )}
-
-          {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
-          <button type="button" className="primary-action-bar college-advance-day" disabled={mutating || Boolean(career.pendingDecision) || career.status === "complete"} onClick={() => void onAdvanceDay()}>
-            <span><small>{formatGameDate(save.meta.currentDate)} · {dayLabels[save.life.dayIndex]}</small><strong>{mutating ? "Симуляция…" : career.status === "complete" ? "Eligibility завершена" : career.pendingDecision ? "Сначала прими решение" : "Завершить день"}</strong></span>
-            <Icon name="arrow-right" />
-          </button>
-          {canExploreDraft && !career.pendingDecision && (
-            <button type="button" className="college-pro-entry" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}>
-              <span><small>ПРОФЕССИОНАЛЬНАЯ ОЦЕНКА</small><strong>Открыть путь к драфту</strong><p>Клубы оценят производство, атлетизм, здоровье, возраст и уровень программы.</p></span>
-              <Icon name="arrow-right" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {view === "career" && (
-        <div className="compact-view college-active-room">
-          <section className="college-room-context">
-            <small>РЕАЛЬНАЯ ПОЗИЦИОННАЯ КОМНАТА</small>
-            <h3>{save.football.position} · {college.positionRoom.length} игроков</h3>
-            <p>Порядок берётся из автономного мира. Форма, здоровье, схема и решения штаба меняют его каждую неделю.</p>
-          </section>
-          {college.positionRoom.map((player) => (
-            <article key={player.id} className={player.isHero ? "is-hero" : ""}>
-              <span>{player.depthRank}</span>
-              <div><strong>{player.name}</strong><small>{player.year}{player.redshirt ? " · RS" : ""} · {player.style}</small></div>
-              <em>{Math.round(player.overall)}</em>
-            </article>
-          ))}
-          <section className="college-depth-reality">
-            <span><small>Форма</small><strong>{Math.round(hero?.form ?? 0)}</strong></span>
-            <span><small>Здоровье</small><strong>{Math.round(hero?.health ?? 0)}</strong></span>
-            <span><small>Scheme fit</small><strong>{Math.round(hero?.tactical.schemeFit ?? 0)}</strong></span>
-            <span><small>Статус</small><strong>{hero?.eligibility.athleticallyEligible ? "Eligible" : "Ineligible"}</strong></span>
-          </section>
-        </div>
-      )}
-
-      {view === "career" && (
-        <div className="compact-view college-people-view">
-          <section className="college-culture-card">
-            <div><small>РАЗДЕВАЛКА</small><h3>{culture && culture.conflict >= 65 ? "Расколота" : culture && culture.cohesion >= 68 ? "Сплочена" : "Нестабильна"}</h3><p>{career.lastSummary}</p></div>
-            <strong>{Math.round(culture?.cohesion ?? 50)}</strong>
-          </section>
-          <div className="college-culture-grid">
-            <article><small>Положение</small><strong>{Math.round(career.lockerRoomStanding)}</strong></article>
-            <article><small>Coach trust</small><strong>{Math.round(culture?.coachTrust ?? 50)}</strong></article>
-            <article><small>Конфликт</small><strong>{Math.round(culture?.conflict ?? 0)}</strong></article>
-            <article><small>Мораль</small><strong>{Math.round(culture?.morale ?? 50)}</strong></article>
+            {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
+            <button type="button" className="primary-action-bar college-advance-day" disabled={mutating || Boolean(career.pendingDecision) || career.status === "complete"} onClick={() => void onAdvanceDay()}><span><small>{formatGameDate(save.meta.currentDate)} · {dayLabels[save.life.dayIndex]}</small><strong>{mutating ? "Расчёт…" : career.status === "complete" ? "Сезон завершён" : career.pendingDecision ? "Решение в профиле" : "Завершить день"}</strong></span><Icon name="arrow-right" /></button>
+            {canExploreDraft && !career.pendingDecision && <button type="button" className="college-pro-entry college-pro-entry--data" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}><span><small>DRAFT</small><strong>Открыть оценку</strong></span><Icon name="arrow-right" /></button>}
           </div>
-          <section className="college-bond-list">
-            <header><small>СВЯЗИ ГЕРОЯ</small><h3>Кто влияет на карьеру</h3></header>
-            {heroBonds.map((bond) => {
-              const otherId = bond.entityAId === "hero" ? bond.entityBId : bond.entityAId;
-              return (
-                <article key={bond.id}>
-                  <span>{bondKindLabel(bond.kind)}</span>
-                  <div><strong>{counterpartName(otherId)}</strong><small>Доверие {Math.round(bond.trust)} · уважение {Math.round(bond.respect)}</small></div>
-                  <em className={bond.tension >= 65 ? "is-danger" : ""}>{Math.round(bond.tension)}</em>
-                </article>
-              );
-            })}
-          </section>
-        </div>
-      )}
-
-      {view === "career" && (
-        <div className="compact-view college-season-view">
-          <section className="college-season-strip">
-            <span><small>Игры</small><strong>{career.gamesPlayed}</strong></span>
-            <span><small>Старты</small><strong>{career.starts}</strong></span>
-            <span><small>Снэпы</small><strong>{career.seasonSnaps}</strong></span>
-            <span><small>Redshirt</small><strong>{career.redshirtStatus}</strong></span>
-          </section>
-          <section className="college-promise-list">
-            <header><small>ОБЕЩАНИЯ ШТАБА</small><h3>Слова против реальности</h3></header>
-            {career.promises.map((promise) => (
-              <article key={promise.id} className={`is-${promise.status}`}>
-                <span>{promiseLabel(promise.status)}</span>
-                <div><strong>Игровая роль к W{promise.deadlineWeek}</strong><small>{promise.summary}</small></div>
-              </article>
-            ))}
-          </section>
-          <section className="college-season-strip college-career-totals">
-            <span><small>Карьера</small><strong>{career.careerGames + career.gamesPlayed} игр</strong></span>
-            <span><small>Старты</small><strong>{career.careerStarts + career.starts}</strong></span>
-            <span><small>Снэпы</small><strong>{career.careerSnaps + career.seasonSnaps}</strong></span>
-            <span><small>Eligibility</small><strong>{career.eligibilityYears}</strong></span>
-          </section>
-          {career.seasonHistory.length > 0 && (
-            <section className="college-game-log college-season-history">
-              <header><small>АРХИВ КАРЬЕРЫ</small><h3>Прошлые сезоны</h3></header>
-              {[...career.seasonHistory].reverse().map((season) => (
-                <article key={`${season.seasonYear}:${season.teamId}`}>
-                  <span className={season.wins >= season.losses ? "is-win" : "is-loss"}>{season.averageGrade}</span>
-                  <div><strong>{season.seasonYear} · {season.teamName} · {season.wins}–{season.losses}</strong><small>{season.classYear} · {season.gamesPlayed} игр · {season.snaps} снэпов{season.redshirted ? " · REDSHIRT" : ""}</small></div>
-                  <em>{Math.round(season.overallEnd)}</em>
-                </article>
-              ))}
-            </section>
-          )}
-          <section className="college-transfer-card">
-            <div><small>ТРАНСФЕРНЫЙ СТАТУС</small><h3>{career.transferIntent === "stay" ? "Остаётся" : career.transferIntent === "open" ? "Слушает варианты" : "В портале"}</h3><p>Решение появляется из реального положения в составе, обещаний и отношений со штабом.</p></div>
-          </section>
-          <section className="college-game-log">
-            <header><small>ИГРОВОЕ ВРЕМЯ</small><h3>Матчи героя</h3></header>
-            {[...career.gameLog].reverse().map((game) => (
-              <article key={game.id}>
-                <span className={game.won ? "is-win" : "is-loss"}>{game.won ? "W" : "L"}</span>
-                <div><strong>{game.opponentName} · {game.score}</strong><small>W{game.week} · {game.snaps} снэпов · {roleLabel(game.role)}</small></div>
-                <em>{game.grade}</em>
-              </article>
-            ))}
-            {career.gameLog.length === 0 && <div className="compact-note"><Icon name="clock" /><p>Первый матч ещё не сыгран. Роль определяется тренировочной неделей.</p></div>}
-          </section>
-          <section className="college-world-stories">
-            <header><small>ВОКРУГ ПРОГРАММЫ</small><h3>Последствия мира</h3></header>
-            {save.world.stories.filter((story) => story.relatedToHero).slice(-5).reverse().map((story) => (
-              <article key={story.id}><strong>{story.title}</strong><small>{story.detail}</small></article>
-            ))}
-          </section>
-        </div>
-      )}
-
-      {view === "world" && <WorldDashboard save={save} />}
-
-      <CareerNavigation active={view} onChange={setView} />
+        )}
+      </main>
+      <CareerNavigation active={primaryView} onChange={selectPrimary} />
+      <CareerDrawer open={drawerOpen} save={save} active={secondaryView} onSelect={(view) => { setSecondaryView(view); onDrawerOpenChange(false); }} onClose={() => onDrawerOpenChange(false)} onExit={onExit} />
     </div>
   );
 }

@@ -4,432 +4,100 @@ import { AppHeader } from "../components/layout/AppHeader";
 import { ScreenShell } from "../components/layout/ScreenShell";
 import { LoadingScreen } from "../components/feedback/LoadingScreen";
 import { Icon } from "../components/ui/Icon";
-import { MetricBar } from "../components/ui/MetricBar";
-import { SectionTabs } from "../components/ui/SectionTabs";
 import { TodayDashboard } from "../components/career/TodayDashboard";
 import { MatchDashboard } from "../components/career/MatchDashboard";
-import { CareerDashboard } from "../components/career/CareerDashboard";
-import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
 import { CollegeCareerDashboard } from "../components/career/CollegeCareerDashboard";
 import { ProfessionalTransitionDashboard } from "../components/career/ProfessionalTransitionDashboard";
 import { WorldDashboard } from "../components/career/WorldDashboard";
 import { CareerNavigation, type CareerPrimaryView } from "../components/career/CareerNavigation";
-import { PlayerIdentityBar } from "../components/career/PlayerIdentityBar";
-import {
-  familyIncomeLabels,
-  familyStructureLabels,
-  familySupportLabels,
-  mindsetLabels,
-} from "../sports/football/career/catalog";
+import { CareerDrawer, type CareerSecondaryView } from "../components/career/CareerDrawer";
+import { PlayerProfileDashboard } from "../components/career/PlayerProfileDashboard";
+import { TeamProfileDashboard } from "../components/career/TeamProfileDashboard";
+import { CareerOverviewDashboard } from "../components/career/CareerOverviewDashboard";
+import { RecruitingDashboard } from "../components/career/RecruitingDashboard";
+import { SeasonDashboard } from "../components/career/SeasonDashboard";
 import { useCareerSave } from "../hooks/useCareerSave";
-
-const teamViews = [
-  { id: "overview", label: "Сводка" },
-  { id: "depth", label: "Depth" },
-  { id: "roster", label: "Ростер" },
-  { id: "staff", label: "Штаб" },
-] as const;
-const rosterViews = [
-  { id: "offense", label: "Атака" },
-  { id: "defense", label: "Защита" },
-  { id: "special", label: "Спец." },
-] as const;
-const profileViews = [
-  { id: "people", label: "Люди" },
-  { id: "body", label: "Тело" },
-  { id: "mind", label: "Характер" },
-  { id: "origin", label: "Дом" },
-  { id: "study", label: "Учёба" },
-] as const;
-
-type TeamView = (typeof teamViews)[number]["id"];
-type ProfileView = (typeof profileViews)[number]["id"];
-type RosterView = (typeof rosterViews)[number]["id"];
-
-function heightLabel(inches: number): string {
-  return `${Math.floor(inches / 12)}′${inches % 12}″`;
-}
-
-function roleLabel(value: "starter" | "rotation" | "special-teams" | "developmental"): string {
-  return { starter: "Стартер", rotation: "Ротация", "special-teams": "Спецкоманды", developmental: "Развитие" }[value];
-}
-
-function coachRoleLabel(value: "head-coach" | "position-coach" | "offensive-coordinator" | "defensive-coordinator"): string {
-  return {
-    "head-coach": "Главный тренер",
-    "position-coach": "Позиционный тренер",
-    "offensive-coordinator": "Координатор атаки",
-    "defensive-coordinator": "Координатор защиты",
-  }[value];
-}
-
-function trendLabel(value: "rising" | "stable" | "falling"): string {
-  return { rising: "Растёт", stable: "Стабильно", falling: "Падает" }[value];
-}
 
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, finalizeCollegeMatch, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority, resolveCollegeHeroDecision, openProfessionalDraft, resolveProfessionalDeclaration, selectProfessionalAgent, completeProfessionalEvaluation, runProfessionalDraft, acceptProfessionalCampInvite, advanceProfessionalTrainingCamp } = useCareerSave(careerId);
-  const [activeTab, setActiveTab] = useState<CareerPrimaryView>("today");
-  const [utilityView, setUtilityView] = useState<"match" | "team" | "profile" | null>(null);
-  const [teamView, setTeamView] = useState<TeamView>("overview");
-  const [profileView, setProfileView] = useState<ProfileView>("people");
-  const [rosterView, setRosterView] = useState<RosterView>("offense");
+  const state = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError } = state;
+  const [primaryView, setPrimaryView] = useState<CareerPrimaryView>("home");
+  const [secondaryView, setSecondaryView] = useState<CareerSecondaryView>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [matchOpen, setMatchOpen] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>();
 
-  if (loading) {
-    return <LoadingScreen label="Восстановление карьеры" />;
+  if (loading) return <LoadingScreen label="Загрузка" />;
+  if (!save || error) return <ScreenShell narrow><section className="fatal-panel"><h1>{error ?? "Карьера не найдена"}</h1><button className="button button--primary" onClick={() => navigate("/")}>Сохранения</button></section></ScreenShell>;
+
+  const careerSave = save;
+  const menuButton = <button className="icon-button icon-button--quiet" aria-label="Открыть разделы" onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button>;
+  const commonDrawer = (minimal = false) => <CareerDrawer open={drawerOpen} save={careerSave} active={secondaryView} showRecruiting={careerSave.meta.phase === "high-school-preseason"} minimal={minimal} onSelect={(view) => { setSecondaryView(view); setDrawerOpen(false); setMatchOpen(false); }} onClose={() => setDrawerOpen(false)} onExit={() => navigate("/")} />;
+
+  if (careerSave.meta.phase === "college-orientation") return (
+    <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
+      <CollegeOrientationDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onSetPriority={state.setCollegeOnboardingPriority} />
+      {commonDrawer(true)}
+    </ScreenShell>
+  );
+
+  if (careerSave.meta.phase === "professional-draft" || careerSave.meta.phase === "professional-career") return (
+    <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
+      <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} />
+      {commonDrawer(true)}
+    </ScreenShell>
+  );
+
+  if (careerSave.meta.phase === "college-season") return (
+    <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
+      <CollegeCareerDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} drawerOpen={drawerOpen} onDrawerOpenChange={setDrawerOpen} onExit={() => navigate("/")} onAdvanceDay={state.advanceDay} onUpdateTrainingPlan={state.updateTrainingPlan} onResolveDecision={state.resolveCollegeHeroDecision} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeMatch={state.finalizeCollegeMatch} onOpenProfessionalDraft={state.openProfessionalDraft} />
+    </ScreenShell>
+  );
+
+  function openTeam(teamId?: string) {
+    setSelectedTeamId(teamId);
+    setPrimaryView("team");
+    setSecondaryView(undefined);
+    setMatchOpen(false);
   }
 
-  if (!save || error) {
-    return (
-      <ScreenShell narrow>
-        <section className="fatal-panel">
-          <span className="eyebrow">Сохранение недоступно</span>
-          <h1>{error ?? "Карьера не найдена"}</h1>
-          <button className="button button--primary" onClick={() => navigate("/")}>К списку карьер</button>
-        </section>
-      </ScreenShell>
-    );
+  function selectPrimary(view: CareerPrimaryView) {
+    setPrimaryView(view);
+    setSecondaryView(undefined);
+    setMatchOpen(false);
+    if (view !== "team") setSelectedTeamId(undefined);
   }
 
-  const { character, football } = save;
-
-  if (save.meta.phase === "college-orientation") {
-    return (
-      <ScreenShell
-        narrow
-        header={
-          <AppHeader
-            compact
-            action={
-              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
-                <Icon name="menu" />
-              </button>
-            }
-          />
-        }
-      >
-        <CollegeOrientationDashboard
-          save={save}
-          mutating={mutating}
-          {...(actionError ? { actionError } : {})}
-          onSetPriority={setCollegeOnboardingPriority}
-        />
-      </ScreenShell>
-    );
+  function renderSecondary() {
+    if (!secondaryView) return null;
+    if (secondaryView === "overview") return <CareerOverviewDashboard save={careerSave} />;
+    if (secondaryView === "season") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="season" />;
+    if (secondaryView === "matches") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="schedule" />;
+    if (secondaryView === "standings") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="standings" />;
+    if (secondaryView === "recruiting") return <RecruitingDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={state.performRecruitingAction} onCommit={state.commitToCollege} onWithdrawCommitment={state.withdrawCollegeCommitment} />;
+    if (secondaryView === "feed") return <WorldDashboard save={careerSave} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
+    return <WorldDashboard save={careerSave} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
   }
-
-  if (save.meta.phase === "professional-draft" || save.meta.phase === "professional-career") {
-    return (
-      <ScreenShell
-        narrow
-        header={
-          <AppHeader
-            compact
-            action={
-              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
-                <Icon name="menu" />
-              </button>
-            }
-          />
-        }
-      >
-        <ProfessionalTransitionDashboard
-          save={save}
-          mutating={mutating}
-          {...(actionError ? { actionError } : {})}
-          onResolveDeclaration={resolveProfessionalDeclaration}
-          onSelectAgent={selectProfessionalAgent}
-          onCompleteEvaluation={completeProfessionalEvaluation}
-          onRunDraft={runProfessionalDraft}
-          onAcceptCampInvite={acceptProfessionalCampInvite}
-          onAdvanceCamp={advanceProfessionalTrainingCamp}
-        />
-      </ScreenShell>
-    );
-  }
-
-  if (save.meta.phase === "college-season") {
-    return (
-      <ScreenShell
-        narrow
-        header={
-          <AppHeader
-            compact
-            action={
-              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
-                <Icon name="menu" />
-              </button>
-            }
-          />
-        }
-      >
-        <CollegeCareerDashboard
-          save={save}
-          mutating={mutating}
-          {...(actionError ? { actionError } : {})}
-          onAdvanceDay={advanceDay}
-          onUpdateTrainingPlan={updateTrainingPlan}
-          onResolveDecision={resolveCollegeHeroDecision}
-          onStartMatch={startMatch}
-          onResolveMatchDecision={resolveMatchDecision}
-          onFinalizeMatch={finalizeCollegeMatch}
-          onOpenProfessionalDraft={openProfessionalDraft}
-        />
-      </ScreenShell>
-    );
-  }
-
-  const positionRivals = football.roster
-    .filter((player) => player.position === football.position)
-    .sort((left, right) => (right.overall * 0.72 + right.coachStanding * 0.28) - (left.overall * 0.72 + left.coachStanding * 0.28));
-  const depthRoom: Array<{ id: string; name: string; year: string; style: string; overall: number; status: string; isHero: boolean }> = positionRivals.map((player) => ({
-    id: player.id, name: player.name, year: player.year, style: player.style, overall: player.overall, status: player.status, isHero: false,
-  }));
-  depthRoom.splice(Math.max(0, football.depthChart.rank - 1), 0, {
-    id: "hero", name: character.identity.fullName, year: "Senior", style: football.archetypeName, overall: football.ratings.overall, status: football.depthChart.projectedRole, isHero: true,
-  });
-  const visibleRoster = football.roster
-    .filter((player) => player.unit === rosterView)
-    .sort((left, right) => left.position.localeCompare(right.position) || left.depthRank - right.depthRank);
 
   return (
-    <ScreenShell
-      header={
-        <AppHeader
-          compact
-          action={
-            <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
-              <Icon name="menu" />
-            </button>
-          }
-        />
-      }
-      className="career-experience"
-      footer={<CareerNavigation active={activeTab} onChange={(view) => { setUtilityView(null); setActiveTab(view); }} />}
-    >
-      <div className="career-layout career-layout--compact">
-        <aside className="career-sidebar career-sidebar--compact">
-          <div className="career-sidebar__logo"><span>{football.position}</span><strong>#{String(football.jerseyNumber).padStart(2, "0")}</strong></div>
-          <CareerNavigation variant="rail" active={activeTab} onChange={(view) => { setUtilityView(null); setActiveTab(view); }} />
-          <div className="career-sidebar__utilities">
-            <button type="button" className={utilityView === "team" ? "is-active" : ""} onClick={() => setUtilityView("team")}><Icon name="team" /><span>Команда</span></button>
-            <button type="button" className={utilityView === "profile" ? "is-active" : ""} onClick={() => setUtilityView("profile")}><Icon name="user" /><span>Профиль</span></button>
-          </div>
-          <div className="career-sidebar__season">
-            <small>SENIOR SEASON</small>
-            <strong>W{football.season.week} · {football.season.wins}–{football.season.losses}</strong>
-            <span>{football.school.shortName} {football.school.mascot}</span>
-          </div>
-        </aside>
-
-        <div className={`career-main career-main--${activeTab}${utilityView ? " career-main--utility" : ""}`}>
-          <PlayerIdentityBar compact={activeTab !== "today" || utilityView !== null} save={save} onOpenTeam={() => setUtilityView("team")} onOpenProfile={() => setUtilityView("profile")} />
-
-          {utilityView && (
-            <header className="utility-view-head">
-              <button type="button" className="icon-button icon-button--quiet" onClick={() => setUtilityView(null)} aria-label="Вернуться"><Icon name="arrow-left" /></button>
-              <div><small>Быстрый доступ</small><strong>{utilityView === "match" ? "Матч" : utilityView === "team" ? "Команда" : "Профиль"}</strong></div>
-            </header>
-          )}
-
-          {!utilityView && activeTab === "today" && (
-            <TodayDashboard
-              save={save}
-              mutating={mutating}
-              {...(actionError ? { actionError } : {})}
-              onUpdatePlan={updateWeeklyPlan}
-              onUpdateTrainingPlan={updateTrainingPlan}
-              onAdvanceDay={advanceDay}
-              onResolveRelationshipEvent={resolveRelationshipEvent}
-              onOpenMatch={() => setUtilityView("match")}
-            />
-          )}
-
-          {utilityView === "match" && (
-            <MatchDashboard
-              save={save}
-              mutating={mutating}
-              {...(actionError ? { actionError } : {})}
-              onStartMatch={startMatch}
-              onResolveDecision={resolveMatchDecision}
-            />
-          )}
-
-          {!utilityView && activeTab === "world" && <WorldDashboard save={save} />}
-
-          {!utilityView && activeTab === "career" && (
-            <CareerDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenMatch={() => setUtilityView("match")} onRecruitingAction={performRecruitingAction} onCommitToCollege={commitToCollege} onWithdrawCommitment={withdrawCollegeCommitment} onSignCollegeAgreement={signCollegeAgreement} onReportToCollege={reportToCollege} />
-          )}
-
-          {utilityView === "team" && (
-            <div className="compact-section">
-              <header className="compact-page-head">
-                <div><span>{football.school.city}, {football.school.stateCode}</span><h2>Команда</h2></div>
-                <span className="team-color-dot" />
-              </header>
-              <SectionTabs<TeamView> tabs={teamViews} active={teamView} onChange={setTeamView} ariaLabel="Разделы команды" />
-
-              {teamView === "overview" && (
-                <div className="compact-view">
-                  <section className="team-card-compact team-card-compact--red">
-                    <div className="team-card-compact__mark">{football.school.shortName.slice(0, 2).toUpperCase()}</div>
-                    <div><small>{football.school.shortName}</small><h3>{football.school.mascot}</h3><p>{football.school.philosophy}</p></div>
-                    <strong>{football.school.prestige}</strong>
-                  </section>
-                  <div className="compact-stat-pair">
-                    <article><small>Твоя роль</small><strong>#{football.depthChart.rank}</strong><span>{roleLabel(football.depthChart.projectedRole)}</span></article>
-                    <article><small>До места выше</small><strong>{football.depthChart.evaluation.gap.toFixed(1)}</strong><span>{trendLabel(football.depthChart.evaluation.trend)}</span></article>
-                  </div>
-                  <section className={`staff-decision staff-decision--${football.depthChart.lastDecision.type}`}>
-                    <div><small>Решение штаба</small><h3>{football.depthChart.lastDecision.title}</h3></div>
-                    <p>{football.depthChart.lastDecision.description}</p>
-                  </section>
-                  <div className="team-action-grid">
-                    <button type="button" onClick={() => setTeamView("depth")}><Icon name="target" /><span><strong>Depth chart</strong><small>Почему ты на этом месте</small></span></button>
-                    <button type="button" onClick={() => setTeamView("roster")}><Icon name="team" /><span><strong>{football.roster.length + 1} игроков</strong><small>Полный состав программы</small></span></button>
-                    <button type="button" onClick={() => setTeamView("staff")}><Icon name="brain" /><span><strong>{football.staff.headCoach.name}</strong><small>Тренерский штаб</small></span></button>
-                  </div>
-                </div>
-              )}
-
-              {teamView === "depth" && (
-                <div className="compact-view">
-                  <section className="depth-card-compact">
-                    <header><div><small>{football.position} ROOM</small><h3>Depth chart</h3></div><span>#{football.depthChart.rank}</span></header>
-                    <div className="depth-list depth-list--compact depth-list--full">
-                      {depthRoom.map((player, index) => (
-                        <article key={player.id} className={player.isHero ? "is-player" : ""}>
-                          <span>{index + 1}</span>
-                          <div><strong>{player.name}</strong><small>{player.year} · {player.style}</small></div>
-                          <em>{player.overall}</em>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                  <section className="depth-evaluation">
-                    <header><span>Оценка штаба</span><strong>{football.depthChart.evaluation.heroScore.toFixed(1)}</strong></header>
-                    <p>{football.depthChart.evaluation.summary}</p>
-                    <ul>{football.depthChart.evaluation.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-                  </section>
-                  <MetricBar compact label="Доверие позиционного тренера" value={football.depthChart.coachTrust} />
-                </div>
-              )}
-
-              {teamView === "roster" && (
-                <div className="compact-view">
-                  <SectionTabs<RosterView> tabs={rosterViews} active={rosterView} onChange={setRosterView} ariaLabel="Группы состава" />
-                  <div className="roster-list-compact">
-                    {visibleRoster.map((player) => (
-                      <article key={player.id}>
-                        <span className="roster-position">{player.position}</span>
-                        <div><strong>{player.name}</strong><small>{player.year} · #{player.depthRank} · {player.style}</small></div>
-                        <span className={`roster-status roster-status--${player.status}`}>{player.status}</span>
-                        <em>{player.overall}</em>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {teamView === "staff" && (
-                <div className="compact-view">
-                  <div className="coach-grid">
-                    {[football.staff.headCoach, football.staff.positionCoach, football.staff.offensiveCoordinator, football.staff.defensiveCoordinator].map((coach) => (
-                      <article key={coach.id} className={coach.role === "position-coach" ? "is-key" : ""}>
-                        <header><span>{coachRoleLabel(coach.role)}</span><em>{coach.age}</em></header>
-                        <h3>{coach.name}</h3>
-                        <p>{coach.summary}</p>
-                        <div><small>Развитие <strong>{coach.development}</strong></small><small>Тактика <strong>{coach.tactics}</strong></small><small>Коммуникация <strong>{coach.communication}</strong></small></div>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="team-dynamics">
-                    <MetricBar compact label="Мораль" value={football.teamDynamics.morale} />
-                    <MetricBar compact label="Сыгранность" value={football.teamDynamics.cohesion} />
-                    <MetricBar compact label="Дисциплина" value={football.teamDynamics.discipline} />
-                    <MetricBar compact label="Знание схемы" value={football.teamDynamics.schemeMastery} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {utilityView === "profile" && (
-            <div className="compact-section">
-              <header className="compact-page-head">
-                <div><span>Personal life</span><h2>Жизнь</h2></div>
-                <strong className="compact-head-score">{football.position}</strong>
-              </header>
-              <SectionTabs<ProfileView> tabs={profileViews} active={profileView} onChange={setProfileView} ariaLabel="Разделы профиля" />
-
-              {profileView === "people" && <PeopleDashboard save={save} />}
-
-              {profileView === "body" && (
-                <div className="compact-view">
-                  <div className="body-readout body-readout--compact">
-                    <span><small>Рост</small><strong>{heightLabel(character.physical.heightInches)}</strong></span>
-                    <span><small>Вес</small><strong>{character.physical.weightLbs}</strong><em>LB</em></span>
-                    <span><small>Телосложение</small><strong>{character.physical.frame}</strong></span>
-                  </div>
-                  <div className="metric-list-card">
-                    <MetricBar compact label="Скорость" value={character.physical.speed} />
-                    <MetricBar compact label="Сила" value={character.physical.strength} />
-                    <MetricBar compact label="Ловкость" value={character.physical.agility} />
-                    <MetricBar compact label="Взрывная мощь" value={character.physical.explosiveness} />
-                    <MetricBar compact label="Выносливость" value={character.physical.stamina} />
-                  </div>
-                </div>
-              )}
-
-              {profileView === "mind" && (
-                <div className="compact-view">
-                  <section className="mindset-card-compact"><small>Архетип</small><h3>{mindsetLabels[character.personality.preset].name}</h3><p>{mindsetLabels[character.personality.preset].summary}</p></section>
-                  <div className="metric-list-card">
-                    <MetricBar compact label="Дисциплина" value={character.personality.discipline} />
-                    <MetricBar compact label="Амбиции" value={character.personality.ambition} />
-                    <MetricBar compact label="Самообладание" value={character.personality.composure} />
-                    <MetricBar compact label="Обучаемость" value={character.personality.coachability} />
-                    <MetricBar compact label="Адаптивность" value={character.personality.adaptability} />
-                  </div>
-                </div>
-              )}
-
-              {profileView === "origin" && (
-                <div className="compact-view">
-                  <section className="origin-card-compact"><Icon name="map" /><div><small>Родной город</small><h3>{character.origin.city}, {character.origin.stateCode}</h3><p>{character.origin.region}</p></div></section>
-                  <div className="info-list info-list--compact">
-                    <span><small>Финансы семьи</small><strong>{familyIncomeLabels[character.origin.familyIncome]}</strong></span>
-                    <span><small>Дом</small><strong>{familyStructureLabels[character.origin.familyStructure]}</strong></span>
-                    <span><small>Поддержка спорта</small><strong>{familySupportLabels[character.origin.familySupport]}</strong></span>
-                  </div>
-                  <div className="metric-list-card">
-                    <MetricBar compact label="Доступ к тренировкам" value={character.origin.trainingAccess} />
-                    <MetricBar compact label="Доступ к медицине" value={character.origin.medicalAccess} />
-                    <MetricBar compact label="Футбольная культура" value={character.origin.footballCulture} />
-                  </div>
-                </div>
-              )}
-
-              {profileView === "study" && (
-                <div className="compact-view">
-                  <section className="academic-card-compact">
-                    <div><small>GPA</small><strong>{character.education.gpa.toFixed(2)}</strong></div>
-                    <span>{character.education.eligibilityStatus.toUpperCase()}</span>
-                  </section>
-                  <div className="metric-list-card">
-                    <MetricBar compact label="Академические способности" value={character.education.academicAbility} />
-                    <MetricBar compact label="Посещаемость" value={character.education.attendance} />
-                  </div>
-                  <div className="compact-note"><Icon name="book" /><p>Учёба влияет на eligibility и список доступных колледжей. Высокий рейтинг не отменяет академические требования.</p></div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+    <ScreenShell header={<AppHeader compact action={menuButton} />} className="career-game-shell" footer={<CareerNavigation active={primaryView} onChange={selectPrimary} />}>
+      <div className="career-game-page">
+        {matchOpen ? (
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setMatchOpen(false)}><Icon name="arrow-left" /></button><strong>Матч</strong></header><MatchDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onStartMatch={state.startMatch} onResolveDecision={state.resolveMatchDecision} /></>
+        ) : secondaryView ? (
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "recruiting" ? "Рекрутинг" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{renderSecondary()}</>
+        ) : primaryView === "profile" ? (
+          <PlayerProfileDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onSignCollege={state.signCollegeAgreement} onReportToCollege={state.reportToCollege} />
+        ) : primaryView === "team" ? (
+          <TeamProfileDashboard save={careerSave} {...(selectedTeamId ? { teamId: selectedTeamId } : {})} />
+        ) : (
+          <TodayDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onUpdatePlan={state.updateWeeklyPlan} onUpdateTrainingPlan={state.updateTrainingPlan} onAdvanceDay={state.advanceDay} onResolveRelationshipEvent={state.resolveRelationshipEvent} onOpenMatch={() => setMatchOpen(true)} />
+        )}
       </div>
+      {commonDrawer()}
     </ScreenShell>
   );
 }
