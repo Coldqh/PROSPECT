@@ -95,7 +95,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
 
   return (
     <div className="college-career-shell college-career-shell--v27">
-      <main className="college-career-main">
+      <div className="college-career-main">
         {secondaryView ? (
           <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{secondaryContent()}</>
         ) : primaryView === "profile" ? (
@@ -123,7 +123,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
             {canExploreDraft && !career.pendingDecision && <button type="button" className="college-pro-entry college-pro-entry--data" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}><span><small>DRAFT</small><strong>Открыть оценку</strong></span><Icon name="arrow-right" /></button>}
           </div>
         )}
-      </main>
+      </div>
       <CareerNavigation active={secondaryView ? undefined : primaryView} onChange={selectPrimary} />
       <CareerDrawer open={drawerOpen} save={save} active={secondaryView} onSelect={(view) => { setSecondaryView(view); onDrawerOpenChange(false); }} onClose={() => onDrawerOpenChange(false)} onExit={onExit} />
     </div>

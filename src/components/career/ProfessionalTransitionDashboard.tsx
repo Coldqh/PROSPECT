@@ -67,7 +67,7 @@ export function ProfessionalTransitionDashboard({
     <div className="professional-shell">
       <header className="elite-draft-header">
         <div className="elite-draft-header__title">
-          <span className="elite-draft-shield">DRAFT</span>
+          <span className="elite-draft-shield">PRO</span>
           <div><small>ПРОФЕССИОНАЛЬНЫЙ ДРАФТ</small><h1>{professional.draftYear}</h1><p>{statusLabel(professional.status)}</p></div>
         </div>
         <span className="elite-live-chip">LIVE</span>

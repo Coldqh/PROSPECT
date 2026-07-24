@@ -1,0 +1,403 @@
+/* Daily career home, training, plan and schedule. */
+
+.today-section { width: min(100%, var(--reading-max)); margin: 0 auto; }
+.today-section .compact-page-head {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.today-section .compact-page-head > div:first-child { min-width: 0; }
+.today-section .compact-page-head h2 { overflow-wrap: anywhere; }
+.today-head-actions { display: flex; align-items: center; gap: 6px; }
+.medical-pill {
+  min-height: 44px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.mini-week {
+  margin: 0 0 12px;
+  padding: 3px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.mini-week span {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+  border-radius: 9px;
+  color: var(--muted);
+}
+.mini-week span.is-complete { opacity: .56; }
+.mini-week span.is-current { color: #fff; background: var(--accent); box-shadow: 0 8px 22px rgba(239, 62, 82, .22); }
+.mini-week small,
+.mini-week strong { font-size: var(--type-caption-size); line-height: 16px; }
+
+.today-overview,
+.training-view,
+.compact-view { min-width: 0; }
+.today-overview { display: grid; gap: 8px; }
+
+.vital-row,
+.training-body-strip,
+.compact-forecast,
+.schedule-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--line);
+}
+.vital-row button,
+.training-body-strip > button,
+.training-body-strip > span,
+.compact-forecast span,
+.schedule-summary span {
+  position: relative;
+  min-width: 0;
+  min-height: 70px;
+  padding: 10px;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+}
+.vital-row small,
+.training-body-strip small,
+.compact-forecast small,
+.schedule-summary small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.vital-row strong,
+.training-body-strip strong,
+.compact-forecast strong,
+.schedule-summary strong { overflow: hidden; font-size: var(--type-number-size); line-height: var(--type-number-line); text-overflow: ellipsis; white-space: nowrap; }
+.vital-row i {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: ui-meter-in .65s var(--ease-emphasized) both;
+}
+.compact-forecast strong.is-danger { color: var(--danger); }
+
+.training-brief,
+.next-activity,
+.today-plan-teaser,
+.result-teaser,
+.relationship-event-teaser,
+.medical-alert {
+  width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+}
+.training-brief > div,
+.next-activity > div,
+.today-plan-teaser > div,
+.result-teaser > div,
+.relationship-event-teaser > div,
+.medical-alert > div { min-width: 0; }
+.training-brief__icon,
+.next-activity__icon,
+.today-plan-teaser > span:first-child,
+.relationship-event-teaser > span:first-child,
+.medical-alert > svg:first-child {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--surface-3);
+}
+.training-brief small,
+.next-activity small,
+.today-plan-teaser small,
+.result-teaser small,
+.relationship-event-teaser small,
+.medical-alert small { display: block; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.training-brief strong,
+.next-activity strong,
+.today-plan-teaser strong,
+.result-teaser strong,
+.relationship-event-teaser strong,
+.medical-alert strong { display: block; overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.training-brief p,
+.next-activity p,
+.today-plan-teaser p,
+.medical-alert span { margin: 1px 0 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.training-brief:hover,
+.next-activity:hover,
+.today-plan-teaser:hover { background: var(--surface-2); }
+
+.result-teaser .result-grade {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #fff;
+  background: var(--accent);
+  font-size: var(--type-section-size);
+  font-weight: 800;
+}
+
+
+.training-apply-row {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--accent);
+  text-align: left;
+  transition: transform var(--duration-fast) var(--ease-standard), background var(--duration-base);
+}
+.training-apply-row > span { min-width: 0; }
+.training-apply-row small,
+.training-apply-row strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.training-apply-row small { color: rgba(255, 255, 255, .74); }
+.training-apply-row strong { font-size: var(--type-section-size); font-weight: 650; line-height: var(--type-section-line); }
+.training-apply-row:active { transform: scale(.988); }
+.training-apply-row:disabled { opacity: 1; color: var(--muted); background: var(--surface-2); }
+.training-apply-row:disabled small { color: var(--muted); }
+
+
+.training-view { display: grid; gap: 8px; }
+.training-body-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.training-body-strip > button { min-height: 64px; }
+.training-body-strip strong { font-size: var(--type-section-size); }
+
+.training-focus-list,
+.plan-list-compact,
+.schedule-list-compact { display: grid; gap: 6px; }
+.training-focus-list button,
+.plan-list-compact button {
+  min-width: 0;
+  min-height: 66px;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+}
+.training-focus-list button.is-active,
+.plan-list-compact button.is-active { border-color: var(--accent-border); background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.training-focus-list button > span,
+.plan-list-compact__mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface-3);
+}
+.training-focus-list button > div,
+.plan-list-compact button > div { min-width: 0; }
+.training-focus-list strong,
+.plan-list-compact strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.training-focus-list small,
+.plan-list-compact small { display: block; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.training-focus-list em,
+.plan-list-compact em { color: var(--muted); font-style: normal; font-weight: 700; }
+
+.training-control-card,
+.compact-control-card {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.training-control-card header,
+.compact-control-card header { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.training-control-card header small,
+.compact-control-card header small { display: block; color: var(--muted); }
+.training-control-card header strong,
+.compact-control-card header strong { display: block; }
+.training-control-card header > span,
+.compact-control-card header > span { color: var(--accent); font-weight: 700; }
+
+.schedule-list-compact article {
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 48px 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.schedule-list-compact time { color: var(--muted); }
+.schedule-list-compact__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.schedule-list-compact article div { min-width: 0; }
+.schedule-list-compact strong,
+.schedule-list-compact small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schedule-list-compact small { color: var(--muted); }
+.schedule-list-compact em { color: var(--muted); font-style: normal; }
+
+.relationship-event-sheet { display: grid; gap: 10px; }
+.relationship-event-sheet > header {
+  padding: 11px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+}
+.relationship-event-sheet > header > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--color-accent-pressed);
+  font-weight: 700;
+}
+.relationship-event-sheet > header div { min-width: 0; }
+.relationship-event-sheet > header small { color: var(--accent); }
+.relationship-event-sheet > header strong { display: block; margin-top: 2px; }
+.relationship-event-context {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.relationship-event-context p { margin: 0; padding: 6px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.relationship-event-context p:last-child { border-bottom: 0; }
+.relationship-event-options { display: grid; gap: 7px; }
+.relationship-event-options button {
+  min-height: 62px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+}
+.relationship-event-options button:hover { border-color: var(--accent-border); background: var(--accent-soft); }
+.relationship-event-options span { color: var(--muted); }
+
+.medical-status-card {
+  min-height: 66px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.medical-status-card > svg { color: var(--accent); }
+.medical-status-card small { display: block; color: var(--muted); }
+.medical-status-card strong { display: block; margin-top: 2px; }
+.active-issue-card { margin-top: 9px; padding: 12px; border-radius: var(--radius-md); background: var(--accent-soft); }
+.active-issue-card small { color: var(--accent); }
+.active-issue-card h3 { margin: 3px 0; }
+.active-issue-card p { margin: 0; color: var(--muted); }
+
+.sheet-deltas {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--line);
+}
+.sheet-deltas span { min-height: 62px; padding: 10px; display: grid; align-content: center; gap: 2px; background: var(--surface); }
+.sheet-deltas small { color: var(--muted); }
+.sheet-deltas strong { font-size: var(--type-section-size); }
+.sheet-result__grade {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: #fff;
+  background: var(--accent);
+  font-size: 32px;
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .today-section .compact-page-head h2 { font-size: 26px; line-height: 31px; }
+  .training-body-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-list-compact article { grid-template-columns: 44px 34px minmax(0, 1fr); }
+  .schedule-list-compact em { display: none; }
+}
+
+@media (max-width: 390px) {
+  .today-section .compact-page-head { align-items: center; }
+  .today-section .compact-page-head h2 { max-width: 210px; font-size: 24px; line-height: 28px; }
+  .today-head-actions .icon-button { display: none; }
+  .mini-week { gap: 1px; }
+  .mini-week span { min-height: 44px; }
+  .vital-row button,
+  .compact-forecast span,
+  .schedule-summary span { padding-inline: 8px; }
+  .training-brief,
+  .next-activity,
+  .today-plan-teaser,
+  .result-teaser,
+  .relationship-event-teaser,
+  .medical-alert { grid-template-columns: 38px minmax(0, 1fr) 18px; padding-inline: 10px; }
+}

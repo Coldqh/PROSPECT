@@ -1,4 +1,4 @@
-import { useEffect, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { Icon, type IconName } from "../ui/Icon";
 
@@ -47,17 +47,49 @@ function seasonLine(save: CareerSave): string {
 }
 
 export function CareerDrawer({ open, save, active, showRecruiting = false, onSelect, onClose, onExit, minimal = false }: CareerDrawerProps) {
+  const dialogRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     if (!open) return undefined;
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    const focusableSelector = "button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])";
     document.body.style.overflow = "hidden";
+
+    const focusFirst = () => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(focusableSelector);
+      (first ?? dialogRef.current)?.focus();
+    };
+    const frame = window.requestAnimationFrame(focusFirst);
+
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>(focusableSelector)];
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => {
+      window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKey);
+      previousFocus?.focus();
     };
   }, [onClose, open]);
 
@@ -78,7 +110,7 @@ export function CareerDrawer({ open, save, active, showRecruiting = false, onSel
 
   return (
     <div className="game-drawer-layer" role="presentation" onMouseDown={(event: ReactMouseEvent<HTMLDivElement>) => event.currentTarget === event.target && onClose()}>
-      <aside className="game-drawer" role="dialog" aria-modal="true" aria-label="Разделы карьеры">
+      <aside ref={dialogRef} className="game-drawer" role="dialog" aria-modal="true" aria-label="Разделы карьеры" tabIndex={-1}>
         <header className="game-drawer__header">
           <div className="game-drawer__brand"><span>P</span><strong>PROSPECT</strong></div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="Закрыть панель"><Icon name="close" /></button>
@@ -110,7 +142,7 @@ export function CareerDrawer({ open, save, active, showRecruiting = false, onSel
 
         <footer className="game-drawer__footer">
           <button type="button" onClick={onExit}><Icon name="database" size={18} /><span>Сохранения</span></button>
-          <span>v0.29</span>
+          <span>PROSPECT</span>
         </footer>
       </aside>
     </div>

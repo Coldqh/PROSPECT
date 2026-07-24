@@ -99,6 +99,10 @@
   --accent-strong: var(--color-accent-hover);
   --accent-soft: var(--color-accent-soft);
   --danger: var(--color-danger);
+  --danger-soft: var(--color-danger-soft);
+  --success: var(--color-success);
+  --accent-border: var(--color-accent-border);
+  --font-size-xs: var(--type-caption-size);
   --orange: var(--color-warning);
   --blue: #7398c9;
   --shadow: var(--shadow-elevated);

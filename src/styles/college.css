@@ -1,0 +1,310 @@
+/* College career screens. */
+
+.college-career-shell { display: grid; gap: 12px; padding-bottom: calc(var(--bottom-nav-height) + var(--space-7)); }
+.college-bond-list article em.is-danger { color: var(--danger); }
+.college-career-main {
+  width: 100%;
+  max-width: 980px;
+  min-width: 0;
+  margin: 0 auto;
+  padding-top: 16px;
+  padding-bottom: calc(var(--bottom-nav-height) + 28px + env(safe-area-inset-bottom));
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
+}
+.career-overview-grid,
+.college-home-metrics,
+.college-depth-strip,
+.college-orientation-v27__metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 4px; }
+.career-overview-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+}
+.career-overview-grid small { text-transform: uppercase; color: var(--muted); font-size: var(--type-caption-size); }
+.career-overview-grid strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 19px;
+}
+.career-overview-grid span { color: var(--muted); font-size: var(--type-caption-size); }
+.career-overview-next {
+  margin-top: 10px;
+  min-height: 66px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+.career-overview-next div { flex: 1; min-width: 0; }
+.career-overview-next small,
+.college-home-game small { color: var(--muted-2); font-size: var(--type-caption-size); }
+.career-overview-next strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.career-overview-next > span { font-weight: 900; }
+.career-overview-list {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.career-overview-list article {
+  padding: 12px;
+  display: grid;
+  gap: 3px;
+  border-right: 1px solid var(--line);
+  text-align: center;
+}
+.career-overview-list article:last-child { border: 0; }
+.career-overview-list span { color: var(--muted-2); font-size: var(--type-caption-size); font-weight: 900; }
+.career-overview-list strong { font-size: 17px; }
+.college-home-metrics article,
+.college-depth-strip article,
+.college-orientation-v27__metrics article {
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+}
+.college-home-metrics small,
+.college-depth-strip small { color: var(--muted); font-size: var(--type-caption-size); }
+.college-home-metrics strong,
+.college-depth-strip strong {
+  font-size: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.college-career-shell--v27 { min-height: calc(100dvh - 58px); }
+.college-home-page {
+  margin: 0 auto;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+.college-home-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line);
+}
+.college-home-head small { color: var(--muted-2); font-size: var(--type-caption-size); letter-spacing: 0; }
+.college-home-head h1 { margin: 4px 0 0; font-size: var(--type-page-size); line-height: var(--type-page-line); }
+.college-home-head > strong { font-size: 27px; }
+.college-home-game {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 3px solid var(--accent);
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+}
+.college-home-game strong { display: block; margin-top: 4px; font-size: 19px; }
+.college-home-game > span { font-size: 25px; font-weight: 900; }
+.college-training-card--data { margin: 0; }
+.college-training-card--data .college-training-focuses button small { line-height: 1.45; }
+.college-pro-entry--data { min-height: 54px; }
+.college-pro-entry--data p { display: none; }
+.college-orientation-v27 {
+  display: grid;
+  gap: 10px;
+  width: min(100%, var(--reading-max));
+  margin: 0 auto;
+  min-width: 0;
+}
+.college-orientation-v27__head {
+  min-height: 110px;
+  padding: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+.college-orientation-v27__head small,
+.college-orientation-v27__priority header span,
+.college-orientation-v27__room header span,
+.college-orientation-v27__offseason header span {
+  color: var(--muted-2);
+  font-size: var(--type-caption-size);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+.college-orientation-v27__head h1 { margin: 4px 0; font-size: clamp(25px, 5vw, 38px); }
+.college-orientation-v27__head span { color: var(--muted); font-size: var(--type-caption-size); }
+.college-orientation-v27__head > strong { font-size: 34px; text-align: center; }
+.college-orientation-v27__head > strong small { display: block; }
+.college-orientation-v27__offseason > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  padding: 8px;
+}
+.college-orientation-v27__offseason article {
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.college-orientation-v27__metrics small,
+.college-orientation-v27__offseason small { color: var(--muted-2); font-size: var(--type-caption-size); }
+.college-orientation-v27__metrics strong,
+.college-orientation-v27__offseason strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+.college-orientation-v27__priority,
+.college-orientation-v27__room,
+.college-orientation-v27__offseason { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.college-orientation-v27__priority > header,
+.college-orientation-v27__room > header,
+.college-orientation-v27__offseason > header {
+  min-height: 43px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+.college-orientation-v27__priority > div {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.college-orientation-v27__priority button {
+  min-height: 90px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+}
+.college-orientation-v27__priority button.is-active { border-color: var(--accent); background: var(--accent-soft); }
+.college-orientation-v27__priority button > span { grid-column: 1 / -1; display: flex; gap: 5px; }
+.college-orientation-v27__priority button small {
+  padding: 4px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+}
+.college-orientation-v27__room article {
+  min-height: 52px;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+}
+.college-orientation-v27__room article.is-hero { box-shadow: inset 3px 0 0 var(--accent); background: var(--accent-soft); }
+.college-orientation-v27__room article > span { color: var(--accent); font-weight: 900; }
+.college-orientation-v27__room small { display: block; color: var(--muted-2); font-size: var(--type-caption-size); }
+.college-orientation-v27__room em { font-style: normal; font-weight: 900; text-align: right; }
+.career-overview-page {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+.college-advance-day,
+.college-pro-entry {
+  min-height: 52px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
+.college-advance-day small,
+.college-pro-entry small { color: rgba(255,255,255,.72); font-size: var(--type-caption-size); }
+.college-advance-day strong,
+.college-pro-entry strong { font-size: var(--type-body-size); font-weight: 650; }
+.college-training-card {
+  animation: ui-card-enter var(--duration-slow) var(--ease-emphasized) both;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+}
+.college-training-focuses { gap: 4px; }
+.college-training-focuses button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.college-training-focuses button.is-active { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.college-game-page {
+  width: 100%;
+  max-width: 980px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 16px max(var(--page-gutter), env(safe-area-inset-right)) calc(var(--bottom-nav-height) + 28px + env(safe-area-inset-bottom)) max(var(--page-gutter), env(safe-area-inset-left));
+}
+@media (max-width: 820px) {
+  .college-career-shell > .career-primary-nav--bottom { display: grid; }
+}
+@media (max-width: 720px) {
+  .college-career-main,
+.college-game-page { padding-top: 12px; padding-left: max(var(--page-gutter), env(safe-area-inset-left)); padding-right: max(var(--page-gutter), env(safe-area-inset-right)); }
+  .career-overview-grid,
+.college-home-metrics,
+.college-depth-strip,
+.college-orientation-v27__metrics,
+.college-orientation-v27__offseason > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .career-overview-list { grid-template-columns: repeat(5, minmax(0,1fr)); }
+  .career-overview-list article { padding: 10px 4px; }
+  .college-orientation-v27__priority > div { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .college-home-page { gap: 8px; }
+  .college-home-head { min-height: 58px; }
+  .college-home-head h1 { font-size: 25px; }
+  .college-training-focuses { grid-template-columns: 1fr !important; }
+  .college-orientation-v27__head { min-height: 96px; padding: 13px; }
+  .college-orientation-v27__head h1 { font-size: 23px; }
+  .college-career-main { padding-top: 12px; }
+}

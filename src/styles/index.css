@@ -1,9 +1,16 @@
-@layer legacy, redesign, refinement, game, visual, elite;
 @import "./tokens.css";
-@import "./legacy.css" layer(legacy);
-@import "./redesign.css" layer(redesign);
-@import "./refinement.css" layer(refinement);
-@import "./game.css" layer(game);
-@import "./visual-system-v2.css" layer(visual);
-
-@import "./elite-ui.css" layer(elite);
+@import "./foundation.css";
+@import "./navigation.css";
+@import "./flows.css";
+@import "./career-common.css";
+@import "./home.css";
+@import "./profile.css";
+@import "./team.css";
+@import "./social.css";
+@import "./season.css";
+@import "./recruiting.css";
+@import "./world.css";
+@import "./college.css";
+@import "./match.css";
+@import "./professional.css";
+@import "./motion.css";

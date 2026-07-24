@@ -1,0 +1,157 @@
+/* Social life and relationships. */
+
+.social-life-page { width: 100%; min-width: 0; }
+.social-life-page.elite-page { display: grid; gap: 12px; }
+
+.social-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--line);
+}
+.social-summary-strip article {
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  background: var(--surface);
+}
+.social-summary-strip small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.social-summary-strip strong { font-size: var(--type-number-size); line-height: var(--type-number-line); }
+
+.social-priority-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 96px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: linear-gradient(120deg, var(--accent-soft), var(--surface) 62%);
+}
+.social-priority-card__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--accent);
+  background: rgba(239, 62, 82, .1);
+}
+.social-priority-card > div:nth-child(2) { min-width: 0; }
+.social-priority-card small { color: var(--accent); }
+.social-priority-card h2 { margin: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.social-priority-card p {
+  margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.social-contact-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 146px;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.social-contact-rail::-webkit-scrollbar { display: none; }
+.social-contact-card {
+  min-width: 0;
+  min-height: 150px;
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(150deg, rgba(239, 62, 82, .08), #0a0d12 60%);
+}
+.social-avatar {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 6px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(239, 62, 82, .24);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.social-avatar--small { width: 42px; height: 42px; margin: 0; }
+.social-contact-card strong { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.social-contact-card small { width: 100%; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.social-contact-card em { margin-top: auto; color: var(--color-success); font-style: normal; }
+
+.social-relationship-list,
+.social-event-list { display: grid; }
+.social-relationship-list article {
+  min-height: 64px;
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.social-relationship-list article:last-child,
+.social-event-list article:last-child { border-bottom: 0; }
+.social-relationship-list article > div:nth-child(2),
+.social-event-list article > div { min-width: 0; }
+.social-relationship-list strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.social-relationship-list small { display: block; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.social-relationship-value { display: grid; gap: 5px; text-align: right; }
+.social-relationship-value strong { color: var(--color-success); }
+.social-relationship-value i {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+.social-relationship-value i b { display: block; height: 100%; border-radius: inherit; background: var(--color-success); animation: ui-meter-in .65s var(--ease-emphasized) both; }
+
+.social-event-list article {
+  min-height: 74px;
+  padding: 9px 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.social-event-list strong { display: block; }
+.social-event-list small { color: var(--muted); }
+.social-event-list p {
+  margin: 3px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.social-event-list em { color: var(--color-success); font-style: normal; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .social-summary-strip article { padding-inline: 8px; }
+  .social-priority-card p { -webkit-line-clamp: 1; }
+  .social-contact-rail { grid-auto-columns: 138px; }
+}

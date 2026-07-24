@@ -121,7 +121,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
           <section className="elite-section elite-team-leaders">
             <header className="elite-section__head"><h2>Лидеры состава</h2><span>{teamPlayers.length}</span></header>
             <div>
-              {leaders.map((player) => <article key={player.id}><span>#{player.depthRank}</span><div className="elite-roster-silhouette" aria-hidden="true">{player.position}</div><small>{player.position}</small><strong>{player.name}</strong><em>OVR {Math.round(player.overall)}</em></article>)}
+              {leaders.map((player) => <article key={player.id}><span className="elite-depth-badge">#{player.depthRank}</span><div className="elite-roster-silhouette" aria-hidden="true">{player.position}</div><small>{player.position}</small><strong>{player.name}</strong><em>OVR {Math.round(player.overall)}</em></article>)}
             </div>
           </section>
 
