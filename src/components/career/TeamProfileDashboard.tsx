@@ -89,7 +89,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
           </section>
           {nextGame && (
             <section className="team-profile__next">
-              <small>СЛЕДУЮЩИЙ МАТЧ · W{nextGame.week}</small>
+              <small>Следующий матч · W{nextGame.week}</small>
               {"opponentName" in nextGame ? (
                 <><strong>{nextGame.opponentName}</strong><span>{nextGame.home ? "Дома" : "В гостях"} · {nextGame.opponentRating} OVR</span></>
               ) : (
@@ -98,7 +98,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
             </section>
           )}
           <section className="team-profile__results">
-            <header><span>ПОСЛЕДНИЕ МАТЧИ</span><strong>{lastGames.length}</strong></header>
+            <header><span>Последние матчи</span><strong>{lastGames.length}</strong></header>
             {lastGames.length === 0 ? <div className="data-empty">Нет результатов</div> : lastGames.map((game) => {
               if ("opponentName" in game) {
                 return <article key={game.id}><span>{game.won ? "W" : "L"}</span><div><strong>{game.opponentName}</strong><small>W{game.week}</small></div><em>{game.heroScore}:{game.opponentScore}</em></article>;
@@ -132,8 +132,8 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
         <div className="team-profile__body">
           {worldTeam ? (
             <>
-              <section className="team-profile__system-title"><small>АТАКА</small><strong>{offenseSystemLabel(worldTeam.tactical.offenseSystem)}</strong><span>{worldTeam.offenseStyle}</span></section>
-              <section className="team-profile__system-title"><small>ЗАЩИТА</small><strong>{defenseSystemLabel(worldTeam.tactical.defenseSystem)}</strong><span>{worldTeam.defenseStyle}</span></section>
+              <section className="team-profile__system-title"><small>Атака</small><strong>{offenseSystemLabel(worldTeam.tactical.offenseSystem)}</strong><span>{worldTeam.offenseStyle}</span></section>
+              <section className="team-profile__system-title"><small>Защита</small><strong>{defenseSystemLabel(worldTeam.tactical.defenseSystem)}</strong><span>{worldTeam.defenseStyle}</span></section>
               <section className="team-profile__metrics">
                 <article><small>Установка</small><strong>{Math.round(worldTeam.tactical.installation)}</strong></article>
                 <article><small>Связность</small><strong>{Math.round(worldTeam.tactical.continuity)}</strong></article>
@@ -143,7 +143,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
             </>
           ) : (
             <>
-              <section className="team-profile__system-title"><small>ФИЛОСОФИЯ</small><strong>{save.football.school.philosophy}</strong></section>
+              <section className="team-profile__system-title"><small>Философия</small><strong>{save.football.school.philosophy}</strong></section>
               <section className="team-profile__metrics">
                 <article><small>Схема</small><strong>{Math.round(save.football.teamDynamics.schemeMastery)}</strong></article>
                 <article><small>Дисциплина</small><strong>{Math.round(save.football.teamDynamics.discipline)}</strong></article>
@@ -173,7 +173,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
               <article><small>База</small><strong>{Math.round(save.football.school.facilities)}</strong></article>
               <article><small>Тренеры</small><strong>{Math.round(save.football.school.coaching)}</strong></article>
               <article><small>Медицина</small><strong>{Math.round(save.football.school.medicine)}</strong></article>
-              <article><small>Discipline</small><strong>{Math.round(save.football.school.discipline)}</strong></article>
+              <article><small>Дисциплина</small><strong>{Math.round(save.football.school.discipline)}</strong></article>
             </>
           )}
         </div>

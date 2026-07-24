@@ -83,7 +83,7 @@ export default function CareerOverviewScreen() {
   }
 
   return (
-    <ScreenShell header={<AppHeader compact action={menuButton} />} className="career-game-shell" footer={<CareerNavigation active={primaryView} onChange={selectPrimary} />}>
+    <ScreenShell header={<AppHeader compact action={menuButton} />} className="career-game-shell" footer={<CareerNavigation active={secondaryView || matchOpen ? undefined : primaryView} onChange={selectPrimary} />}>
       <div className="career-game-page">
         {matchOpen ? (
           <><header className="secondary-page-bar"><button type="button" onClick={() => setMatchOpen(false)}><Icon name="arrow-left" /></button><strong>Матч</strong></header><MatchDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onStartMatch={state.startMatch} onResolveDecision={state.resolveMatchDecision} /></>

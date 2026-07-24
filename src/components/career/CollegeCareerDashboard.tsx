@@ -122,7 +122,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
           </div>
         )}
       </main>
-      <CareerNavigation active={primaryView} onChange={selectPrimary} />
+      <CareerNavigation active={secondaryView ? undefined : primaryView} onChange={selectPrimary} />
       <CareerDrawer open={drawerOpen} save={save} active={secondaryView} onSelect={(view) => { setSecondaryView(view); onDrawerOpenChange(false); }} onClose={() => onDrawerOpenChange(false)} onExit={onExit} />
     </div>
   );

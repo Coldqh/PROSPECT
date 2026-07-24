@@ -1,6 +1,7 @@
-@layer legacy, redesign, refinement, game;
+@layer legacy, redesign, refinement, game, visual;
 @import "./tokens.css";
 @import "./legacy.css" layer(legacy);
 @import "./redesign.css" layer(redesign);
 @import "./refinement.css" layer(refinement);
 @import "./game.css" layer(game);
+@import "./visual-system-v2.css" layer(visual);

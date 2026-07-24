@@ -9,7 +9,7 @@ const items = [
 ] as const satisfies readonly { id: CareerPrimaryView; label: string; icon: IconName }[];
 
 interface CareerNavigationProps {
-  active: CareerPrimaryView;
+  active?: CareerPrimaryView | undefined;
   onChange(view: CareerPrimaryView): void;
 }
 

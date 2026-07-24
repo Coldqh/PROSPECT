@@ -222,3 +222,16 @@
 - career saves use compact rows with player, team, season, OVR, continue and delete actions;
 - player creation and training choices show numeric skill effects instead of descriptive copy;
 - career-index metadata is repaired automatically without changing save schema.
+
+
+## v0.28 — Mobile visual system
+
+- Inter is the only application font;
+- page, section, body, caption and numeric text use one fixed scale;
+- mobile content uses a 20 px gutter and a 4 px spacing grid;
+- ordinary cards are capped at 16 px radius;
+- decorative nested surfaces are flattened;
+- borders are limited to structural separators;
+- the career library, creator, Home, Profile, Team and World use denser layouts;
+- secondary pages clear the active state in the primary navigation;
+- no game state or save migration changes.

@@ -104,7 +104,7 @@ export default function NewCareerScreen() {
   }
 
   return (
-    <ScreenShell className="new-career" header={<AppHeader compact context="NEW CAREER" action={<button className="icon-button" aria-label="Закрыть" onClick={() => navigate("/")}><Icon name="close" /></button>} />}>
+    <ScreenShell className="new-career" header={<AppHeader compact context="Новая карьера" action={<button className="icon-button" aria-label="Закрыть" onClick={() => navigate("/")}><Icon name="close" /></button>} />}>
       <div className="new-career__shell">
         <header className="new-career__progress">
           <div><small>{String(stepIndex + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")}</small><strong>{steps[stepIndex]?.label}</strong></div>

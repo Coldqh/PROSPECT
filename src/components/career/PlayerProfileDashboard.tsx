@@ -20,10 +20,10 @@ function heightLabel(inches: number): string {
 
 function potentialLabel(value: CareerSave["football"]["ratings"]["potentialBand"]): string {
   return {
-    "role-player": "ROLE",
-    starter: "STARTER",
-    "high-upside": "HIGH UPSIDE",
-    "national-ceiling": "ELITE",
+    "role-player": "Роль",
+    starter: "Стартер",
+    "high-upside": "Высокий",
+    "national-ceiling": "Элита",
   }[value];
 }
 
@@ -126,14 +126,14 @@ export function PlayerProfileDashboard({ save, mutating, actionError, onResolveC
       </section>
 
       <section className="profile-section-block">
-        <header><span>СТАТИСТИКА</span><strong>{save.meta.phase === "college-season" ? collegeCareer?.seasonYear : football.season.year}</strong></header>
+        <header><span>Статистика</span><strong>{save.meta.phase === "college-season" ? collegeCareer?.seasonYear : football.season.year}</strong></header>
         <div className="profile-stat-grid">
           {stats.map((stat) => <article key={stat.label}><small>{stat.label}</small><strong>{stat.value}</strong><span>{stat.detail}</span></article>)}
         </div>
       </section>
 
       <section className="profile-section-block">
-        <header><span>ФИЗИКА</span><strong>{heightLabel(character.physical.heightInches)} · {character.physical.weightLbs} LB</strong></header>
+        <header><span>Физика</span><strong>{heightLabel(character.physical.heightInches)} · {character.physical.weightLbs} LB</strong></header>
         <div className="profile-skill-list">
           {[
             ["Скорость", character.physical.speed],
@@ -147,17 +147,17 @@ export function PlayerProfileDashboard({ save, mutating, actionError, onResolveC
 
       <section className="profile-section-block profile-section-block--split">
         <article><small>Характер</small><strong>{mindsetLabels[character.personality.preset].name}</strong><span>Дисциплина {Math.round(character.personality.discipline)} · Самообладание {Math.round(character.personality.composure)}</span></article>
-        <article><small>Учёба</small><strong>GPA {character.education.gpa.toFixed(2)}</strong><span>{character.education.eligibilityStatus.toUpperCase()} · посещаемость {Math.round(character.education.attendance)}</span></article>
+        <article><small>Учёба</small><strong>GPA {character.education.gpa.toFixed(2)}</strong><span>{character.education.eligibilityStatus} · посещаемость {Math.round(character.education.attendance)}</span></article>
         <article><small>Состояние</small><strong>{Math.round(character.condition.health)} HP</strong><span>Энергия {Math.round(character.condition.energy)} · стресс {Math.round(character.condition.stress)}</span></article>
       </section>
 
       {heroBonds.length > 0 && (
         <section className="profile-section-block">
-          <header><span>СВЯЗИ</span><strong>{heroBonds.length}</strong></header>
+          <header><span>Связи</span><strong>{heroBonds.length}</strong></header>
           <div className="profile-bond-list">
             {heroBonds.map((bond) => {
               const otherId = bond.entityAId === "hero" ? bond.entityBId : bond.entityAId;
-              return <article key={bond.id}><div><strong>{counterpartName(otherId)}</strong><small>{bond.kind}</small></div><span>TR {Math.round(bond.trust)}</span><span>TN {Math.round(bond.tension)}</span></article>;
+              return <article key={bond.id}><div><strong>{counterpartName(otherId)}</strong><small>{bond.kind}</small></div><span>Доверие {Math.round(bond.trust)}</span><span>Напряжение {Math.round(bond.tension)}</span></article>;
             })}
           </div>
         </section>
@@ -165,7 +165,7 @@ export function PlayerProfileDashboard({ save, mutating, actionError, onResolveC
 
       {collegeCareer?.pendingDecision && onResolveCollegeDecision && (
         <section className="profile-decision-block">
-          <header><Icon name="target" /><div><small>РЕШЕНИЕ</small><strong>{collegeCareer.pendingDecision.title}</strong></div></header>
+          <header><Icon name="target" /><div><small>Решение</small><strong>{collegeCareer.pendingDecision.title}</strong></div></header>
           <div>
             {collegeCareer.pendingDecision.options.map((option) => (
               <button type="button" key={option.id} disabled={mutating} onClick={() => void onResolveCollegeDecision(option.id)}>

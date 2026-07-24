@@ -70,15 +70,14 @@ export default function CareerLibraryScreen() {
   }
 
   return (
-    <ScreenShell header={<AppHeader context="CAREERS" />} className="game-library">
+    <ScreenShell header={<AppHeader context="Карьеры" />} className="game-library">
       <input ref={fileInput} className="visually-hidden" type="file" accept="application/json,.json" onChange={(event) => void handleImport(event.target.files?.[0])} />
 
       <section className="game-library-hero">
-        <div className="game-library-hero__field" aria-hidden="true"><i /><i /><i /><b>P</b></div>
         <div className="game-library-hero__copy">
-          <small>PROSPECT · 0.27</small>
-          <h1>{latest ? latest.displayName : "NEW CAREER"}</h1>
-          <p>{latest ? `${latest.position} · OVR ${Math.round(latest.overall)} · ${latest.schoolName}` : "AMERICAN FOOTBALL"}</p>
+          <small>PROSPECT</small>
+          <h1>{latest ? latest.displayName : "Карьеры"}</h1>
+          <p>{latest ? `${latest.position} · ${Math.round(latest.overall)} OVR · ${latest.schoolName}` : "American Football"}</p>
         </div>
         <div className="game-library-hero__actions">
           {latest && <button type="button" className="button button--ghost" onClick={() => navigate(`/career/${latest.id}`)}>Продолжить <Icon name="arrow-right" /></button>}
@@ -88,7 +87,7 @@ export default function CareerLibraryScreen() {
 
       <section className="game-library-list">
         <header className="game-library-toolbar">
-          <div><small>СОХРАНЕНИЯ</small><strong>{careers.length}</strong></div>
+          <div><strong>Сохранения</strong><small>{careers.length}</small></div>
           <label><Icon name="search" size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск" aria-label="Поиск карьер" /></label>
           <button type="button" onClick={() => fileInput.current?.click()}><Icon name="upload" size={17} /> Импорт</button>
         </header>
