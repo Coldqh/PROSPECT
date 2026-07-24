@@ -10,7 +10,8 @@ export type CollegeHeroRole = "starter" | "rotation" | "special-teams" | "develo
 export type CollegeTransferIntent = "stay" | "open" | "portal";
 export type CollegeRedshirtStatus = "active" | "candidate" | "used";
 export type CollegePromiseStatus = "active" | "kept" | "broken";
-export type CollegeHeroDecisionKind = "coach-meeting" | "position-rivalry" | "transfer-window";
+export type CollegeHeroDecisionKind = "coach-meeting" | "position-rivalry" | "transfer-window" | "transfer-destination";
+export type CollegeHeroCareerStatus = "active" | "complete";
 
 export interface CollegeProgramIdentity {
   id: string;
@@ -88,6 +89,46 @@ export interface CollegeHeroGameLog {
   started: boolean;
   grade: "A" | "B" | "C" | "D";
   role: CollegeHeroRole;
+  spotlight?: string | undefined;
+  stats?: {
+    passingYards: number;
+    rushingYards: number;
+    receivingYards: number;
+    touchdowns: number;
+    turnovers: number;
+    tackles: number;
+    sacks: number;
+    interceptions: number;
+  } | undefined;
+}
+
+export interface CollegeHeroSeasonSummary {
+  seasonYear: number;
+  classYear: CollegePlayerYear;
+  teamId: string;
+  teamName: string;
+  wins: number;
+  losses: number;
+  role: CollegeHeroRole;
+  gamesPlayed: number;
+  starts: number;
+  snaps: number;
+  averageGrade: "A" | "B" | "C" | "D";
+  redshirted: boolean;
+  overallStart: number;
+  overallEnd: number;
+  coachTrustEnd: number;
+  awards: string[];
+}
+
+export interface CollegeTransferOffer {
+  teamId: string;
+  teamName: string;
+  shortName: string;
+  projectedRole: CollegeHeroRole;
+  schemeFit: number;
+  scholarship: boolean;
+  summary: string;
 }
 
 export interface CollegeHeroWeekLog {
@@ -103,9 +144,12 @@ export interface CollegeHeroWeekLog {
 }
 
 export interface FootballCollegeHeroCareer {
-  version: 1;
+  version: 2;
+  status: CollegeHeroCareerStatus;
   teamId: string;
   seasonYear: number;
+  classYear: CollegePlayerYear;
+  eligibilityYears: number;
   week: number;
   role: CollegeHeroRole;
   depthRank: number;
@@ -116,15 +160,20 @@ export interface FootballCollegeHeroCareer {
   seasonSnaps: number;
   gamesPlayed: number;
   starts: number;
+  careerSnaps: number;
+  careerGames: number;
+  careerStarts: number;
+  seasonOverallStart: number;
   redshirtStatus: CollegeRedshirtStatus;
   transferIntent: CollegeTransferIntent;
+  transferOffers: CollegeTransferOffer[];
   promises: CollegeHeroPromise[];
   pendingDecision?: CollegeHeroDecision | undefined;
   gameLog: CollegeHeroGameLog[];
   weekLog: CollegeHeroWeekLog[];
+  seasonHistory: CollegeHeroSeasonSummary[];
   lastSummary: string;
 }
-
 export interface FootballCollegeState {
   moduleVersion: 1;
   status: CollegeTransitionStatus;
