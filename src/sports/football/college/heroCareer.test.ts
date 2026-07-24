@@ -4,7 +4,8 @@ import { createFootballCareerState, createLegacyFootballSetup } from "../career/
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
-import { advanceCollegeCareerDay, resolveCollegeHeroDecision } from "./heroCareer";
+import { advanceCollegeCareerDay, finalizeCollegeMatch, isCollegeMatchAwaitingResolution, resolveCollegeHeroDecision, synchronizeCollegeHeroAfterWorld } from "./heroCareer";
+import { resolveMatchDecision, startMatch } from "../matches/simulateMatch";
 import { collegeDecisionPrograms, reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "./transition";
 
 function activeCollegeCareer(seed = "hero-college-test"): CareerSave {
@@ -60,6 +61,18 @@ function activeCollegeCareer(seed = "hero-college-test"): CareerSave {
   );
 }
 
+
+function playReadyCollegeMatch(save: CareerSave): CareerSave {
+  if (!isCollegeMatchAwaitingResolution(save)) return save;
+  let next = save.football.match.status === "upcoming" ? startMatch(save) : save;
+  while (next.football.match.status === "in-progress") {
+    const option = next.football.match.currentEpisode?.options[0];
+    if (!option) throw new Error("Interactive match has no decision");
+    next = resolveMatchDecision(next, option.id);
+  }
+  return finalizeCollegeMatch(next);
+}
+
 describe("college hero career", () => {
   it("activates the hero inside the real college roster", () => {
     const save = activeCollegeCareer();
@@ -80,9 +93,16 @@ describe("college hero career", () => {
         save = resolveCollegeHeroDecision(save, option.id);
       }
       save = advanceCollegeCareerDay(save);
+      save = playReadyCollegeMatch(save);
     }
     const career = save.football.college.heroCareer;
-    expect(save.world.competition.schedule.some((game) => game.status === "complete" && (game.homeTeamId === career?.teamId || game.awayTeamId === career?.teamId))).toBe(true);
+    const logged = career?.gameLog.at(-1);
+    const official = logged ? save.world.competition.schedule.find((game) => game.id === logged.id) : undefined;
+    expect(official?.status).toBe("complete");
+    expect(logged?.score).toBe(official && career
+      ? `${official.homeTeamId === career.teamId ? official.homeScore : official.awayScore}–${official.homeTeamId === career.teamId ? official.awayScore : official.homeScore}`
+      : undefined);
+    expect(logged?.stats).toBeDefined();
     expect(career?.gameLog.length).toBeGreaterThan(0);
     expect(career?.seasonSnaps).toBeGreaterThanOrEqual(0);
     expect(save.football.college.positionRoom[0]?.depthRank).toBe(1);
@@ -119,5 +139,88 @@ describe("college hero career", () => {
     expect(resolved.football.college.heroCareer?.transferIntent).toBe("portal");
     expect(resolved.world.players.find((player) => player.isHero)?.transferStatus).toBe("portal");
     expect(resolved.world.transactions.at(-1)?.kind).toBe("portal-entry");
+    expect(resolved.football.college.heroCareer?.pendingDecision?.kind).toBe("transfer-destination");
+    const destination = resolved.football.college.heroCareer?.transferOffers[0];
+    if (!destination) throw new Error("Portal returned no destination");
+    const transferred = resolveCollegeHeroDecision(resolved, `transfer:${destination.teamId}`);
+    expect(transferred.football.college.heroCareer?.teamId).toBe(destination.teamId);
+    expect(transferred.world.players.find((player) => player.isHero)?.teamId).toBe(destination.teamId);
+    expect(transferred.world.transactions.at(-1)?.kind).toBe("transfer");
+    expect(transferred.world.social.bonds.some((bond) => bond.active && bond.teamId === destination.teamId && (bond.entityAId === "hero" || bond.entityBId === "hero"))).toBe(true);
+    expect(transferred.football.college.positionRoom.some((player) => player.isHero)).toBe(true);
+  });
+
+  it("archives a completed year and carries career totals into the next season", () => {
+    const save = activeCollegeCareer("hero-college-rollover");
+    const career = save.football.college.heroCareer;
+    if (!career) throw new Error("No hero career");
+    const advancedWorld = {
+      ...save.world,
+      seasonYear: save.world.seasonYear + 1,
+      seasonWeek: 1,
+      players: save.world.players.map((player) => player.isHero ? {
+        ...player,
+        classYear: "Sophomore" as const,
+        eligibilityYears: 3,
+      } : player),
+      teamHistory: [
+        ...save.world.teamHistory,
+        {
+          id: "hero-rollover-record",
+          seasonYear: career.seasonYear,
+          teamId: career.teamId,
+          conferenceId: save.world.teams.find((team) => team.id === career.teamId)?.conferenceId ?? "test",
+          wins: 8,
+          losses: 4,
+          conferenceWins: 5,
+          conferenceLosses: 3,
+          finalRating: 80,
+          finish: 12,
+          conferenceChampion: false,
+        },
+      ],
+    };
+    const rolled = synchronizeCollegeHeroAfterWorld({
+      ...save,
+      world: advancedWorld,
+      football: {
+        ...save.football,
+        college: {
+          ...save.football.college,
+          heroCareer: { ...career, gamesPlayed: 9, starts: 4, seasonSnaps: 310 },
+        },
+      },
+    }, { ...career, gamesPlayed: 9, starts: 4, seasonSnaps: 310 });
+    expect(rolled.football.college.heroCareer?.seasonHistory).toHaveLength(1);
+    expect(rolled.football.college.heroCareer?.careerSnaps).toBe(310);
+    expect(rolled.football.college.heroCareer?.gamesPlayed).toBe(0);
+    expect(rolled.football.college.heroCareer?.classYear).toBe("Sophomore");
+  });
+
+  it("preserves eligibility and class year when the redshirt threshold is not exceeded", () => {
+    const save = activeCollegeCareer("hero-college-redshirt");
+    const career = save.football.college.heroCareer;
+    const hero = save.world.players.find((player) => player.isHero);
+    if (!career || !hero) throw new Error("No active hero");
+    const nextWorld = {
+      ...save.world,
+      seasonYear: save.world.seasonYear + 1,
+      seasonWeek: 1,
+      players: save.world.players.map((player) => player.isHero ? {
+        ...player,
+        classYear: career.classYear,
+        eligibilityYears: career.eligibilityYears,
+        eligibility: { ...player.eligibility, redshirtUsed: true, gamesPlayedThisSeason: 0 },
+      } : player),
+    };
+    const rolled = synchronizeCollegeHeroAfterWorld({ ...save, world: nextWorld }, {
+      ...career,
+      gamesPlayed: Math.min(2, save.world.constitution.legacyRedshirtGameLimit),
+      seasonSnaps: 24,
+    });
+    const summary = rolled.football.college.heroCareer?.seasonHistory.at(-1);
+    expect(summary?.redshirted).toBe(true);
+    expect(rolled.football.college.heroCareer?.classYear).toBe(career.classYear);
+    expect(rolled.football.college.heroCareer?.eligibilityYears).toBe(career.eligibilityYears);
   });
 });

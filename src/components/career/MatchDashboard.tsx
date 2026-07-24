@@ -7,9 +7,19 @@ import { Icon } from "../ui/Icon";
 interface MatchDashboardProps {
   save: CareerSave;
   mutating: boolean;
-  actionError?: string;
+  actionError?: string | undefined;
   onStartMatch(): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
+  onFinalizeMatch?: (() => Promise<void>) | undefined;
+}
+
+function collegeRoleLabel(role: NonNullable<CareerSave["football"]["college"]["heroCareer"]>["role"]): string {
+  return {
+    starter: "Стартер",
+    rotation: "Ротация",
+    "special-teams": "Спецкоманды",
+    developmental: "Развитие",
+  }[role];
 }
 
 function clockLabel(seconds: number): string {
@@ -71,13 +81,17 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
   }
 }
 
-export function MatchDashboard({ save, mutating, actionError, onStartMatch, onResolveDecision }: MatchDashboardProps) {
+export function MatchDashboard({ save, mutating, actionError, onStartMatch, onResolveDecision, onFinalizeMatch }: MatchDashboardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { football, life } = save;
   const match = football.match;
   const episode = match.currentEpisode;
   const stats = useMemo(() => statLine(save), [save]);
-  const isMatchDay = life.dayIndex === 5;
+  const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
+  const isMatchDay = Boolean(collegeCareer) || life.dayIndex === 5;
+  const heroTeamName = collegeCareer
+    ? save.world.teams.find((team) => team.id === collegeCareer.teamId)?.shortName ?? save.football.college.program?.shortName ?? "PROGRAM"
+    : football.school.shortName;
 
   return (
     <div className="compact-section match-section">
@@ -95,7 +109,7 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
 
       <section className="match-scoreboard">
         <div>
-          <small>{football.school.shortName}</small>
+          <small>{heroTeamName}</small>
           <strong>{match.heroScore}</strong>
         </div>
         <span>
@@ -120,9 +134,9 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
           </section>
 
           <div className="match-readiness-strip">
-            <span><small>РОЛЬ</small><strong>#{football.depthChart.rank}</strong></span>
+            <span><small>РОЛЬ</small><strong>{collegeCareer ? collegeRoleLabel(collegeCareer.role) : `#${football.depthChart.rank}`}</strong></span>
             <span><small>ГОТОВНОСТЬ</small><strong>{Math.round(football.training.body.readiness)}</strong></span>
-            <span><small>ДОВЕРИЕ</small><strong>{Math.round(football.depthChart.coachTrust)}</strong></span>
+            <span><small>ДОВЕРИЕ</small><strong>{Math.round(collegeCareer?.coachTrust ?? football.depthChart.coachTrust)}</strong></span>
           </div>
 
           {isMatchDay ? (
@@ -191,6 +205,12 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
             <div><small>ОЦЕНКА ШТАБА</small><strong>{match.finalResult.spotlight}</strong><p>Доверие {match.finalResult.coachTrustDelta >= 0 ? "+" : ""}{match.finalResult.coachTrustDelta.toFixed(1)} · Видимость +{match.finalResult.visibilityDelta.toFixed(1)}</p></div>
           </section>
 
+          {collegeCareer && onFinalizeMatch && (
+            <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onFinalizeMatch()}>
+              <span><small>Результат войдёт в национальный календарь</small><strong>{mutating ? "Фиксация…" : "Закрыть матч"}</strong></span>
+              <Icon name="arrow-right" />
+            </button>
+          )}
           <button type="button" className="button button--ghost button--wide" onClick={() => setSheetOpen(true)}>Открыть протокол</button>
         </div>
       )}
