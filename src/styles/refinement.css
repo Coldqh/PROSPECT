@@ -793,3 +793,512 @@ body {
     margin-top: auto;
   }
 }
+
+/* v0.25 — interactive college seasons */
+.college-career-shell--match {
+  min-height: calc(100svh - 72px);
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  align-content: start;
+}
+
+.college-career-shell--match .match-section {
+  width: 100%;
+  animation: college-match-enter 220ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.college-career-shell--match .match-scoreboard {
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  background: var(--color-surface);
+}
+
+.college-career-totals {
+  border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+  background: var(--color-surface-elevated);
+}
+
+.college-season-history article {
+  grid-template-columns: 32px minmax(0, 1fr) 38px;
+}
+
+.college-season-history article > span {
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+}
+
+.college-season-history article > em {
+  color: var(--color-text-primary);
+}
+
+.college-game-log article div strong,
+.college-season-history article div strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-final-view > .primary-action-bar--match {
+  position: sticky;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 12;
+}
+
+@keyframes college-match-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 560px) {
+  .college-career-shell--match {
+    gap: 8px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .college-career-shell--match > .player-identity-bar {
+    margin-bottom: 0;
+  }
+
+  .college-career-shell--match .compact-page-head {
+    min-height: 48px;
+  }
+
+  .college-career-shell--match .match-scoreboard {
+    min-height: 112px;
+  }
+
+  .college-career-shell--match .match-scoreboard > div strong {
+    font-size: clamp(36px, 12vw, 48px);
+  }
+
+  .college-career-shell--match .match-options button {
+    min-height: 82px;
+  }
+
+  .college-career-totals strong {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .college-career-shell--match .match-section { animation: none; }
+}
+
+/* v0.26 — professional transition */
+.professional-shell {
+  display: grid;
+  gap: var(--space-4);
+  padding-bottom: max(var(--space-8), env(safe-area-inset-bottom));
+  animation: professional-enter var(--motion-medium) var(--ease-out) both;
+}
+
+.professional-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-5);
+  min-height: 168px;
+  padding: clamp(20px, 5vw, 34px);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 34%),
+    var(--color-surface);
+}
+
+.professional-header::after {
+  content: "DRAFT";
+  position: absolute;
+  right: -4px;
+  bottom: -24px;
+  color: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  font-size: clamp(76px, 17vw, 170px);
+  font-weight: 900;
+  letter-spacing: -.08em;
+  line-height: .8;
+  pointer-events: none;
+}
+
+.professional-header > div:first-child { position: relative; z-index: 1; max-width: 620px; }
+.professional-header small,
+.professional-section header small,
+.professional-decision > small,
+.professional-combine-card header small,
+.professional-board header small,
+.professional-draft-feed header small,
+.professional-outcome > small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 760;
+  letter-spacing: .12em;
+}
+
+.professional-header h1 {
+  margin: 8px 0 6px;
+  font-size: clamp(28px, 6vw, 52px);
+  line-height: .98;
+  letter-spacing: -.04em;
+}
+
+.professional-header p,
+.professional-section header p,
+.professional-decision p,
+.professional-combine-card > p,
+.professional-outcome p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.professional-stock {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 104px;
+  min-height: 112px;
+  align-content: center;
+  justify-items: center;
+  border-left: 1px solid var(--color-border);
+}
+
+.professional-stock small { color: var(--color-text-muted); font-size: 10px; text-transform: uppercase; }
+.professional-stock strong { font-size: 48px; line-height: 1; letter-spacing: -.07em; }
+.professional-stock span { color: var(--color-text-secondary); font-size: 12px; font-weight: 700; }
+.professional-stock.is-elite strong { color: var(--color-success); }
+.professional-stock.is-risk strong { color: var(--color-danger); }
+
+.professional-market-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block: 1px solid var(--color-border);
+}
+
+.professional-market-strip span {
+  display: grid;
+  gap: 2px;
+  padding: 13px 16px;
+}
+
+.professional-market-strip span + span { border-left: 1px solid var(--color-border); }
+.professional-market-strip small { color: var(--color-text-muted); font-size: 10px; }
+.professional-market-strip strong { font-size: 17px; }
+
+.professional-decision,
+.professional-section,
+.professional-combine-card,
+.professional-board,
+.professional-draft-feed,
+.professional-outcome {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.professional-decision { padding: clamp(20px, 5vw, 34px); }
+.professional-decision h2,
+.professional-section h2,
+.professional-combine-card h2,
+.professional-board h2,
+.professional-draft-feed h2,
+.professional-outcome h2 {
+  margin: 5px 0 8px;
+  font-size: clamp(21px, 4vw, 30px);
+  letter-spacing: -.025em;
+}
+
+.professional-decision > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.professional-decision button,
+.professional-agent-grid > button,
+.professional-focus-grid > button,
+.professional-invite-list > button {
+  color: inherit;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  transition: transform var(--motion-fast) var(--ease-out), border-color var(--motion-fast), background var(--motion-fast);
+}
+
+.professional-decision button:hover,
+.professional-agent-grid > button:hover,
+.professional-focus-grid > button:hover,
+.professional-invite-list > button:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.professional-decision button {
+  display: flex;
+  gap: 12px;
+  min-height: 92px;
+  align-items: center;
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.professional-decision button.is-primary {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface-elevated));
+}
+
+.professional-decision button span,
+.professional-focus-grid button { display: grid; gap: 4px; }
+.professional-decision button small,
+.professional-focus-grid button small,
+.professional-agent-grid p,
+.professional-invite-list small { color: var(--color-text-secondary); line-height: 1.35; }
+
+.professional-section { padding: clamp(18px, 4vw, 28px); }
+.professional-section > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 38%);
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.professional-section > header p { text-align: right; font-size: 13px; }
+
+.professional-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.professional-agent-grid > button {
+  display: grid;
+  gap: 18px;
+  min-height: 190px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+}
+.professional-agent-grid button > div > small { color: var(--color-accent); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.professional-agent-grid button > div > strong { display: block; margin-top: 5px; font-size: 19px; }
+.professional-agent-grid button > div > p { margin: 8px 0 0; font-size: 12px; }
+.professional-agent-grid button > section { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--color-border); padding-top: 12px; }
+.professional-agent-grid button > section span { display: grid; gap: 3px; }
+.professional-agent-grid button > section small { color: var(--color-text-muted); font-size: 9px; }
+.professional-agent-grid button > section b { font-size: 15px; }
+
+.professional-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.professional-focus-grid > button {
+  min-height: 130px;
+  align-content: end;
+  padding: 18px;
+  border-radius: var(--radius-md);
+}
+.professional-focus-grid svg { margin-bottom: 12px; color: var(--color-accent); }
+.professional-focus-grid strong { font-size: 17px; }
+
+.professional-combine-card { padding: clamp(18px, 4vw, 28px); }
+.professional-combine-card > header { display: flex; justify-content: space-between; align-items: end; }
+.professional-combine-card > header > strong { font-size: 23px; }
+.professional-combine-card .is-positive { color: var(--color-success); }
+.professional-combine-card .is-negative { color: var(--color-danger); }
+.professional-combine-card > div {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 14px 0;
+  border-block: 1px solid var(--color-border);
+}
+.professional-combine-card > div span { display: grid; gap: 3px; padding: 12px 10px; }
+.professional-combine-card > div span + span { border-left: 1px solid var(--color-border); }
+.professional-combine-card > div small { color: var(--color-text-muted); font-size: 9px; }
+.professional-combine-card > div strong { font-size: 16px; }
+
+.professional-draft-stage { display: grid; gap: 12px; }
+.professional-board,
+.professional-draft-feed { overflow: hidden; }
+.professional-board header,
+.professional-draft-feed header { padding: 18px 20px 12px; }
+.professional-board article,
+.professional-draft-feed article,
+.professional-camp-log article {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 44px;
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+}
+.professional-board article > span,
+.professional-draft-feed article > span,
+.professional-camp-log article > span { color: var(--color-text-muted); font-weight: 750; text-align: center; }
+.professional-board article div,
+.professional-draft-feed article div,
+.professional-camp-log article div { min-width: 0; }
+.professional-board article strong,
+.professional-draft-feed article strong,
+.professional-camp-log article strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.professional-board article small,
+.professional-draft-feed article small,
+.professional-camp-log article small { display: block; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.professional-board article em,
+.professional-draft-feed article em,
+.professional-camp-log article em { font-style: normal; text-align: right; font-weight: 800; }
+.professional-board article.is-hero,
+.professional-draft-feed article.is-hero { background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface)); }
+.professional-board article.is-hero > span { color: var(--color-accent); }
+
+.professional-contract-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+  margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+}
+.professional-contract-card > div { display: grid; gap: 3px; }
+.professional-contract-card > div small { color: var(--color-text-muted); }
+.professional-contract-card > div strong { font-size: 34px; letter-spacing: -.04em; }
+.professional-contract-card > div span { color: var(--color-text-secondary); }
+.professional-contract-card > section { display: flex; gap: 24px; }
+.professional-contract-card > section span { display: grid; gap: 3px; }
+.professional-contract-card > section small { color: var(--color-text-muted); font-size: 9px; }
+
+.professional-invite-list { display: grid; gap: 7px; }
+.professional-invite-list > button {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+}
+.professional-invite-list > button > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font-size: 11px;
+  font-weight: 850;
+}
+.professional-invite-list > button div { min-width: 0; }
+.professional-invite-list > button strong,
+.professional-invite-list > button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.professional-invite-list > button em { font-style: normal; text-align: right; font-size: 18px; font-weight: 800; }
+
+.professional-camp-track { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.professional-camp-track span { display: grid; place-items: center; height: 34px; border: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 11px; }
+.professional-camp-track span.is-complete { border-color: color-mix(in srgb, var(--color-success) 50%, var(--color-border)); color: var(--color-success); }
+.professional-camp-track span.is-current { border-color: var(--color-accent); color: var(--color-text-primary); }
+.professional-camp-log { margin-top: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+
+.professional-outcome {
+  display: grid;
+  justify-items: center;
+  padding: clamp(28px, 7vw, 58px) 24px;
+  text-align: center;
+}
+.professional-outcome > svg { width: 42px; height: 42px; margin-bottom: 14px; color: var(--color-accent); }
+.professional-outcome > strong { margin-top: 14px; }
+.professional-outcome--roster { border-color: color-mix(in srgb, var(--color-success) 42%, var(--color-border)); }
+.professional-outcome--roster > svg { color: var(--color-success); }
+.professional-outcome--cut { border-color: color-mix(in srgb, var(--color-danger) 42%, var(--color-border)); }
+.professional-outcome--cut > svg { color: var(--color-danger); }
+
+.college-pro-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 18px;
+  color: var(--color-text-primary);
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+}
+.college-pro-entry span { display: grid; gap: 3px; }
+.college-pro-entry small { color: var(--color-accent); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+.college-pro-entry strong { font-size: 16px; }
+.college-pro-entry p { margin: 0; color: var(--color-text-secondary); font-size: 12px; }
+
+@keyframes professional-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 700px) {
+  .professional-shell { gap: 10px; }
+  .professional-header { min-height: 144px; padding: 18px; border-radius: var(--radius-lg); }
+  .professional-header h1 { font-size: 30px; }
+  .professional-header p { font-size: 12px; }
+  .professional-stock { width: 76px; min-height: 92px; }
+  .professional-stock strong { font-size: 38px; }
+  .professional-market-strip span { padding: 10px 8px; }
+  .professional-market-strip strong { font-size: 14px; }
+  .professional-decision > div,
+  .professional-agent-grid,
+  .professional-focus-grid { grid-template-columns: 1fr; }
+  .professional-decision button { min-height: 76px; }
+  .professional-section > header { grid-template-columns: 1fr; gap: 5px; }
+  .professional-section > header p { text-align: left; }
+  .professional-agent-grid > button { min-height: 152px; }
+  .professional-focus-grid > button { min-height: 96px; align-content: center; grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; }
+  .professional-focus-grid svg { grid-row: 1 / 3; margin: 0; }
+  .professional-combine-card > div { grid-template-columns: repeat(3, 1fr); }
+  .professional-combine-card > div span:nth-child(4) { border-left: 0; }
+  .professional-combine-card > div span:nth-child(n+4) { border-top: 1px solid var(--color-border); }
+  .professional-contract-card { grid-template-columns: 1fr; gap: 12px; }
+  .professional-contract-card > section { justify-content: space-between; }
+  .professional-invite-list > button { grid-template-columns: 44px minmax(0, 1fr) 34px; }
+}
+
+@media (max-width: 420px) {
+  .professional-header { grid-template-columns: minmax(0, 1fr) 66px; gap: 10px; }
+  .professional-header h1 { font-size: 27px; }
+  .professional-market-strip small { font-size: 8px; }
+  .professional-market-strip strong { font-size: 13px; }
+  .professional-decision,
+  .professional-section,
+  .professional-combine-card { padding: 16px; }
+  .professional-agent-grid button > section { gap: 6px; }
+  .professional-board article,
+  .professional-draft-feed article,
+  .professional-camp-log article { grid-template-columns: 28px minmax(0, 1fr) 34px; padding-inline: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .professional-shell { animation: none; }
+  .professional-decision button,
+  .professional-agent-grid > button,
+  .professional-focus-grid > button,
+  .professional-invite-list > button { transition: none; }
+}
+
+/* v0.26 polish — keep the professional flow compact and non-interactive chrome honest */
+.player-identity-bar__team--static {
+  cursor: default;
+}
+
+.professional-header {
+  min-height: 126px;
+  background: var(--color-surface);
+}
+
+.professional-header::after {
+  content: none;
+}
+
+@media (max-width: 700px) {
+  .professional-header {
+    min-height: 116px;
+  }
+}

@@ -2,12 +2,14 @@ import { useState } from "react";
 import type { TrainingIntensity } from "../../core/life/types";
 import { formatGameDate } from "../../core/calendar/types";
 import type { CareerSave } from "../../storage/saves/schema";
+import { isCollegeMatchAwaitingResolution } from "../../sports/football/college/heroCareer";
 import type { CollegeHeroRole } from "../../sports/football/college/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import { Icon } from "../ui/Icon";
 import { CareerNavigation, type CareerPrimaryView } from "./CareerNavigation";
 import { PlayerIdentityBar } from "./PlayerIdentityBar";
 import { WorldDashboard } from "./WorldDashboard";
+import { MatchDashboard } from "./MatchDashboard";
 
 const focuses: readonly { id: TrainingFocusId; label: string; detail: string }[] = [
   { id: "position-craft", label: "Техника", detail: "Позиционные навыки и надёжность" },
@@ -25,6 +27,10 @@ interface CollegeCareerDashboardProps {
   onAdvanceDay(): Promise<void>;
   onUpdateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
+  onStartMatch(): Promise<void>;
+  onResolveMatchDecision(optionId: string): Promise<void>;
+  onFinalizeMatch(): Promise<void>;
+  onOpenProfessionalDraft(): Promise<void>;
 }
 
 function roleLabel(role: CollegeHeroRole): string {
@@ -57,6 +63,10 @@ export function CollegeCareerDashboard({
   onAdvanceDay,
   onUpdateTrainingPlan,
   onResolveDecision,
+  onStartMatch,
+  onResolveMatchDecision,
+  onFinalizeMatch,
+  onOpenProfessionalDraft,
 }: CollegeCareerDashboardProps) {
   const [view, setView] = useState<CareerPrimaryView>("today");
   const [focusId, setFocusId] = useState<TrainingFocusId>(save.football.training.plan.focusId);
@@ -77,6 +87,7 @@ export function CollegeCareerDashboard({
     : undefined;
   const nextOpponent = nextOpponentId ? save.world.teams.find((item) => item.id === nextOpponentId) : undefined;
   const trainingChanged = focusId !== save.football.training.plan.focusId || intensity !== save.football.training.plan.intensity;
+  const canExploreDraft = career.status === "complete" || career.classYear === "Junior" || career.classYear === "Senior" || career.seasonHistory.length >= 2;
 
   const heroBonds = save.world.social.bonds
     .filter((bond) => bond.active && bond.teamId === career.teamId && (bond.entityAId === "hero" || bond.entityBId === "hero"))
@@ -87,12 +98,28 @@ export function CollegeCareerDashboard({
     ?? save.world.coaches.find((coach) => coach.id === entityId)?.name
     ?? entityId;
 
+  if (isCollegeMatchAwaitingResolution(save)) {
+    return (
+      <div className="college-career-shell college-career-shell--match">
+        <PlayerIdentityBar save={save} compact />
+        <MatchDashboard
+          save={save}
+          mutating={mutating}
+          {...(actionError ? { actionError } : {})}
+          onStartMatch={onStartMatch}
+          onResolveDecision={onResolveMatchDecision}
+          onFinalizeMatch={onFinalizeMatch}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="college-career-shell">
       <PlayerIdentityBar save={save} compact onOpenTeam={() => setView("career")} onOpenProfile={() => setView("career")} />
 
       <header className="college-career-context">
-        <div><small>FRESHMAN · {program.city}, {program.stateCode} · W{career.week}</small><strong>{program.shortName}</strong></div>
+        <div><small>{career.classYear.toUpperCase()} · {program.city}, {program.stateCode} · W{career.week}</small><strong>{program.shortName}</strong></div>
         <span>{team?.wins ?? 0}–{team?.losses ?? 0}</span>
       </header>
 
@@ -157,10 +184,16 @@ export function CollegeCareerDashboard({
           )}
 
           {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
-          <button type="button" className="primary-action-bar college-advance-day" disabled={mutating || Boolean(career.pendingDecision)} onClick={() => void onAdvanceDay()}>
-            <span><small>{formatGameDate(save.meta.currentDate)} · {dayLabels[save.life.dayIndex]}</small><strong>{mutating ? "Симуляция…" : career.pendingDecision ? "Сначала прими решение" : "Завершить день"}</strong></span>
+          <button type="button" className="primary-action-bar college-advance-day" disabled={mutating || Boolean(career.pendingDecision) || career.status === "complete"} onClick={() => void onAdvanceDay()}>
+            <span><small>{formatGameDate(save.meta.currentDate)} · {dayLabels[save.life.dayIndex]}</small><strong>{mutating ? "Симуляция…" : career.status === "complete" ? "Eligibility завершена" : career.pendingDecision ? "Сначала прими решение" : "Завершить день"}</strong></span>
             <Icon name="arrow-right" />
           </button>
+          {canExploreDraft && !career.pendingDecision && (
+            <button type="button" className="college-pro-entry" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}>
+              <span><small>ПРОФЕССИОНАЛЬНАЯ ОЦЕНКА</small><strong>Открыть путь к драфту</strong><p>Клубы оценят производство, атлетизм, здоровье, возраст и уровень программы.</p></span>
+              <Icon name="arrow-right" />
+            </button>
+          )}
         </div>
       )}
 
@@ -232,6 +265,24 @@ export function CollegeCareerDashboard({
               </article>
             ))}
           </section>
+          <section className="college-season-strip college-career-totals">
+            <span><small>Карьера</small><strong>{career.careerGames + career.gamesPlayed} игр</strong></span>
+            <span><small>Старты</small><strong>{career.careerStarts + career.starts}</strong></span>
+            <span><small>Снэпы</small><strong>{career.careerSnaps + career.seasonSnaps}</strong></span>
+            <span><small>Eligibility</small><strong>{career.eligibilityYears}</strong></span>
+          </section>
+          {career.seasonHistory.length > 0 && (
+            <section className="college-game-log college-season-history">
+              <header><small>АРХИВ КАРЬЕРЫ</small><h3>Прошлые сезоны</h3></header>
+              {[...career.seasonHistory].reverse().map((season) => (
+                <article key={`${season.seasonYear}:${season.teamId}`}>
+                  <span className={season.wins >= season.losses ? "is-win" : "is-loss"}>{season.averageGrade}</span>
+                  <div><strong>{season.seasonYear} · {season.teamName} · {season.wins}–{season.losses}</strong><small>{season.classYear} · {season.gamesPlayed} игр · {season.snaps} снэпов{season.redshirted ? " · REDSHIRT" : ""}</small></div>
+                  <em>{Math.round(season.overallEnd)}</em>
+                </article>
+              ))}
+            </section>
+          )}
           <section className="college-transfer-card">
             <div><small>ТРАНСФЕРНЫЙ СТАТУС</small><h3>{career.transferIntent === "stay" ? "Остаётся" : career.transferIntent === "open" ? "Слушает варианты" : "В портале"}</h3><p>Решение появляется из реального положения в составе, обещаний и отношений со штабом.</p></div>
           </section>

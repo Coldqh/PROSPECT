@@ -540,6 +540,53 @@ describe("migrateCareerSave", () => {
     expect(result.save.world.social.bonds.every((bond) => bond.active)).toBe(true);
   });
 
+  it("migrates version twenty-two college careers into multi-year progression", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const collegeTeam = current.world.teams.find((team) => team.level === "college");
+    if (!collegeTeam) throw new Error("No college team");
+    const versionTwentyTwo = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 22 as const, phase: "college-season" as const },
+      football: {
+        ...current.football,
+        stage: "college-season" as const,
+        college: {
+          ...current.football.college,
+          status: "active" as const,
+          signedProgramId: collegeTeam.id,
+          heroCareer: {
+            version: 1 as const,
+            teamId: collegeTeam.id,
+            seasonYear: current.world.seasonYear,
+            week: 4,
+            role: "rotation" as const,
+            depthRank: 2,
+            coachTrust: 61,
+            lockerRoomStanding: 54,
+            practiceReps: 48,
+            weeklyPracticeGrade: "B" as const,
+            seasonSnaps: 88,
+            gamesPlayed: 4,
+            starts: 1,
+            redshirtStatus: "active" as const,
+            transferIntent: "stay" as const,
+            promises: [],
+            gameLog: [],
+            weekLog: [],
+            lastSummary: "Сезон продолжается.",
+          },
+        },
+      },
+    };
+    const result = migrateCareerSave(versionTwentyTwo);
+    expect(result.migratedFrom).toBe(22);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.college.heroCareer?.version).toBe(2);
+    expect(result.save.football.college.heroCareer?.careerSnaps).toBe(0);
+    expect(result.save.football.college.heroCareer?.seasonOverallStart).toBe(result.save.football.ratings.overall);
+    expect(result.save.football.college.heroCareer?.seasonHistory).toEqual([]);
+  });
+
   it("migrates version twenty-one saves into the active hero schema", () => {
     const current = migrateCareerSave(legacySave).save;
     const versionTwentyOne = {
@@ -551,6 +598,23 @@ describe("migrateCareerSave", () => {
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.save.football.college.heroCareer).toBeUndefined();
     expect(result.save.history.at(-1)?.title).toBe("Герой вернулся в живой мир");
+  });
+
+
+  it("migrates version twenty-three saves into the professional market", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { professional: _professional, ...legacyFootball } = current.football;
+    const versionTwentyThree = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 23 as const },
+      football: legacyFootball,
+    };
+    const result = migrateCareerSave(versionTwentyThree);
+    expect(result.migratedFrom).toBe(23);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.professional.status).toBe("dormant");
+    expect(result.save.football.professional.teams).toHaveLength(16);
+    expect(result.save.football.professional.agents.length).toBeGreaterThanOrEqual(3);
   });
 
   it("produces the same migrated athlete for the same seed", () => {

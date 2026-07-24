@@ -24,7 +24,9 @@
 - [x] Social ecosystem
 - [x] Resume hero gameplay inside the stable world
 - [x] Mobile-first editorial interface and unified navigation
-- [ ] Interactive college match layer and full multi-year athlete progression
+- [x] Interactive college match layer and full multi-year athlete progression
+- [x] Professional draft, contracts and pro football ecosystem
+- [ ] Autonomous professional league, salary cap, free agency and interactive pro seasons
 
 ## v0.11 — High school to college
 
@@ -180,3 +182,30 @@
 - Today prioritizes condition, training, schedule and one action;
 - World prioritizes stories and hides zero-value market cards;
 - no save migration required.
+
+
+## v0.25 — Interactive college career and multi-year progression
+
+- role-dependent interactive college matches use the existing offense and defense decision engine;
+- a completed interactive game overrides the autonomous result of the exact national-schedule fixture;
+- match stats, spotlight, snaps, starts and coach grade persist in the hero game log;
+- every completed college year is archived with team record, role, grade, OVR change, redshirt and awards;
+- class year, eligibility and career totals continue across seasons;
+- redshirt consumes no legacy competition season when the game limit is respected;
+- portal entry creates concrete destination offers based on position need, depth, scheme fit and scholarship capacity;
+- selecting a destination moves the hero between real rosters and deactivates old locker-room bonds;
+- deterministic migration from schema v22 to v23.
+
+
+## v0.26 — Professional draft and training camp
+
+- the athlete can return to college while eligibility remains or submit an irreversible draft declaration;
+- sixteen persistent professional clubs carry records, roster strength, cap space and position-specific needs;
+- agents trade commission and risk for negotiation skill, media reach and direct team access;
+- Combine and Pro Day produce athletic, technical, medical and interview results that move draft stock;
+- the draft class combines graduating ecosystem players with a deterministic national prospect pool;
+- seven rounds and 112 picks run autonomously, including traded selections and roster-need updates after every pick;
+- falling below the draft line opens a real undrafted free-agent market instead of a rescue selection;
+- draft slot or UDFA demand creates a rookie contract and concrete training-camp opportunity;
+- four camp sessions determine active roster, practice squad or release from actual performance, health and coach trust;
+- deterministic migration from schema v23 to v24.

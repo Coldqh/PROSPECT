@@ -4,6 +4,7 @@ import type { FootballMatchState } from "../matches/types";
 import type { FootballSeasonState } from "../season/types";
 import type { FootballRecruitingState } from "../recruiting/types";
 import type { FootballCollegeState } from "../college/types";
+import type { FootballProfessionalState } from "../pro/types";
 import type {
   DepthChartDecision,
   DepthChartEvaluation,
@@ -68,7 +69,7 @@ export interface DepthChartState {
 export interface FootballCareerState {
   moduleVersion: 8;
   worldSeed: string;
-  stage: "high-school-preseason" | "college-orientation" | "college-season";
+  stage: "high-school-preseason" | "college-orientation" | "college-season" | "professional-draft" | "professional-career";
   position: FootballPosition;
   archetypeId: string;
   archetypeName: string;
@@ -84,4 +85,5 @@ export interface FootballCareerState {
   season: FootballSeasonState;
   recruitment: FootballRecruitingState;
   college: FootballCollegeState;
+  professional: FootballProfessionalState;
 }

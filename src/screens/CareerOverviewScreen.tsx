@@ -12,6 +12,7 @@ import { CareerDashboard } from "../components/career/CareerDashboard";
 import { PeopleDashboard } from "../components/career/PeopleDashboard";
 import { CollegeOrientationDashboard } from "../components/career/CollegeOrientationDashboard";
 import { CollegeCareerDashboard } from "../components/career/CollegeCareerDashboard";
+import { ProfessionalTransitionDashboard } from "../components/career/ProfessionalTransitionDashboard";
 import { WorldDashboard } from "../components/career/WorldDashboard";
 import { CareerNavigation, type CareerPrimaryView } from "../components/career/CareerNavigation";
 import { PlayerIdentityBar } from "../components/career/PlayerIdentityBar";
@@ -70,7 +71,7 @@ function trendLabel(value: "rising" | "stable" | "falling"): string {
 export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
-  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority, resolveCollegeHeroDecision } = useCareerSave(careerId);
+  const { save, loading, error, mutating, actionError, updateWeeklyPlan, updateTrainingPlan, advanceDay, startMatch, resolveMatchDecision, finalizeCollegeMatch, resolveRelationshipEvent, performRecruitingAction, commitToCollege, withdrawCollegeCommitment, signCollegeAgreement, reportToCollege, setCollegeOnboardingPriority, resolveCollegeHeroDecision, openProfessionalDraft, resolveProfessionalDeclaration, selectProfessionalAgent, completeProfessionalEvaluation, runProfessionalDraft, acceptProfessionalCampInvite, advanceProfessionalTrainingCamp } = useCareerSave(careerId);
   const [activeTab, setActiveTab] = useState<CareerPrimaryView>("today");
   const [utilityView, setUtilityView] = useState<"match" | "team" | "profile" | null>(null);
   const [teamView, setTeamView] = useState<TeamView>("overview");
@@ -120,6 +121,36 @@ export default function CareerOverviewScreen() {
     );
   }
 
+  if (save.meta.phase === "professional-draft" || save.meta.phase === "professional-career") {
+    return (
+      <ScreenShell
+        narrow
+        header={
+          <AppHeader
+            compact
+            action={
+              <button className="icon-button icon-button--quiet" aria-label="К списку карьер" onClick={() => navigate("/")}>
+                <Icon name="menu" />
+              </button>
+            }
+          />
+        }
+      >
+        <ProfessionalTransitionDashboard
+          save={save}
+          mutating={mutating}
+          {...(actionError ? { actionError } : {})}
+          onResolveDeclaration={resolveProfessionalDeclaration}
+          onSelectAgent={selectProfessionalAgent}
+          onCompleteEvaluation={completeProfessionalEvaluation}
+          onRunDraft={runProfessionalDraft}
+          onAcceptCampInvite={acceptProfessionalCampInvite}
+          onAdvanceCamp={advanceProfessionalTrainingCamp}
+        />
+      </ScreenShell>
+    );
+  }
+
   if (save.meta.phase === "college-season") {
     return (
       <ScreenShell
@@ -142,6 +173,10 @@ export default function CareerOverviewScreen() {
           onAdvanceDay={advanceDay}
           onUpdateTrainingPlan={updateTrainingPlan}
           onResolveDecision={resolveCollegeHeroDecision}
+          onStartMatch={startMatch}
+          onResolveMatchDecision={resolveMatchDecision}
+          onFinalizeMatch={finalizeCollegeMatch}
+          onOpenProfessionalDraft={openProfessionalDraft}
         />
       </ScreenShell>
     );

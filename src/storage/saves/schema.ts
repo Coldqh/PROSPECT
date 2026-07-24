@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 22;
+export const CURRENT_SCHEMA_VERSION = 24;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -401,9 +401,10 @@ const footballRecruitingSchema = z.object({
 
 
 const collegeHeroRoleSchema = z.enum(["starter", "rotation", "special-teams", "developmental"]);
+const collegePlayerYearSchema = z.enum(["Freshman", "Sophomore", "Junior", "Senior"]);
 const collegeHeroDecisionSchema = z.object({
   id: z.string().min(1),
-  kind: z.enum(["coach-meeting", "position-rivalry", "transfer-window"]),
+  kind: z.enum(["coach-meeting", "position-rivalry", "transfer-window", "transfer-destination"]),
   createdWeek: z.number().int().min(1),
   title: z.string().min(2),
   detail: z.string().min(2),
@@ -414,9 +415,12 @@ const collegeHeroDecisionSchema = z.object({
   })).min(2),
 });
 const collegeHeroCareerSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
+  status: z.enum(["active", "complete"]),
   teamId: z.string().min(1),
   seasonYear: z.number().int(),
+  classYear: collegePlayerYearSchema,
+  eligibilityYears: z.number().int().min(0).max(6),
   week: z.number().int().min(1),
   role: collegeHeroRoleSchema,
   depthRank: z.number().int().min(1),
@@ -427,8 +431,21 @@ const collegeHeroCareerSchema = z.object({
   seasonSnaps: z.number().int().nonnegative(),
   gamesPlayed: z.number().int().nonnegative(),
   starts: z.number().int().nonnegative(),
+  careerSnaps: z.number().int().nonnegative(),
+  careerGames: z.number().int().nonnegative(),
+  careerStarts: z.number().int().nonnegative(),
+  seasonOverallStart: z.number().min(0).max(100),
   redshirtStatus: z.enum(["active", "candidate", "used"]),
   transferIntent: z.enum(["stay", "open", "portal"]),
+  transferOffers: z.array(z.object({
+    teamId: z.string().min(1),
+    teamName: z.string().min(2),
+    shortName: z.string().min(1),
+    projectedRole: collegeHeroRoleSchema,
+    schemeFit: z.number().min(0).max(100),
+    scholarship: z.boolean(),
+    summary: z.string().min(2),
+  })),
   promises: z.array(z.object({
     id: z.string().min(1),
     kind: z.literal("playing-time"),
@@ -451,6 +468,17 @@ const collegeHeroCareerSchema = z.object({
     started: z.boolean(),
     grade: z.enum(["A", "B", "C", "D"]),
     role: collegeHeroRoleSchema,
+    spotlight: z.string().min(1).optional(),
+    stats: z.object({
+      passingYards: z.number().int(),
+      rushingYards: z.number().int(),
+      receivingYards: z.number().int(),
+      touchdowns: z.number().int().nonnegative(),
+      turnovers: z.number().int().nonnegative(),
+      tackles: z.number().int().nonnegative(),
+      sacks: z.number().int().nonnegative(),
+      interceptions: z.number().int().nonnegative(),
+    }).optional(),
   })),
   weekLog: z.array(z.object({
     id: z.string().min(1),
@@ -462,6 +490,24 @@ const collegeHeroCareerSchema = z.object({
     lockerRoomStanding: z.number().min(0).max(100),
     practiceGrade: z.enum(["A", "B", "C", "D"]),
     summary: z.string().min(2),
+  })),
+  seasonHistory: z.array(z.object({
+    seasonYear: z.number().int(),
+    classYear: collegePlayerYearSchema,
+    teamId: z.string().min(1),
+    teamName: z.string().min(1),
+    wins: z.number().int().nonnegative(),
+    losses: z.number().int().nonnegative(),
+    role: collegeHeroRoleSchema,
+    gamesPlayed: z.number().int().nonnegative(),
+    starts: z.number().int().nonnegative(),
+    snaps: z.number().int().nonnegative(),
+    averageGrade: z.enum(["A", "B", "C", "D"]),
+    redshirted: z.boolean(),
+    overallStart: z.number().min(0).max(100),
+    overallEnd: z.number().min(0).max(100),
+    coachTrustEnd: z.number().min(0).max(100),
+    awards: z.array(z.string().min(1)),
   })),
   lastSummary: z.string().min(2),
 });
@@ -518,10 +564,162 @@ const footballCollegeSchema = z.object({
   heroCareer: collegeHeroCareerSchema.optional(),
 });
 
+
+const professionalPositionNeedsSchema = z.object({
+  QB: z.number().min(0).max(100),
+  RB: z.number().min(0).max(100),
+  WR: z.number().min(0).max(100),
+  LB: z.number().min(0).max(100),
+  CB: z.number().min(0).max(100),
+});
+
+const professionalStateSchema = z.object({
+  version: z.literal(1),
+  status: z.enum(["dormant", "decision", "agent-selection", "evaluation", "draft-ready", "drafted", "undrafted", "training-camp", "roster", "practice-squad", "cut"]),
+  draftYear: z.number().int().min(2020).max(2200),
+  declared: z.boolean(),
+  draftStock: z.number().min(0).max(100),
+  projectedRound: z.number().int().min(1).max(7).nullable(),
+  projectedRange: z.string().min(2),
+  agents: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(2),
+    agency: z.string().min(2),
+    reputation: z.number().min(0).max(100),
+    negotiation: z.number().min(0).max(100),
+    mediaReach: z.number().min(0).max(100),
+    teamAccess: z.number().min(0).max(100),
+    commission: z.number().min(0).max(25),
+    risk: z.number().min(0).max(100),
+    summary: z.string().min(2),
+  })).min(3),
+  selectedAgentId: z.string().min(1).optional(),
+  teams: z.array(z.object({
+    id: z.string().min(1),
+    city: z.string().min(2),
+    name: z.string().min(2),
+    shortName: z.string().min(2),
+    conference: z.enum(["AFC", "NFC"]),
+    prestige: z.number().min(0).max(100),
+    rosterStrength: z.number().min(0).max(100),
+    wins: z.number().int().nonnegative(),
+    losses: z.number().int().nonnegative(),
+    capSpace: z.number().min(0),
+    needs: professionalPositionNeedsSchema,
+  })).min(16),
+  prospects: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(2),
+    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    collegeName: z.string().min(1),
+    age: z.number().int().min(18).max(30),
+    overall: z.number().min(0).max(100),
+    potential: z.number().min(0).max(100),
+    production: z.number().min(0).max(100),
+    athleticScore: z.number().min(0).max(100),
+    medicalScore: z.number().min(0).max(100),
+    interviewScore: z.number().min(0).max(100),
+    draftGrade: z.number().min(0).max(100),
+    projectedRound: z.number().int().min(1).max(7).nullable(),
+    isHero: z.boolean(),
+  })),
+  draftOrder: z.array(z.object({
+    id: z.string().min(1),
+    round: z.number().int().min(1).max(7),
+    pickInRound: z.number().int().min(1),
+    overallPick: z.number().int().min(1),
+    originalTeamId: z.string().min(1),
+    currentTeamId: z.string().min(1),
+    traded: z.boolean(),
+  })),
+  evaluation: z.object({
+    completedOn: gameDateSchema,
+    focus: z.enum(["athletic", "technical", "interview"]),
+    fortyYard: z.number().min(3).max(7),
+    shuttle: z.number().min(3).max(7),
+    vertical: z.number().min(10).max(60),
+    benchReps: z.number().int().min(0).max(60),
+    positionDrill: z.number().min(0).max(100),
+    medical: z.number().min(0).max(100),
+    interview: z.number().min(0).max(100),
+    overallScore: z.number().min(0).max(100),
+    stockDelta: z.number().min(-30).max(30),
+    summary: z.string().min(2),
+  }).optional(),
+  draftResults: z.array(z.object({
+    id: z.string().min(1),
+    round: z.number().int().min(1).max(7),
+    pickInRound: z.number().int().min(1),
+    overallPick: z.number().int().min(1),
+    teamId: z.string().min(1),
+    prospectId: z.string().min(1),
+    prospectName: z.string().min(2),
+    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    collegeName: z.string().min(1),
+    grade: z.number().min(0).max(100),
+    isHero: z.boolean(),
+  })),
+  heroSelection: z.object({
+    id: z.string().min(1),
+    round: z.number().int().min(1).max(7),
+    pickInRound: z.number().int().min(1),
+    overallPick: z.number().int().min(1),
+    teamId: z.string().min(1),
+    prospectId: z.string().min(1),
+    prospectName: z.string().min(2),
+    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    collegeName: z.string().min(1),
+    grade: z.number().min(0).max(100),
+    isHero: z.boolean(),
+  }).optional(),
+  campInvites: z.array(z.object({
+    teamId: z.string().min(1),
+    teamName: z.string().min(2),
+    shortName: z.string().min(2),
+    signingBonus: z.number().int().nonnegative(),
+    rosterOpportunity: z.number().min(0).max(100),
+    positionCompetition: z.number().min(0).max(100),
+    schemeFit: z.number().min(0).max(100),
+    summary: z.string().min(2),
+  })),
+  contract: z.object({
+    teamId: z.string().min(1),
+    teamName: z.string().min(2),
+    years: z.number().int().min(1).max(7),
+    totalValue: z.number().int().nonnegative(),
+    guaranteed: z.number().int().nonnegative(),
+    signingBonus: z.number().int().nonnegative(),
+    salaryYearOne: z.number().int().nonnegative(),
+    agentFee: z.number().int().nonnegative(),
+    round: z.number().int().min(1).max(7).nullable(),
+    overallPick: z.number().int().min(1).nullable(),
+  }).optional(),
+  camp: z.object({
+    teamId: z.string().min(1),
+    day: z.number().int().min(1).max(10),
+    totalDays: z.number().int().min(1).max(10),
+    coachTrust: z.number().min(0).max(100),
+    rosterRank: z.number().int().min(1),
+    playersAtPosition: z.number().int().min(1),
+    sessions: z.array(z.object({
+      id: z.string().min(1),
+      day: z.number().int().min(1),
+      approach: z.enum(["controlled", "balanced", "aggressive"]),
+      grade: z.enum(["A", "B", "C", "D"]),
+      performance: z.number().min(0).max(100),
+      healthDelta: z.number(),
+      coachTrustDelta: z.number(),
+      summary: z.string().min(2),
+    })),
+    outcome: z.enum(["active-roster", "practice-squad", "released"]).optional(),
+  }).optional(),
+  lastSummary: z.string().min(2),
+});
+
 const footballSchema = z.object({
   moduleVersion: z.literal(8),
   worldSeed: z.string().min(1),
-  stage: z.enum(["high-school-preseason", "college-orientation", "college-season"]),
+  stage: z.enum(["high-school-preseason", "college-orientation", "college-season", "professional-draft", "professional-career"]),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
   archetypeId: z.string().min(1),
   archetypeName: z.string().min(1),
@@ -641,6 +839,7 @@ const footballSchema = z.object({
   }),
   recruitment: footballRecruitingSchema,
   college: footballCollegeSchema,
+  professional: professionalStateSchema,
 });
 
 const focusSchema = z.object({
@@ -1373,7 +1572,7 @@ const careerMetaSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   currentDate: gameDateSchema,
-  phase: z.enum(["high-school-preseason", "college-orientation", "college-season"]),
+  phase: z.enum(["high-school-preseason", "college-orientation", "college-season", "professional-draft", "professional-career"]),
   revision: z.number().int().nonnegative(),
 });
 
@@ -1401,7 +1600,7 @@ export interface CareerIndexRecord {
   id: string;
   displayName: string;
   sport: "american-football";
-  phase: "high-school-preseason" | "college-orientation" | "college-season";
+  phase: "high-school-preseason" | "college-orientation" | "college-season" | "professional-draft" | "professional-career";
   currentDate: string;
   updatedAt: string;
   revision: number;

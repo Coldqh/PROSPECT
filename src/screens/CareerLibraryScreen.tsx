@@ -16,7 +16,9 @@ const potentialLabels = {
 const phaseLabels = {
   "high-school-preseason": "Senior season",
   "college-orientation": "College arrival",
-  "college-season": "Freshman season",
+  "college-season": "College career",
+  "professional-draft": "Professional draft",
+  "professional-career": "Professional career",
 } as const;
 
 export default function CareerLibraryScreen() {

@@ -17,7 +17,17 @@ import { commitToCollege, withdrawCollegeCommitment } from "../../sports/footbal
 import type { RecruitingActionId } from "../../sports/football/recruiting/types";
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../../sports/football/college/types";
 import { reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "../../sports/football/college/transition";
-import { resolveCollegeHeroDecision } from "../../sports/football/college/heroCareer";
+import { finalizeCollegeMatch, isCollegeMatchAwaitingResolution, resolveCollegeHeroDecision } from "../../sports/football/college/heroCareer";
+import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../../sports/football/pro/types";
+import {
+  acceptProfessionalCampInvite,
+  advanceProfessionalTrainingCamp,
+  completeProfessionalEvaluation,
+  openProfessionalDraftProcess,
+  resolveProfessionalDeclaration,
+  runProfessionalDraft,
+  selectProfessionalAgent,
+} from "../../sports/football/pro/draft";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -45,9 +55,11 @@ function toIndexRecord(save: CareerSave): CareerIndexRecord {
     revision: save.meta.revision,
     position: save.football.position,
     jerseyNumber: save.football.jerseyNumber,
-    schoolName: (save.football.college.status === "orientation" || save.football.college.status === "active") && save.football.college.program
-      ? save.football.college.program.name
-      : save.football.school.name,
+    schoolName: save.football.professional.contract
+      ? save.football.professional.contract.teamName
+      : (save.football.college.status === "orientation" || save.football.college.status === "active") && save.football.college.program
+        ? save.football.college.program.name
+        : save.football.school.name,
     stateCode: save.character.origin.stateCode,
     overall: save.football.ratings.overall,
     potentialBand: save.football.ratings.potentialBand,
@@ -159,7 +171,11 @@ export class CareerRepository {
 
   async startMatch(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
-    if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is only available during high school");
+    if (current.meta.phase === "college-season") {
+      if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
+      return this.save(startMatch(current));
+    }
+    if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
     if (current.life.dayIndex !== 5) throw new Error("Match is only available on Saturday");
     return this.save(startMatch(current));
@@ -168,6 +184,11 @@ export class CareerRepository {
   async resolveMatchDecision(careerId: string, optionId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
     return this.save(resolveMatchDecision(current, optionId));
+  }
+
+  async finalizeCollegeMatch(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(finalizeCollegeMatch(current));
   }
 
   async resolveRelationshipEvent(careerId: string, optionId: string): Promise<CareerSave> {
@@ -212,14 +233,53 @@ export class CareerRepository {
     return this.save(resolveCollegeHeroDecision(current, optionId));
   }
 
+  async openProfessionalDraft(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(openProfessionalDraftProcess(current));
+  }
+
+  async resolveProfessionalDeclaration(careerId: string, optionId: "return-college" | "declare"): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(resolveProfessionalDeclaration(current, optionId));
+  }
+
+  async selectProfessionalAgent(careerId: string, agentId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(selectProfessionalAgent(current, agentId));
+  }
+
+  async completeProfessionalEvaluation(careerId: string, focus: ProfessionalEvaluationFocus): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(completeProfessionalEvaluation(current, focus));
+  }
+
+  async runProfessionalDraft(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(runProfessionalDraft(current));
+  }
+
+  async acceptProfessionalCampInvite(careerId: string, teamId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(acceptProfessionalCampInvite(current, teamId));
+  }
+
+  async advanceProfessionalTrainingCamp(careerId: string, approach: ProfessionalCampApproach): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(advanceProfessionalTrainingCamp(current, approach));
+  }
+
   async advanceDay(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
+    if (current.meta.phase === "professional-draft" || current.meta.phase === "professional-career") throw new Error("Use professional career actions in this phase");
     if (current.meta.phase === "college-orientation") throw new Error("College orientation must be completed before advancing");
     if (current.meta.phase === "high-school-preseason" && current.relationships.pendingEvent) {
       throw new Error("Relationship event must be resolved before advancing");
     }
     if (current.meta.phase === "high-school-preseason" && current.life.dayIndex === 5 && current.football.match.status !== "complete") {
       throw new Error("Match must be completed before advancing Saturday");
+    }
+    if (current.meta.phase === "college-season" && isCollegeMatchAwaitingResolution(current)) {
+      throw new Error(current.football.match.status === "complete" ? "College match must be finalized" : "College match must be played");
     }
     return this.save(advanceFootballCareerDay(current));
   }

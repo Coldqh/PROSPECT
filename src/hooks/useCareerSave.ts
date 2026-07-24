@@ -3,6 +3,7 @@ import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types
 import type { TrainingFocusId } from "../sports/football/training/types";
 import type { RecruitingActionId } from "../sports/football/recruiting/types";
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../sports/football/college/types";
+import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../sports/football/pro/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -17,6 +18,7 @@ interface CareerSaveState {
   advanceDay(): Promise<void>;
   startMatch(): Promise<void>;
   resolveMatchDecision(optionId: string): Promise<void>;
+  finalizeCollegeMatch(): Promise<void>;
   resolveRelationshipEvent(optionId: string): Promise<void>;
   performRecruitingAction(programId: string, actionId: RecruitingActionId): Promise<void>;
   commitToCollege(programId: string): Promise<void>;
@@ -25,6 +27,13 @@ interface CareerSaveState {
   reportToCollege(): Promise<void>;
   setCollegeOnboardingPriority(priority: CollegeOnboardingPriority): Promise<void>;
   resolveCollegeHeroDecision(optionId: string): Promise<void>;
+  openProfessionalDraft(): Promise<void>;
+  resolveProfessionalDeclaration(optionId: "return-college" | "declare"): Promise<void>;
+  selectProfessionalAgent(agentId: string): Promise<void>;
+  completeProfessionalEvaluation(focus: ProfessionalEvaluationFocus): Promise<void>;
+  runProfessionalDraft(): Promise<void>;
+  acceptProfessionalCampInvite(teamId: string): Promise<void>;
+  advanceProfessionalTrainingCamp(approach: ProfessionalCampApproach): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -133,6 +142,20 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось рассчитать игровой эпизод.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const finalizeCollegeMatch = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.finalizeCollegeMatch(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось зафиксировать результат в общем календаре.");
     } finally {
       setMutating(false);
     }
@@ -250,6 +273,104 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const openProfessionalDraft = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.openProfessionalDraft(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Профессиональная оценка пока недоступна.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const resolveProfessionalDeclaration = useCallback(async (optionId: "return-college" | "declare") => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.resolveProfessionalDeclaration(careerId, optionId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось зафиксировать решение по драфту.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const selectProfessionalAgent = useCallback(async (agentId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.selectProfessionalAgent(careerId, agentId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось подписать агента.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const completeProfessionalEvaluation = useCallback(async (focus: ProfessionalEvaluationFocus) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.completeProfessionalEvaluation(careerId, focus));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить Combine и Pro Day.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const runProfessionalDraft = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.runProfessionalDraft(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось провести профессиональный драфт.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const acceptProfessionalCampInvite = useCallback(async (teamId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.acceptProfessionalCampInvite(careerId, teamId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось подписать контракт и прибыть в лагерь.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const advanceProfessionalTrainingCamp = useCallback(async (approach: ProfessionalCampApproach) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.advanceProfessionalTrainingCamp(careerId, approach));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить этап тренировочного лагеря.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -261,6 +382,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     advanceDay,
     startMatch,
     resolveMatchDecision,
+    finalizeCollegeMatch,
     resolveRelationshipEvent,
     performRecruitingAction,
     commitToCollege,
@@ -269,5 +391,12 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     reportToCollege,
     setCollegeOnboardingPriority,
     resolveCollegeHeroDecision,
+    openProfessionalDraft,
+    resolveProfessionalDeclaration,
+    selectProfessionalAgent,
+    completeProfessionalEvaluation,
+    runProfessionalDraft,
+    acceptProfessionalCampInvite,
+    advanceProfessionalTrainingCamp,
   };
 }
