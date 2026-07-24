@@ -180,6 +180,9 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
 function skillValue(save: CareerSave, option: MatchDecisionOption): number {
   const ratings = save.football.ratings;
   const heroTacticalFit = save.world.players.find((player) => player.isHero)?.tactical.schemeFit ?? 65;
+  const coachTrust = save.meta.phase === "college-season"
+    ? save.football.college.heroCareer?.coachTrust ?? save.football.depthChart.coachTrust
+    : save.football.depthChart.coachTrust;
   const focus = {
     technique: ratings.technique,
     athleticism: ratings.athleticism,
@@ -192,7 +195,7 @@ function skillValue(save: CareerSave, option: MatchDecisionOption): number {
     ratings.footballIq * 0.12 +
     save.character.condition.confidence * 0.1 +
     save.football.training.body.readiness * 0.07 +
-    save.football.depthChart.coachTrust * 0.06 +
+    coachTrust * 0.06 +
     heroTacticalFit * 0.06
   );
 }
@@ -254,10 +257,19 @@ function resultText(unit: FootballMatchState["heroUnit"], grade: MatchOutcomeGra
 
 function backgroundScore(match: FootballMatchState, save: CareerSave, index: number): { hero: number; opponent: number } {
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:background:${index}`);
-  const opponentRating = save.football.season.opponents.find((opponent) => opponent.id === match.opponentId)?.rating ?? 72;
-  const teamRating = (save.football.school.prestige + save.football.school.coaching + save.football.teamDynamics.cohesion) / 3;
+  const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
+  const opponentRating = collegeCareer
+    ? save.world.teams.find((team) => team.id === match.opponentId)?.rating ?? 72
+    : save.football.season.opponents.find((opponent) => opponent.id === match.opponentId)?.rating ?? 72;
+  const collegeTeam = collegeCareer ? save.world.teams.find((team) => team.id === collegeCareer.teamId) : undefined;
+  const collegeCulture = collegeCareer ? save.world.social.teamCultures.find((culture) => culture.teamId === collegeCareer.teamId) : undefined;
+  const teamRating = collegeTeam
+    ? collegeTeam.rating * 0.72 + collegeTeam.tactical.installation * 0.14 + (collegeCulture?.cohesion ?? 50) * 0.14
+    : (save.football.school.prestige + save.football.school.coaching + save.football.teamDynamics.cohesion) / 3;
   const ratingEdge = (teamRating - opponentRating) / 100;
-  const teamEdge = (save.football.teamDynamics.cohesion + save.football.teamDynamics.schemeMastery - 120) / 100 + ratingEdge;
+  const teamEdge = collegeTeam
+    ? ((collegeCulture?.cohesion ?? 50) + collegeTeam.tactical.installation - 120) / 100 + ratingEdge
+    : (save.football.teamDynamics.cohesion + save.football.teamDynamics.schemeMastery - 120) / 100 + ratingEdge;
   const heroChance = 0.34 + teamEdge * 0.18;
   const opponentChance = 0.32 - teamEdge * 0.13;
   const score = () => (random.chance(0.68) ? 7 : 3);
@@ -288,13 +300,16 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
           : `${match.stats.tackles} захватов, ${match.stats.passBreakups} PBU, ${match.stats.interceptions} INT`;
   const coachTrustDelta = round((match.coachGrade - 55) * 0.11, 1);
   const visibilityDelta = round(Math.max(0, (match.coachGrade - 52) * 0.09) + (won ? 0.8 : 0), 1);
+  const teamName = save.meta.phase === "college-season"
+    ? save.football.college.program?.shortName ?? "Программа"
+    : save.football.school.shortName;
   return {
     won,
     heroScore,
     opponentScore,
     grade,
     headline: won ? "Победа закрыта" : "Матч упущен",
-    summary: `${save.football.school.shortName} ${won ? "побеждает" : "проигрывает"} ${heroScore}:${opponentScore}. Оценка штаба — ${grade}.`,
+    summary: `${teamName} ${won ? "побеждает" : "проигрывает"} ${heroScore}:${opponentScore}. Оценка штаба — ${grade}.`,
     spotlight,
     coachTrustDelta,
     visibilityDelta,
@@ -346,7 +361,9 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:${episode.id}:${optionId}`);
   const fatiguePenalty = match.heroFatigue * 0.24 + save.character.condition.fatigue * 0.08;
   const painPenalty = save.football.training.body.pain * 0.1 + (save.football.training.body.medicalStatus === "limited" ? 6 : 0);
-  const opponentRating = save.football.season.opponents.find((opponent) => opponent.id === match.opponentId)?.rating ?? 72;
+  const opponentRating = save.meta.phase === "college-season"
+    ? save.world.teams.find((team) => team.id === match.opponentId)?.rating ?? 72
+    : save.football.season.opponents.find((opponent) => opponent.id === match.opponentId)?.rating ?? 72;
   const opponentPenalty = Math.max(-3, Math.min(6, (opponentRating - 72) * 0.22));
   const rawScore = skillValue(save, selected) + random.integer(-17, 17) - selected.difficulty * 0.42 - fatiguePenalty - painPenalty - opponentPenalty + 31;
   const grade = gradeFromScore(rawScore);
@@ -421,22 +438,39 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
       clockSeconds: 0,
       finalResult: result,
     };
-    const season = applyCompletedMatchToSeason(save, nextMatch);
-    nextFootball = {
-      ...save.football,
-      match: nextMatch,
-      season,
-      depthChart: {
-        ...save.football.depthChart,
-        coachTrust: clamp(save.football.depthChart.coachTrust + result.coachTrustDelta),
-      },
-      recruitment: save.football.recruitment,
-    };
-    const recruitingSave: CareerSave = { ...save, character: nextCharacter, football: nextFootball };
-    nextFootball = {
-      ...nextFootball,
-      recruitment: updateRecruitingAfterMatch(recruitingSave, nextMatch),
-    };
+    if (save.meta.phase === "college-season" && save.football.college.heroCareer) {
+      const career = save.football.college.heroCareer;
+      nextFootball = {
+        ...save.football,
+        match: nextMatch,
+        college: {
+          ...save.football.college,
+          heroCareer: {
+            ...career,
+            coachTrust: clamp(career.coachTrust + result.coachTrustDelta),
+            lockerRoomStanding: clamp(career.lockerRoomStanding + (result.grade === "A" ? 3 : result.grade === "B" ? 1 : result.grade === "D" ? -2 : 0)),
+            lastSummary: `${result.summary} ${result.spotlight}.`,
+          },
+        },
+      };
+    } else {
+      const season = applyCompletedMatchToSeason(save, nextMatch);
+      nextFootball = {
+        ...save.football,
+        match: nextMatch,
+        season,
+        depthChart: {
+          ...save.football.depthChart,
+          coachTrust: clamp(save.football.depthChart.coachTrust + result.coachTrustDelta),
+        },
+        recruitment: save.football.recruitment,
+      };
+      const recruitingSave: CareerSave = { ...save, character: nextCharacter, football: nextFootball };
+      nextFootball = {
+        ...nextFootball,
+        recruitment: updateRecruitingAfterMatch(recruitingSave, nextMatch),
+      };
+    }
     history = [
       ...history,
       {
