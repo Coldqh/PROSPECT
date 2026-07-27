@@ -18,6 +18,7 @@ import { CareerOverviewDashboard } from "../components/career/CareerOverviewDash
 import { RecruitingDashboard } from "../components/career/RecruitingDashboard";
 import { SeasonDashboard } from "../components/career/SeasonDashboard";
 import { SocialLifeDashboard } from "../components/career/SocialLifeDashboard";
+import { MarketDashboard } from "../components/career/MarketDashboard";
 import { useCareerSave } from "../hooks/useCareerSave";
 
 export default function CareerOverviewScreen() {
@@ -81,6 +82,7 @@ export default function CareerOverviewScreen() {
     if (secondaryView === "social") return <SocialLifeDashboard save={careerSave} mutating={mutating} onResolveRelationshipEvent={state.resolveRelationshipEvent} />;
     if (secondaryView === "recruiting") return <RecruitingDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={state.performRecruitingAction} onCommit={state.commitToCollege} onWithdrawCommitment={state.withdrawCollegeCommitment} />;
     if (secondaryView === "feed") return <WorldDashboard save={careerSave} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
+    if (secondaryView === "market") return <MarketDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenTeam={(id) => openTeam(id)} />;
     return <WorldDashboard save={careerSave} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
   }
 
@@ -90,7 +92,7 @@ export default function CareerOverviewScreen() {
         {matchOpen ? (
           <><header className="secondary-page-bar"><button type="button" onClick={() => setMatchOpen(false)}><Icon name="arrow-left" /></button><strong>Матч</strong></header><MatchDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onStartMatch={state.startMatch} onResolveDecision={state.resolveMatchDecision} /></>
         ) : secondaryView ? (
-          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "recruiting" ? "Рекрутинг" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : "Рейтинг"}</strong></header>{renderSecondary()}</>
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "recruiting" ? "Рекрутинг" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : "Рейтинг"}</strong></header>{renderSecondary()}</>
         ) : primaryView === "profile" ? (
           <PlayerProfileDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onSignCollege={state.signCollegeAgreement} onReportToCollege={state.reportToCollege} />
         ) : primaryView === "team" ? (

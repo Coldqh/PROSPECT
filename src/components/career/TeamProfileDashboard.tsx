@@ -2,18 +2,21 @@ import { useMemo, useState, type CSSProperties } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { defenseSystemLabel, offenseSystemLabel } from "../../sports/football/ecosystem/tactics";
 import type { EcosystemPlayer, EcosystemTeam } from "../../sports/football/ecosystem/types";
+import { candidateKindLabel, getTeamEcosystemSnapshot, negotiationStatusLabel, openingStatusLabel, promiseRoleLabel, rosterStrategyLabel, scholarshipLabel } from "../../sports/football/ecosystem/visibility";
 import type { FootballRosterPlayer } from "../../sports/football/team/types";
 import { Icon } from "../ui/Icon";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 
-type TeamView = "overview" | "roster" | "staff" | "system" | "resources";
+type TeamView = "overview" | "roster" | "planning" | "staff" | "system" | "resources" | "history";
 
 const views: readonly { id: TeamView; label: string }[] = [
   { id: "overview", label: "Обзор" },
   { id: "roster", label: "Состав" },
+  { id: "planning", label: "План" },
   { id: "staff", label: "Штаб" },
   { id: "system", label: "Система" },
   { id: "resources", label: "Ресурсы" },
+  { id: "history", label: "История" },
 ];
 
 interface TeamProfileDashboardProps {
@@ -67,6 +70,8 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
   const conferenceTeams = conference
     ? conference.teamIds.map((id) => save.world.teams.find((team) => team.id === id)).filter((team): team is EcosystemTeam => Boolean(team)).sort((left, right) => right.conferenceWins - left.conferenceWins || left.conferenceLosses - right.conferenceLosses || right.wins - left.wins)
     : [];
+  const ecosystemSnapshot = worldTeam ? getTeamEcosystemSnapshot(save.world, worldTeam.id) : undefined;
+  const positionPlan = worldTeam ? Object.values(worldTeam.rosterPlan.positionProjections).sort((left, right) => right.targetAdds - left.targetAdds || right.needNextYear - left.needNextYear) : [];
 
   const teamStyle = worldTeam ? undefined : ({
     "--team-primary": save.football.school.primaryColor,
@@ -170,6 +175,41 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
         </div>
       )}
 
+      {view === "planning" && (
+        <div className="team-profile__planning">
+          {worldTeam && ecosystemSnapshot ? (
+            <>
+              <section className="team-plan-summary">
+                <article><small>Стратегия</small><strong>{rosterStrategyLabel(worldTeam.rosterPlan.strategy)}</strong></article>
+                <article><small>Размер класса</small><strong>{worldTeam.rosterPlan.targetClassSize}</strong></article>
+                <article><small>Свободные места</small><strong>{worldTeam.rosterPlan.availableRosterSpots}</strong></article>
+                <article><small>Уходят</small><strong>{worldTeam.rosterPlan.projectedDepartures}</strong></article>
+              </section>
+              <section className="elite-section">
+                <header className="elite-section__head"><h2>Позиционный план</h2><span>{worldTeam.rosterPlan.lastReviewReason}</span></header>
+                <div className="team-plan-list">
+                  {positionPlan.map((projection) => <article key={projection.position}><span>{projection.position}</span><div><strong>{projection.currentPlayers} в комнате</strong><small>{projection.returningNextYear} вернутся · OVR {Math.round(projection.averageOverall)}</small></div><em>Need {projection.needNextYear}</em><b>+{projection.targetAdds}</b></article>)}
+                </div>
+              </section>
+              <section className="elite-section">
+                <header className="elite-section__head"><h2>Набор и портал</h2><span>{ecosystemSnapshot.negotiations.filter((item) => item.status === "offered").length} активных</span></header>
+                <div className="team-market-feed">
+                  {ecosystemSnapshot.negotiations.slice(0, 12).map((item) => <article key={item.id}><span>{item.position}</span><div><strong>{item.candidateName}</strong><small>{candidateKindLabel(item.candidateKind)} · {promiseRoleLabel(item.promisedRole)} · {scholarshipLabel(item.scholarship)}</small></div><em>{negotiationStatusLabel(item.status)}</em></article>)}
+                  {ecosystemSnapshot.negotiations.length === 0 && <div className="data-empty">Переговоров нет</div>}
+                </div>
+              </section>
+              <section className="elite-section">
+                <header className="elite-section__head"><h2>Открытые места</h2><span>{ecosystemSnapshot.openings.filter((item) => item.status === "open").length}</span></header>
+                <div className="team-market-feed">
+                  {ecosystemSnapshot.openings.map((opening) => <article key={opening.id}><span>{opening.position}</span><div><strong>{opening.reason}</strong><small>{opening.filledByCandidateIds.length}/{opening.slots} заполнено · {opening.scholarshipSlots} стипендий</small></div><em>{openingStatusLabel(opening.status)}</em></article>)}
+                  {ecosystemSnapshot.openings.length === 0 && <div className="data-empty">План набора не сформирован</div>}
+                </div>
+              </section>
+            </>
+          ) : <div className="data-empty">План состава доступен для команд экосистемы</div>}
+        </div>
+      )}
+
       {view === "staff" && (
         <div className="team-profile__staff">
           {teamCoaches.map((coach) => <article key={coach.id}><div><small>{roleLabel(coach.role)}</small><strong>{coach.name}</strong></div><span>{"reputation" in coach ? Math.round(coach.reputation) : Math.round(coach.tactics)}</span><footer>{"careerWins" in coach ? `${coach.careerWins}–${coach.careerLosses}` : `DEV ${coach.development} · TAC ${coach.tactics}`}</footer></article>)}
@@ -224,6 +264,35 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
               <article><small>Дисциплина</small><strong>{Math.round(save.football.school.discipline)}</strong></article>
             </>
           )}
+        </div>
+      )}
+
+      {view === "history" && (
+        <div className="team-profile__history">
+          {worldTeam && ecosystemSnapshot ? (
+            <>
+              <section className="team-plan-summary">
+                <article><small>Входящие</small><strong>{ecosystemSnapshot.inboundMoves}</strong></article>
+                <article><small>Исходящие</small><strong>{ecosystemSnapshot.outboundMoves}</strong></article>
+                <article><small>Сезонов в архиве</small><strong>{ecosystemSnapshot.history.length}</strong></article>
+                <article><small>Вакансии штабов</small><strong>{ecosystemSnapshot.vacancies.length}</strong></article>
+              </section>
+              <section className="elite-section">
+                <header className="elite-section__head"><h2>История сезонов</h2><span>{ecosystemSnapshot.history.length}</span></header>
+                <div className="team-market-feed">
+                  {ecosystemSnapshot.history.map((season) => <article key={season.id}><span>{season.seasonYear}</span><div><strong>{season.wins}–{season.losses}</strong><small>{season.conferenceWins}–{season.conferenceLosses} в конференции · место {season.finish}</small></div><em>{season.conferenceChampion ? "CHAMP" : Math.round(season.finalRating)}</em></article>)}
+                  {ecosystemSnapshot.history.length === 0 && <div className="data-empty">Первый сезон ещё не архивирован</div>}
+                </div>
+              </section>
+              <section className="elite-section">
+                <header className="elite-section__head"><h2>Транзакции</h2><span>{ecosystemSnapshot.transactions.length}</span></header>
+                <div className="team-market-feed">
+                  {ecosystemSnapshot.transactions.slice(0, 30).map((item) => { const player = item.playerId ? save.world.players.find((candidate) => candidate.id === item.playerId) : undefined; return player ? <button type="button" key={item.id} onClick={() => setSelectedPlayer(player)}><span>W{item.week}</span><div><strong>{item.title}</strong><small>{item.detail}</small></div><Icon name="arrow-right" size={15} /></button> : <article key={item.id}><span>W{item.week}</span><div><strong>{item.title}</strong><small>{item.detail}</small></div><em>{item.seasonYear}</em></article>; })}
+                  {ecosystemSnapshot.transactions.length === 0 && <div className="data-empty">Движений пока нет</div>}
+                </div>
+              </section>
+            </>
+          ) : <div className="data-empty">История доступна для команд экосистемы</div>}
         </div>
       )}
       <EcosystemPlayerProfile save={save} player={selectedPlayer} onClose={() => setSelectedPlayer(undefined)} />

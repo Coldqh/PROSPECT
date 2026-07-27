@@ -2,7 +2,7 @@ import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { Icon, type IconName } from "../ui/Icon";
 
-export type CareerSecondaryView = "overview" | "season" | "matches" | "standings" | "recruiting" | "social" | "feed" | "rankings";
+export type CareerSecondaryView = "overview" | "season" | "matches" | "standings" | "recruiting" | "social" | "feed" | "market" | "rankings";
 
 interface DrawerItem {
   id: CareerSecondaryView;
@@ -21,6 +21,7 @@ const careerItems: readonly DrawerItem[] = [
 const worldItems: readonly DrawerItem[] = [
   { id: "social", label: "Социальная жизнь", code: "SOC", icon: "team" },
   { id: "feed", label: "Лента", code: "FED", icon: "pulse" },
+  { id: "market", label: "Рынок", code: "MKT", icon: "swap" },
   { id: "rankings", label: "Рейтинг", code: "RNK", icon: "chart" },
 ];
 
