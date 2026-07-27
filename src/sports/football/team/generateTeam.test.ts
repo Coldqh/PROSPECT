@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createFootballCareerState } from "../career/createFootballCareer";
 import type { FootballCareerSetup } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_STARTER_TARGETS } from "./positions";
 
 const setup: FootballCareerSetup = {
   character: {
@@ -30,9 +31,13 @@ describe("football team generation", () => {
 
   it("creates a full roster and a populated position room", () => {
     const football = createFootballCareerState("team-seed", setup).football;
-    expect(football.roster.length).toBeGreaterThanOrEqual(45);
+    expect(football.roster.length).toBeGreaterThanOrEqual(55);
     expect(football.roster.filter((player) => player.position === "WR").length).toBeGreaterThanOrEqual(4);
     expect(football.depthChart.playersAtPosition).toBeGreaterThanOrEqual(5);
     expect(football.depthChart.evaluation.reasons.length).toBeGreaterThan(0);
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
+      const room = football.roster.filter((player) => player.position === position);
+      expect(room.length).toBeGreaterThanOrEqual(POSITION_STARTER_TARGETS[position]);
+    }
   });
 });

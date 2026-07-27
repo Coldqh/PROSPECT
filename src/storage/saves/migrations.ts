@@ -3,6 +3,8 @@ import { createFootballCareerState, createLegacyFootballSetup } from "../../spor
 import type { FootballCareerState } from "../../sports/football/career/types";
 import { evaluateDepthChart } from "../../sports/football/team/evaluateDepthChart";
 import { createFootballRoster, createTeamDynamics, createTeamStaff } from "../../sports/football/team/generateTeam";
+import { rosterUnitForPosition } from "../../sports/football/team/positions";
+import type { FootballRosterPlayer } from "../../sports/football/team/types";
 import { createInitialTrainingState } from "../../sports/football/training/createTrainingState";
 import { createInitialMatchState } from "../../sports/football/matches/createMatchState";
 import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
@@ -12,13 +14,47 @@ import { createInitialCollegeState } from "../../sports/football/college/createC
 import { createInitialProfessionalState } from "../../sports/football/pro/createProfessionalState";
 import { activateCollegeHeroCareer } from "../../sports/football/college/heroCareer";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
-import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
 export interface MigrationResult {
   save: CareerSave;
   migratedFrom?: number;
+}
+
+function synchronizeLocalFootballRoster(save: CareerSave): CareerSave {
+  const currentById = new Map<string, FootballRosterPlayer>(
+    save.football.roster.map((player: FootballRosterPlayer) => [player.id, player]),
+  );
+  const roster: FootballRosterPlayer[] = save.world.players
+    .filter((player) => player.teamId === save.football.school.id && !player.isHero)
+    .sort((left, right) => left.position.localeCompare(right.position) || left.depthRank - right.depthRank || right.overall - left.overall)
+    .map((player) => {
+      const existing = currentById.get(player.id);
+      return {
+        id: player.id,
+        name: player.name,
+        position: player.position,
+        unit: rosterUnitForPosition(player.position),
+        year: player.classYear,
+        overall: player.overall,
+        potential: player.potential,
+        style: existing?.style ?? player.tactical.archetype.replaceAll("-", " "),
+        coachStanding: existing?.coachStanding ?? player.form,
+        health: player.health,
+        status: player.status,
+        depthRank: player.depthRank,
+      };
+    });
+  return careerSaveSchema.parse({
+    ...save,
+    football: { ...save.football, roster },
+  });
+}
+
+function migratedResult(save: CareerSave, migratedFrom: number): MigrationResult {
+  return { save: synchronizeLocalFootballRoster(save), migratedFrom };
 }
 
 interface HistoryEntry {
@@ -135,6 +171,16 @@ interface LegacyTacticalSave {
 
 
 type LegacyFootballWithoutProfessional = Omit<FootballCareerState, "professional">;
+
+interface LegacyFullRosterSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 24 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV10;
+  history: HistoryEntry[];
+}
 
 interface LegacyProfessionalSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 23 };
@@ -392,11 +438,30 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
 }
 
 
+function migrateVersionTwentyFour(input: LegacyFullRosterSave): CareerSave {
+  return careerSaveSchema.parse({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV10(input.world, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v25`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Составы расширены до полного футбольного ростера",
+        description: "Добавлены линии атаки и защиты, тайт-энды, сэйфти и спецкоманды. Старые игроки и история мира сохранены.",
+      },
+    ],
+  });
+}
+
 function migrateVersionTwentyThree(input: LegacyProfessionalSave): CareerSave {
   return careerSaveSchema.parse({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football: withProfessionalState(input.football, input.meta.worldSeed, input.world.seasonYear + 1),
+    world: upgradeFootballEcosystemV10(input.world as unknown as LegacyFootballEcosystemStateV10, input.meta.currentDate),
     history: [
       ...input.history,
       {
@@ -437,6 +502,7 @@ function migrateVersionTwentyTwo(input: LegacyHeroGameplaySave): CareerSave {
         ...(heroCareer ? { heroCareer } : {}),
       },
     },
+    world: upgradeFootballEcosystemV10(input.world as unknown as LegacyFootballEcosystemStateV10, input.meta.currentDate),
     history: [
       ...input.history,
       {
@@ -455,6 +521,7 @@ function migrateVersionTwentyOne(input: LegacySocialSave): CareerSave {
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
     football: withProfessionalState(input.football, input.meta.worldSeed, input.world.seasonYear + 1),
+    world: upgradeFootballEcosystemV10(input.world as unknown as LegacyFootballEcosystemStateV10, input.meta.currentDate),
   } as CareerSave;
   const activated = upgraded.meta.phase === "college-orientation"
     && upgraded.football.college.status === "orientation"
@@ -1019,29 +1086,30 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
-  if (schemaVersion === 23) return { save: migrateVersionTwentyThree(input as LegacyProfessionalSave), migratedFrom: 23 };
-  if (schemaVersion === 22) return { save: migrateVersionTwentyTwo(input as LegacyHeroGameplaySave), migratedFrom: 22 };
-  if (schemaVersion === 21) return { save: migrateVersionTwentyOne(input as LegacySocialSave), migratedFrom: 21 };
-  if (schemaVersion === 20) return { save: migrateVersionTwenty(input as LegacyCompetitionSave), migratedFrom: 20 };
-  if (schemaVersion === 19) return { save: migrateVersionNineteen(input as LegacyTacticalSave), migratedFrom: 19 };
-  if (schemaVersion === 18) return { save: migrateVersionEighteen(input as LegacyUnifiedMarketSave), migratedFrom: 18 };
-  if (schemaVersion === 17) return { save: migrateVersionSeventeen(input as LegacyRosterPlanningSave), migratedFrom: 17 };
-  if (schemaVersion === 16) return { save: migrateVersionSixteen(input as LegacyAnnualTalentSave), migratedFrom: 16 };
-  if (schemaVersion === 15) return { save: migrateVersionFifteen(input as LegacyFiniteResourcesSave), migratedFrom: 15 };
-  if (schemaVersion === 14) return { save: migrateVersionFourteen(input as LegacyWorldConstitutionSave), migratedFrom: 14 };
-  if (schemaVersion === 13) return { save: migrateVersionThirteen(input as LegacyContinuitySave), migratedFrom: 13 };
-  if (schemaVersion === 12) return { save: migrateVersionTwelve(input as LegacyEcosystemSave), migratedFrom: 12 };
-  if (schemaVersion === 11) return { save: migrateVersionEleven(input as LegacyCollegeTransitionSave), migratedFrom: 11 };
-  if (schemaVersion === 10) return { save: migrateVersionTen(input as LegacyDecisionSave), migratedFrom: 10 };
-  if (schemaVersion === 9) return { save: migrateVersionNine(input as LegacyRecruitingSave), migratedFrom: 9 };
-  if (schemaVersion === 8) return { save: migrateVersionEight(input as LegacyRelationshipsSave), migratedFrom: 8 };
-  if (schemaVersion === 7) return { save: migrateVersionSeven(input as LegacySeasonSave), migratedFrom: 7 };
-  if (schemaVersion === 6) return { save: migrateVersionSix(input as LegacyMatchSave), migratedFrom: 6 };
-  if (schemaVersion === 5) return { save: migrateVersionFive(input as LegacyTrainingHealthSave), migratedFrom: 5 };
-  if (schemaVersion === 4) return { save: migrateVersionFour(input as LegacyTeamWorldSave), migratedFrom: 4 };
-  if (schemaVersion === 3) return { save: migrateVersionThree(input as LegacyWeeklyLoopSave), migratedFrom: 3 };
-  if (schemaVersion === 2) return { save: migrateVersionTwo(input as LegacyPlayerCreationSave), migratedFrom: 2 };
-  if (schemaVersion === 1) return { save: migrateVersionOne(input as LegacyFoundationSave), migratedFrom: 1 };
+  if (schemaVersion === 24) return migratedResult(migrateVersionTwentyFour(input as LegacyFullRosterSave), 24);
+  if (schemaVersion === 23) return migratedResult(migrateVersionTwentyThree(input as LegacyProfessionalSave), 23);
+  if (schemaVersion === 22) return migratedResult(migrateVersionTwentyTwo(input as LegacyHeroGameplaySave), 22);
+  if (schemaVersion === 21) return migratedResult(migrateVersionTwentyOne(input as LegacySocialSave), 21);
+  if (schemaVersion === 20) return migratedResult(migrateVersionTwenty(input as LegacyCompetitionSave), 20);
+  if (schemaVersion === 19) return migratedResult(migrateVersionNineteen(input as LegacyTacticalSave), 19);
+  if (schemaVersion === 18) return migratedResult(migrateVersionEighteen(input as LegacyUnifiedMarketSave), 18);
+  if (schemaVersion === 17) return migratedResult(migrateVersionSeventeen(input as LegacyRosterPlanningSave), 17);
+  if (schemaVersion === 16) return migratedResult(migrateVersionSixteen(input as LegacyAnnualTalentSave), 16);
+  if (schemaVersion === 15) return migratedResult(migrateVersionFifteen(input as LegacyFiniteResourcesSave), 15);
+  if (schemaVersion === 14) return migratedResult(migrateVersionFourteen(input as LegacyWorldConstitutionSave), 14);
+  if (schemaVersion === 13) return migratedResult(migrateVersionThirteen(input as LegacyContinuitySave), 13);
+  if (schemaVersion === 12) return migratedResult(migrateVersionTwelve(input as LegacyEcosystemSave), 12);
+  if (schemaVersion === 11) return migratedResult(migrateVersionEleven(input as LegacyCollegeTransitionSave), 11);
+  if (schemaVersion === 10) return migratedResult(migrateVersionTen(input as LegacyDecisionSave), 10);
+  if (schemaVersion === 9) return migratedResult(migrateVersionNine(input as LegacyRecruitingSave), 9);
+  if (schemaVersion === 8) return migratedResult(migrateVersionEight(input as LegacyRelationshipsSave), 8);
+  if (schemaVersion === 7) return migratedResult(migrateVersionSeven(input as LegacySeasonSave), 7);
+  if (schemaVersion === 6) return migratedResult(migrateVersionSix(input as LegacyMatchSave), 6);
+  if (schemaVersion === 5) return migratedResult(migrateVersionFive(input as LegacyTrainingHealthSave), 5);
+  if (schemaVersion === 4) return migratedResult(migrateVersionFour(input as LegacyTeamWorldSave), 4);
+  if (schemaVersion === 3) return migratedResult(migrateVersionThree(input as LegacyWeeklyLoopSave), 3);
+  if (schemaVersion === 2) return migratedResult(migrateVersionTwo(input as LegacyPlayerCreationSave), 2);
+  if (schemaVersion === 1) return migratedResult(migrateVersionOne(input as LegacyFoundationSave), 1);
   if (typeof schemaVersion !== "number") throw new Error("Save has no schema version");
   if (schemaVersion > CURRENT_SCHEMA_VERSION) throw new Error("Save was created by a newer PROSPECT version");
   throw new Error(`No migration path from schema ${schemaVersion}`);

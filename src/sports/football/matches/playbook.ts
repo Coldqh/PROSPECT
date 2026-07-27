@@ -155,11 +155,11 @@ function point(x: number, y: number): MatchPoint {
 
 function offenseFormation(formation: string): FormationPlayer[] {
   const line: FormationPlayer[] = [
-    { slot: "LT", position: "OL", label: "LT", start: point(36, 62) },
-    { slot: "LG", position: "OL", label: "LG", start: point(43, 61) },
-    { slot: "C", position: "OL", label: "C", start: point(50, 60) },
-    { slot: "RG", position: "OL", label: "RG", start: point(57, 61) },
-    { slot: "RT", position: "OL", label: "RT", start: point(64, 62) },
+    { slot: "LT", position: "OT", label: "LT", start: point(36, 62) },
+    { slot: "LG", position: "OG", label: "LG", start: point(43, 61) },
+    { slot: "C", position: "C", label: "C", start: point(50, 60) },
+    { slot: "RG", position: "OG", label: "RG", start: point(57, 61) },
+    { slot: "RT", position: "OT", label: "RT", start: point(64, 62) },
   ];
   const skill: Record<string, FormationPlayer[]> = {
     "Gun Trips": [
@@ -217,9 +217,9 @@ function offenseFormation(formation: string): FormationPlayer[] {
 function defenseFormation(formation: string): FormationPlayer[] {
   if (formation === "3–4 Odd") {
     return [
-      { slot: "LE", position: "DL", label: "DE", start: point(39, 42) },
-      { slot: "NT", position: "DL", label: "NT", start: point(50, 40) },
-      { slot: "RE", position: "DL", label: "DE", start: point(61, 42) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(39, 42) },
+      { slot: "NT", position: "DT", label: "NT", start: point(50, 40) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(61, 42) },
       { slot: "WILL", position: "LB", label: "W", start: point(28, 30) },
       { slot: "MIKE", position: "LB", label: "M", start: point(44, 28) },
       { slot: "SAM", position: "LB", label: "S", start: point(56, 28) },
@@ -232,10 +232,10 @@ function defenseFormation(formation: string): FormationPlayer[] {
   }
   if (formation === "Nickel 4–2–5") {
     return [
-      { slot: "LE", position: "DL", label: "DE", start: point(35, 42) },
-      { slot: "DT1", position: "DL", label: "DT", start: point(45, 40) },
-      { slot: "DT2", position: "DL", label: "DT", start: point(55, 40) },
-      { slot: "RE", position: "DL", label: "DE", start: point(65, 42) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
       { slot: "WILL", position: "LB", label: "W", start: point(42, 27) },
       { slot: "MIKE", position: "LB", label: "M", start: point(58, 27) },
       { slot: "LCB", position: "CB", label: "CB", start: point(8, 21) },
@@ -247,10 +247,10 @@ function defenseFormation(formation: string): FormationPlayer[] {
   }
   if (formation === "Dime") {
     return [
-      { slot: "LE", position: "DL", label: "DE", start: point(35, 42) },
-      { slot: "DT1", position: "DL", label: "DT", start: point(45, 40) },
-      { slot: "DT2", position: "DL", label: "DT", start: point(55, 40) },
-      { slot: "RE", position: "DL", label: "DE", start: point(65, 42) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
       { slot: "MIKE", position: "LB", label: "M", start: point(50, 27) },
       { slot: "LCB", position: "CB", label: "CB", start: point(7, 21) },
       { slot: "SCB", position: "CB", label: "DB", start: point(27, 22) },
@@ -262,11 +262,11 @@ function defenseFormation(formation: string): FormationPlayer[] {
   }
   if (formation === "Bear Front" || formation === "Goal Line") {
     return [
-      { slot: "LE", position: "DL", label: "DE", start: point(31, 42) },
-      { slot: "DT1", position: "DL", label: "DT", start: point(40, 40) },
-      { slot: "NT", position: "DL", label: "NT", start: point(50, 39) },
-      { slot: "DT2", position: "DL", label: "DT", start: point(60, 40) },
-      { slot: "RE", position: "DL", label: "DE", start: point(69, 42) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(31, 42) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(40, 40) },
+      { slot: "NT", position: "DT", label: "NT", start: point(50, 39) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(60, 40) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(69, 42) },
       { slot: "WILL", position: "LB", label: "W", start: point(38, 27) },
       { slot: "MIKE", position: "LB", label: "M", start: point(50, 25) },
       { slot: "SAM", position: "LB", label: "S", start: point(62, 27) },
@@ -276,10 +276,10 @@ function defenseFormation(formation: string): FormationPlayer[] {
     ];
   }
   return [
-    { slot: "LE", position: "DL", label: "DE", start: point(35, 42) },
-    { slot: "DT1", position: "DL", label: "DT", start: point(45, 40) },
-    { slot: "DT2", position: "DL", label: "DT", start: point(55, 40) },
-    { slot: "RE", position: "DL", label: "DE", start: point(65, 42) },
+    { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
+    { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
+    { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
+    { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
     { slot: "WILL", position: "LB", label: "W", start: point(31, 28) },
     { slot: "MIKE", position: "LB", label: "M", start: point(50, 25) },
     { slot: "SAM", position: "LB", label: "S", start: point(69, 28) },
@@ -311,7 +311,7 @@ function offenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
   let task = "Выполнить маршрут по таймингу";
   let end = routeEnd(player.slot, call, player.start, random);
 
-  if (player.position === "OL") {
+  if (["OT", "OG", "C"].includes(player.position)) {
     const run = call.playType === "run";
     kind = run ? "run-block" : "pass-protection";
     task = run ? `Сместить фронт в ${call.runLane ?? "назначенный гэп"}` : "Сохранить глубину кармана";
@@ -372,7 +372,7 @@ function coverageMatchup(slot: string): string | undefined {
 
 function defenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: MatchTeamSide, isHero: boolean, random: SeededRandom): MatchPlayerAssignment {
   const blitz = call.playType === "blitz";
-  const isFront = player.position === "DL";
+  const isFront = player.position === "EDGE" || player.position === "DT";
   const isLinebacker = player.position === "LB";
   const man = call.concept.includes("Man") || call.concept.includes("Cover 1") || call.concept.includes("Zero");
   let kind: MatchPlayerAssignment["kind"] = "zone-coverage";

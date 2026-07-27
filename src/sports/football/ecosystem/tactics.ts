@@ -1,25 +1,35 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import type {
   EcosystemCoach,
-  EcosystemOffenseSystem,
   EcosystemDefenseSystem,
+  EcosystemOffenseSystem,
   EcosystemPlayer,
   EcosystemPlayerArchetype,
   EcosystemPlayerTacticalProfile,
   EcosystemPositionRole,
+  EcosystemRolePriority,
   EcosystemTacticalIdentity,
   EcosystemTeam,
 } from "./types";
 
-const POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
-
-const ROLE_BY_POSITION: Record<FootballPosition, readonly EcosystemPositionRole[]> = {
+const ROLE_BY_POSITION: Record<FootballRosterPosition, readonly EcosystemPositionRole[]> = {
   QB: ["pocket-distributor", "dual-threat", "field-general"],
   RB: ["zone-runner", "power-back", "receiving-back"],
   WR: ["separator", "vertical-threat", "possession-target"],
+  TE: ["inline-receiver", "seam-threat", "move-tight-end"],
+  OT: ["blindside-anchor", "zone-tackle", "power-tackle"],
+  OG: ["pull-guard", "phone-booth-guard", "zone-guard"],
+  C: ["line-caller", "reach-center", "power-center"],
+  EDGE: ["speed-rusher", "power-rusher", "edge-setter"],
+  DT: ["nose-anchor", "interior-penetrator", "three-technique"],
   LB: ["run-anchor", "coverage-backer", "edge-blitzer"],
   CB: ["press-corner", "zone-corner", "ball-hawk"],
+  S: ["box-safety", "center-fielder", "match-safety"],
+  K: ["accuracy-kicker", "power-kicker", "clutch-kicker"],
+  P: ["directional-punter", "hangtime-punter", "field-position-punter"],
 };
 
 const OFFENSE_STYLE_MAP: Array<[RegExp, EcosystemOffenseSystem]> = [
@@ -49,76 +59,118 @@ function normalizedDefense(style: string): EcosystemDefenseSystem {
   return DEFENSE_STYLE_MAP.find(([pattern]) => pattern.test(style))?.[1] ?? "multiple-defense";
 }
 
-function offenseRoles(system: EcosystemOffenseSystem): Pick<EcosystemTacticalIdentity["positionRoles"], "QB" | "RB" | "WR"> {
+function pair(primary: EcosystemPositionRole, secondary: EcosystemPositionRole): EcosystemRolePriority {
+  return { primary, secondary };
+}
+
+function offenseRoles(system: EcosystemOffenseSystem): Pick<EcosystemTacticalIdentity["positionRoles"], "QB" | "RB" | "WR" | "TE" | "OT" | "OG" | "C"> {
   if (system === "air-raid") {
     return {
-      QB: { primary: "pocket-distributor", secondary: "field-general" },
-      RB: { primary: "receiving-back", secondary: "zone-runner" },
-      WR: { primary: "separator", secondary: "vertical-threat" },
+      QB: pair("pocket-distributor", "field-general"),
+      RB: pair("receiving-back", "zone-runner"),
+      WR: pair("separator", "vertical-threat"),
+      TE: pair("move-tight-end", "seam-threat"),
+      OT: pair("blindside-anchor", "zone-tackle"),
+      OG: pair("zone-guard", "pull-guard"),
+      C: pair("line-caller", "reach-center"),
     };
   }
   if (system === "west-coast") {
     return {
-      QB: { primary: "field-general", secondary: "pocket-distributor" },
-      RB: { primary: "receiving-back", secondary: "zone-runner" },
-      WR: { primary: "possession-target", secondary: "separator" },
+      QB: pair("field-general", "pocket-distributor"),
+      RB: pair("receiving-back", "zone-runner"),
+      WR: pair("possession-target", "separator"),
+      TE: pair("move-tight-end", "inline-receiver"),
+      OT: pair("zone-tackle", "blindside-anchor"),
+      OG: pair("zone-guard", "pull-guard"),
+      C: pair("reach-center", "line-caller"),
     };
   }
   if (system === "power-run") {
     return {
-      QB: { primary: "field-general", secondary: "pocket-distributor" },
-      RB: { primary: "power-back", secondary: "zone-runner" },
-      WR: { primary: "possession-target", secondary: "vertical-threat" },
+      QB: pair("field-general", "pocket-distributor"),
+      RB: pair("power-back", "zone-runner"),
+      WR: pair("possession-target", "vertical-threat"),
+      TE: pair("inline-receiver", "seam-threat"),
+      OT: pair("power-tackle", "blindside-anchor"),
+      OG: pair("phone-booth-guard", "pull-guard"),
+      C: pair("power-center", "line-caller"),
     };
   }
   if (system === "spread-option") {
     return {
-      QB: { primary: "dual-threat", secondary: "field-general" },
-      RB: { primary: "zone-runner", secondary: "power-back" },
-      WR: { primary: "vertical-threat", secondary: "separator" },
+      QB: pair("dual-threat", "field-general"),
+      RB: pair("zone-runner", "power-back"),
+      WR: pair("vertical-threat", "separator"),
+      TE: pair("move-tight-end", "inline-receiver"),
+      OT: pair("zone-tackle", "power-tackle"),
+      OG: pair("pull-guard", "zone-guard"),
+      C: pair("reach-center", "line-caller"),
     };
   }
   return {
-    QB: { primary: "field-general", secondary: "dual-threat" },
-    RB: { primary: "zone-runner", secondary: "receiving-back" },
-    WR: { primary: "separator", secondary: "possession-target" },
+    QB: pair("field-general", "dual-threat"),
+    RB: pair("zone-runner", "receiving-back"),
+    WR: pair("separator", "possession-target"),
+    TE: pair("seam-threat", "inline-receiver"),
+    OT: pair("blindside-anchor", "zone-tackle"),
+    OG: pair("pull-guard", "phone-booth-guard"),
+    C: pair("line-caller", "power-center"),
   };
 }
 
-function defenseRoles(system: EcosystemDefenseSystem): Pick<EcosystemTacticalIdentity["positionRoles"], "LB" | "CB"> {
+function defenseRoles(system: EcosystemDefenseSystem): Pick<EcosystemTacticalIdentity["positionRoles"], "EDGE" | "DT" | "LB" | "CB" | "S"> {
   if (system === "quarters-425") {
     return {
-      LB: { primary: "coverage-backer", secondary: "run-anchor" },
-      CB: { primary: "zone-corner", secondary: "ball-hawk" },
+      EDGE: pair("edge-setter", "speed-rusher"),
+      DT: pair("interior-penetrator", "three-technique"),
+      LB: pair("coverage-backer", "run-anchor"),
+      CB: pair("zone-corner", "ball-hawk"),
+      S: pair("match-safety", "box-safety"),
     };
   }
   if (system === "multiple-34") {
     return {
-      LB: { primary: "edge-blitzer", secondary: "run-anchor" },
-      CB: { primary: "press-corner", secondary: "zone-corner" },
+      EDGE: pair("power-rusher", "edge-setter"),
+      DT: pair("nose-anchor", "interior-penetrator"),
+      LB: pair("edge-blitzer", "run-anchor"),
+      CB: pair("press-corner", "zone-corner"),
+      S: pair("box-safety", "center-fielder"),
     };
   }
   if (system === "over-43") {
     return {
-      LB: { primary: "run-anchor", secondary: "coverage-backer" },
-      CB: { primary: "zone-corner", secondary: "ball-hawk" },
+      EDGE: pair("edge-setter", "power-rusher"),
+      DT: pair("three-technique", "nose-anchor"),
+      LB: pair("run-anchor", "coverage-backer"),
+      CB: pair("zone-corner", "ball-hawk"),
+      S: pair("center-fielder", "box-safety"),
     };
   }
   if (system === "nickel-match") {
     return {
-      LB: { primary: "coverage-backer", secondary: "edge-blitzer" },
-      CB: { primary: "zone-corner", secondary: "press-corner" },
+      EDGE: pair("speed-rusher", "edge-setter"),
+      DT: pair("interior-penetrator", "three-technique"),
+      LB: pair("coverage-backer", "edge-blitzer"),
+      CB: pair("zone-corner", "press-corner"),
+      S: pair("match-safety", "center-fielder"),
     };
   }
   if (system === "man-pressure") {
     return {
-      LB: { primary: "edge-blitzer", secondary: "coverage-backer" },
-      CB: { primary: "press-corner", secondary: "ball-hawk" },
+      EDGE: pair("speed-rusher", "power-rusher"),
+      DT: pair("interior-penetrator", "nose-anchor"),
+      LB: pair("edge-blitzer", "coverage-backer"),
+      CB: pair("press-corner", "ball-hawk"),
+      S: pair("box-safety", "match-safety"),
     };
   }
   return {
-    LB: { primary: "run-anchor", secondary: "coverage-backer" },
-    CB: { primary: "zone-corner", secondary: "press-corner" },
+    EDGE: pair("edge-setter", "speed-rusher"),
+    DT: pair("nose-anchor", "three-technique"),
+    LB: pair("run-anchor", "coverage-backer"),
+    CB: pair("zone-corner", "press-corner"),
+    S: pair("center-fielder", "box-safety"),
   };
 }
 
@@ -133,12 +185,39 @@ export function positionRoleLabel(role: EcosystemPositionRole): string {
     separator: "сепаратор",
     "vertical-threat": "глубинная угроза",
     "possession-target": "надёжная цель",
+    "inline-receiver": "инлайн тайт-энд",
+    "seam-threat": "угроза по шву",
+    "move-tight-end": "мобильный тайт-энд",
+    "blindside-anchor": "якорь слепой стороны",
+    "zone-tackle": "тэкл зонной схемы",
+    "power-tackle": "силовой тэкл",
+    "pull-guard": "выходящий гард",
+    "phone-booth-guard": "силовой гард",
+    "zone-guard": "гард зонной схемы",
+    "line-caller": "координатор линии",
+    "reach-center": "мобильный центр",
+    "power-center": "силовой центр",
+    "speed-rusher": "скоростной раш",
+    "power-rusher": "силовой раш",
+    "edge-setter": "контроль края",
+    "nose-anchor": "якорь центра",
+    "interior-penetrator": "проникающий тэкл",
+    "three-technique": "трёхтехник",
     "run-anchor": "якорь против выноса",
     "coverage-backer": "лайнбекер покрытия",
     "edge-blitzer": "атакующий блицер",
     "press-corner": "пресс-корнер",
     "zone-corner": "зонный корнер",
     "ball-hawk": "охотник за мячом",
+    "box-safety": "боксовый сэйфти",
+    "center-fielder": "глубокий сэйфти",
+    "match-safety": "матчевый сэйфти",
+    "accuracy-kicker": "точный кикер",
+    "power-kicker": "кикер с сильной ногой",
+    "clutch-kicker": "кикер решающих ударов",
+    "directional-punter": "направленный пантер",
+    "hangtime-punter": "пантер с высоким зависанием",
+    "field-position-punter": "пантер контроля поля",
   };
   return labels[role];
 }
@@ -178,16 +257,15 @@ export function createTacticalIdentity(
     rotationDepth,
     headCoachFingerprint: coach?.seed ?? `${team.seed}:staff`,
     positionRoles: {
-      QB: offense.QB,
-      RB: offense.RB,
-      WR: offense.WR,
-      LB: defense.LB,
-      CB: defense.CB,
+      ...offense,
+      ...defense,
+      K: pair("accuracy-kicker", "power-kicker"),
+      P: pair("field-position-punter", "hangtime-punter"),
     },
   };
 }
 
-function deterministicArchetype(position: FootballPosition, random: SeededRandom): EcosystemPlayerArchetype {
+function deterministicArchetype(position: FootballRosterPosition, random: SeededRandom): EcosystemPlayerArchetype {
   return random.pick(ROLE_BY_POSITION[position]) as EcosystemPlayerArchetype;
 }
 
@@ -195,7 +273,7 @@ export function roleFitScore(
   preferredRole: EcosystemPositionRole,
   secondaryRole: EcosystemPositionRole,
   identity: EcosystemTacticalIdentity,
-  position: FootballPosition,
+  position: FootballRosterPosition,
 ): number {
   const target = identity.positionRoles[position];
   if (preferredRole === target.primary) return 96;
@@ -288,7 +366,7 @@ export function tacticalTeamModifier(team: EcosystemTeam, players: EcosystemPlay
 }
 
 export function tacticalRecruitingFit(
-  position: FootballPosition,
+  position: FootballRosterPosition,
   preferredRole: EcosystemPositionRole,
   secondaryRole: EcosystemPositionRole,
   team: EcosystemTeam,
@@ -296,7 +374,7 @@ export function tacticalRecruitingFit(
   return roleFitScore(preferredRole, secondaryRole, team.tactical, position);
 }
 
-export function defaultRoleForPosition(position: FootballPosition, seed: string): { preferredRole: EcosystemPositionRole; secondaryRole: EcosystemPositionRole } {
+export function defaultRoleForPosition(position: FootballRosterPosition, seed: string): { preferredRole: EcosystemPositionRole; secondaryRole: EcosystemPositionRole } {
   const random = new SeededRandom(`${seed}:market-role`);
   const roles = ROLE_BY_POSITION[position];
   const preferredRole = random.pick(roles);
@@ -349,6 +427,8 @@ export function defenseSystemLabel(system: EcosystemDefenseSystem): string {
 export function tacticalIdentitySummary(team: EcosystemTeam): string {
   const offense = offenseSystemLabel(team.tactical.offenseSystem);
   const defense = defenseSystemLabel(team.tactical.defenseSystem);
-  const primaryRoles = POSITIONS.map((position) => `${position}: ${positionRoleLabel(team.tactical.positionRoles[position].primary)}`).join(" · ");
+  const primaryRoles = FOOTBALL_ROSTER_POSITIONS
+    .map((position) => `${position}: ${positionRoleLabel(team.tactical.positionRoles[position].primary)}`)
+    .join(" · ");
   return `${offense} / ${defense}. ${primaryRoles}`;
 }

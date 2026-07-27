@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 24;
+export const CURRENT_SCHEMA_VERSION = 25;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -92,7 +92,8 @@ const schoolSchema = z.object({
 
 
 const playerYearSchema = z.enum(["Freshman", "Sophomore", "Junior", "Senior"]);
-const rosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "K", "P"]);
+const rosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OT", "OG", "C", "OL", "EDGE", "DT", "DL", "LB", "CB", "S", "K", "P"]);
+const ecosystemRosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S", "K", "P"]);
 const coachSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(3),
@@ -286,6 +287,11 @@ const matchPlayerAssignmentSchema = z.object({
   end: matchPointSchema,
   delayMs: z.number().int().nonnegative().max(5000),
   matchupSlot: z.string().min(1).optional(),
+  playerId: z.string().min(1).optional(),
+  playerName: z.string().min(2).optional(),
+  overall: z.number().min(0).max(100).optional(),
+  health: z.number().min(0).max(100).optional(),
+  depthRank: z.number().int().min(1).optional(),
 });
 
 const legacyPlayCall = {
@@ -1121,8 +1127,17 @@ const ecosystemPositionNeedsSchema = z.object({
   QB: z.number().min(0).max(100),
   RB: z.number().min(0).max(100),
   WR: z.number().min(0).max(100),
+  TE: z.number().min(0).max(100),
+  OT: z.number().min(0).max(100),
+  OG: z.number().min(0).max(100),
+  C: z.number().min(0).max(100),
+  EDGE: z.number().min(0).max(100),
+  DT: z.number().min(0).max(100),
   LB: z.number().min(0).max(100),
   CB: z.number().min(0).max(100),
+  S: z.number().min(0).max(100),
+  K: z.number().min(0).max(100),
+  P: z.number().min(0).max(100),
 });
 
 const worldConstitutionSchema = z.object({
@@ -1240,7 +1255,7 @@ const ecosystemTalentPipelineSchema = z.object({
   })),
   independentProspects: z.array(z.object({
     id: z.string().min(1), seed: z.string().min(1), name: z.string().min(2),
-    age: z.number().int().min(17).max(23), position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    age: z.number().int().min(17).max(23), position: ecosystemRosterPositionSchema,
     route: z.enum(["juco", "walk-on"]), regionId: z.string().min(1), homeState: z.string().length(2),
     overall: z.number().min(0).max(100), potential: z.number().min(0).max(100), health: z.number().min(0).max(100),
     academicProjection: z.number().min(0).max(100), exposure: z.enum(["hidden", "local", "regional", "national"]),
@@ -1257,7 +1272,7 @@ const ecosystemTalentPipelineSchema = z.object({
 });
 
 const ecosystemPositionProjectionSchema = z.object({
-  position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+  position: ecosystemRosterPositionSchema,
   currentPlayers: z.number().int().nonnegative(),
   returningNextYear: z.number().int().nonnegative(),
   returningInTwoYears: z.number().int().nonnegative(),
@@ -1268,7 +1283,7 @@ const ecosystemPositionProjectionSchema = z.object({
   averagePotential: z.number().min(0).max(100),
   needNow: z.number().min(0).max(100),
   needNextYear: z.number().min(0).max(100),
-  targetAdds: z.number().int().min(0).max(3),
+  targetAdds: z.number().int().min(0).max(6),
 });
 
 const ecosystemRosterPlanSchema = z.object({
@@ -1286,8 +1301,8 @@ const ecosystemRosterPlanSchema = z.object({
   developmentalPlayerIds: z.array(z.string().min(1)),
   positionChanges: z.array(z.object({
     playerId: z.string().min(1),
-    fromPosition: z.enum(["QB", "RB", "WR", "LB", "CB"]),
-    toPosition: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    fromPosition: ecosystemRosterPositionSchema,
+    toPosition: ecosystemRosterPositionSchema,
     reason: z.string().min(2),
     applied: z.boolean(),
   })),
@@ -1301,8 +1316,17 @@ const ecosystemRosterPlanSchema = z.object({
     QB: ecosystemPositionProjectionSchema,
     RB: ecosystemPositionProjectionSchema,
     WR: ecosystemPositionProjectionSchema,
+    TE: ecosystemPositionProjectionSchema,
+    OT: ecosystemPositionProjectionSchema,
+    OG: ecosystemPositionProjectionSchema,
+    C: ecosystemPositionProjectionSchema,
+    EDGE: ecosystemPositionProjectionSchema,
+    DT: ecosystemPositionProjectionSchema,
     LB: ecosystemPositionProjectionSchema,
     CB: ecosystemPositionProjectionSchema,
+    S: ecosystemPositionProjectionSchema,
+    K: ecosystemPositionProjectionSchema,
+    P: ecosystemPositionProjectionSchema,
   }),
   lastReviewReason: z.string().min(2),
 });
@@ -1315,7 +1339,7 @@ const ecosystemMovementMarketSchema = z.object({
   openings: z.array(z.object({
     id: z.string().min(1),
     teamId: z.string().min(1),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: ecosystemRosterPositionSchema,
     seasonYear: z.number().int().min(2020).max(2200),
     slots: z.number().int().nonnegative(),
     scholarshipSlots: z.number().int().nonnegative(),
@@ -1330,7 +1354,7 @@ const ecosystemMovementMarketSchema = z.object({
     candidateId: z.string().min(1),
     candidateKind: z.enum(["high-school", "juco", "walk-on", "transfer"]),
     candidateName: z.string().min(2),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: ecosystemRosterPositionSchema,
     teamId: z.string().min(1),
     status: z.enum(["offered", "accepted", "withdrawn", "expired"]),
     scholarship: z.enum(["none", "partial", "full"]),
@@ -1448,8 +1472,17 @@ const ecosystemPositionRoleSchema = z.enum([
   "pocket-distributor", "dual-threat", "field-general",
   "zone-runner", "power-back", "receiving-back",
   "separator", "vertical-threat", "possession-target",
+  "inline-receiver", "seam-threat", "move-tight-end",
+  "blindside-anchor", "zone-tackle", "power-tackle",
+  "pull-guard", "phone-booth-guard", "zone-guard",
+  "line-caller", "reach-center", "power-center",
+  "speed-rusher", "power-rusher", "edge-setter",
+  "nose-anchor", "interior-penetrator", "three-technique",
   "run-anchor", "coverage-backer", "edge-blitzer",
   "press-corner", "zone-corner", "ball-hawk",
+  "box-safety", "center-fielder", "match-safety",
+  "accuracy-kicker", "power-kicker", "clutch-kicker",
+  "directional-punter", "hangtime-punter", "field-position-punter",
 ]);
 
 const ecosystemTacticalIdentitySchema = z.object({
@@ -1468,8 +1501,17 @@ const ecosystemTacticalIdentitySchema = z.object({
     QB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
     RB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
     WR: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    TE: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    OT: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    OG: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    C: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    EDGE: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    DT: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
     LB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
     CB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    S: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    K: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
+    P: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
   }),
 });
 
@@ -1508,7 +1550,7 @@ const ecosystemSocialSchema = z.object({
     active: z.boolean(),
     lastSeasonYear: z.number().int().min(2020).max(2200),
     lastWeek: z.number().int().min(1).max(60),
-  })).max(3000),
+  })).max(12000),
   teamCultures: z.array(z.object({
     teamId: z.string().min(1),
     cohesion: z.number().min(0).max(100),
@@ -1536,7 +1578,7 @@ const ecosystemSocialSchema = z.object({
 });
 
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(10),
+  moduleVersion: z.literal(11),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -1591,7 +1633,7 @@ const footballEcosystemSchema = z.object({
     level: z.enum(["high-school", "college"]),
     age: z.number().int().min(14).max(24),
     classYear: z.enum(["Freshman", "Sophomore", "Junior", "Senior"]),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: ecosystemRosterPositionSchema,
     overall: z.number().min(0).max(100),
     potential: z.number().min(0).max(100),
     health: z.number().min(0).max(100),
@@ -1610,7 +1652,7 @@ const footballEcosystemSchema = z.object({
     eligibility: ecosystemPlayerEligibilitySchema,
     talent: ecosystemTalentProfileSchema,
     usagePlan: z.enum(["starter", "rotation", "special-teams", "developmental", "redshirt"]),
-    positionHistory: z.array(z.enum(["QB", "RB", "WR", "LB", "CB"])),
+    positionHistory: z.array(ecosystemRosterPositionSchema),
     tactical: ecosystemPlayerTacticalProfileSchema,
   })).min(40),
   coaches: z.array(z.object({

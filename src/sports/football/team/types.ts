@@ -1,6 +1,7 @@
 import type { FootballPosition } from "../career/types";
 
-export type FootballRosterPosition = FootballPosition | "TE" | "OL" | "DL" | "S" | "K" | "P";
+export type FootballRosterPosition = FootballPosition | "TE" | "OT" | "OG" | "C" | "EDGE" | "DT" | "S" | "K" | "P";
+export type LegacyFootballRosterPosition = "OL" | "DL";
 export type PlayerYear = "Freshman" | "Sophomore" | "Junior" | "Senior";
 export type RosterUnit = "offense" | "defense" | "special";
 
@@ -23,7 +24,7 @@ export interface FootballCoach {
 export interface FootballRosterPlayer {
   id: string;
   name: string;
-  position: FootballRosterPosition;
+  position: FootballRosterPosition | LegacyFootballRosterPosition;
   unit: RosterUnit;
   year: PlayerYear;
   overall: number;

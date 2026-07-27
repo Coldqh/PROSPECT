@@ -31,7 +31,7 @@ function createTeam(id: string, level: EcosystemTeam["level"], stateCode: string
     championships: 0,
     offenseStyle: "Spread option",
     defenseStyle: "4-2-5 pressure",
-    positionNeeds: { QB: 70, RB: 70, WR: 70, LB: 70, CB: 70 },
+    positionNeeds: { QB: 70, RB: 70, WR: 70, TE: 70, OT: 70, OG: 70, C: 70, EDGE: 70, DT: 70, LB: 70, CB: 70, S: 70, K: 70, P: 70 },
     rosterIds: [],
     coachIds: [],
     trend: "stable" as const,

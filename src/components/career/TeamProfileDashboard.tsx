@@ -3,7 +3,8 @@ import type { CareerSave } from "../../storage/saves/schema";
 import { defenseSystemLabel, offenseSystemLabel } from "../../sports/football/ecosystem/tactics";
 import type { EcosystemPlayer, EcosystemTeam } from "../../sports/football/ecosystem/types";
 import { candidateKindLabel, getTeamEcosystemSnapshot, negotiationStatusLabel, openingStatusLabel, promiseRoleLabel, rosterStrategyLabel, scholarshipLabel } from "../../sports/football/ecosystem/visibility";
-import type { FootballRosterPlayer } from "../../sports/football/team/types";
+import { DEFENSE_ROSTER_POSITIONS, FOOTBALL_ROSTER_POSITIONS, OFFENSE_ROSTER_POSITIONS, POSITION_STARTER_TARGETS, SPECIAL_TEAMS_POSITIONS, normalizeLegacyRosterPosition, positionLabel } from "../../sports/football/team/positions";
+import type { FootballRosterPlayer, FootballRosterPosition } from "../../sports/football/team/types";
 import { Icon } from "../ui/Icon";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 
@@ -38,6 +39,16 @@ function roleLabel(role: string): string {
   }[role] ?? role;
 }
 
+function resolvedPosition(player: EcosystemPlayer | FootballRosterPlayer): FootballRosterPosition {
+  return normalizeLegacyRosterPosition(player.position, player.id);
+}
+
+const rosterUnitSections: ReadonlyArray<{ id: string; label: string; positions: readonly FootballRosterPosition[] }> = [
+  { id: "offense", label: "Атака", positions: OFFENSE_ROSTER_POSITIONS },
+  { id: "defense", label: "Защита", positions: DEFENSE_ROSTER_POSITIONS },
+  { id: "special", label: "Спецкоманды", positions: SPECIAL_TEAMS_POSITIONS },
+];
+
 export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps) {
   const [view, setView] = useState<TeamView>("overview");
   const [selectedPlayer, setSelectedPlayer] = useState<EcosystemPlayer | FootballRosterPlayer>();
@@ -53,9 +64,15 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
     : undefined;
   const culture = worldTeam ? save.world.social.teamCultures.find((item) => item.teamId === worldTeam.id) : undefined;
   const ranking = worldTeam ? save.world.competition.rankings.find((item) => item.teamId === worldTeam.id) : undefined;
-  const teamPlayers = worldTeam
-    ? save.world.players.filter((player) => player.teamId === worldTeam.id).sort((a, b) => a.position.localeCompare(b.position) || a.depthRank - b.depthRank || b.overall - a.overall)
-    : save.football.roster.slice().sort((a, b) => a.position.localeCompare(b.position) || a.depthRank - b.depthRank || b.overall - a.overall);
+  const positionOrder = new Map(FOOTBALL_ROSTER_POSITIONS.map((position, index) => [position, index]));
+  const teamPlayers: Array<EcosystemPlayer | FootballRosterPlayer> = worldTeam
+    ? save.world.players.filter((player) => player.teamId === worldTeam.id)
+    : save.football.roster.slice();
+  teamPlayers.sort((left, right) => (positionOrder.get(resolvedPosition(left)) ?? 99) - (positionOrder.get(resolvedPosition(right)) ?? 99) || left.depthRank - right.depthRank || right.overall - left.overall);
+  const rosterRooms = FOOTBALL_ROSTER_POSITIONS.map((position) => ({
+    position,
+    players: teamPlayers.filter((player) => resolvedPosition(player) === position),
+  }));
   const teamCoaches = worldTeam
     ? save.world.coaches.filter((coach) => coach.teamId === worldTeam.id).sort((a, b) => a.role.localeCompare(b.role))
     : [save.football.staff.headCoach, save.football.staff.offensiveCoordinator, save.football.staff.defensiveCoordinator, save.football.staff.positionCoach];
@@ -71,7 +88,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
     ? conference.teamIds.map((id) => save.world.teams.find((team) => team.id === id)).filter((team): team is EcosystemTeam => Boolean(team)).sort((left, right) => right.conferenceWins - left.conferenceWins || left.conferenceLosses - right.conferenceLosses || right.wins - left.wins)
     : [];
   const ecosystemSnapshot = worldTeam ? getTeamEcosystemSnapshot(save.world, worldTeam.id) : undefined;
-  const positionPlan = worldTeam ? Object.values(worldTeam.rosterPlan.positionProjections).sort((left, right) => right.targetAdds - left.targetAdds || right.needNextYear - left.needNextYear) : [];
+  const positionPlan = worldTeam ? FOOTBALL_ROSTER_POSITIONS.map((position) => worldTeam.rosterPlan.positionProjections[position]).sort((left, right) => right.targetAdds - left.targetAdds || right.needNextYear - left.needNextYear) : [];
 
   const teamStyle = worldTeam ? undefined : ({
     "--team-primary": save.football.school.primaryColor,
@@ -166,11 +183,29 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
       )}
 
       {view === "roster" && (
-        <div className="team-profile__roster">
-          {teamPlayers.map((player) => {
-            const isHero = "isHero" in player ? player.isHero : false;
-            return <button type="button" key={player.id} className={isHero ? "is-hero" : ""} onClick={() => setSelectedPlayer(player)}><span>{player.position}</span><div><strong>{player.name}</strong><small>{"classYear" in player ? player.classYear : player.year} · #{player.depthRank}</small></div><em>{Math.round(player.overall)}</em></button>;
-          })}
+        <div className="team-depth-chart">
+          {rosterUnitSections.map((section) => (
+            <section key={section.id} className="team-depth-chart__unit">
+              <header><h2>{section.label}</h2><span>{section.positions.reduce((total, position) => total + (rosterRooms.find((room) => room.position === position)?.players.length ?? 0), 0)} игроков</span></header>
+              <div className="team-depth-chart__rooms">
+                {section.positions.map((position) => {
+                  const room = rosterRooms.find((item) => item.position === position)?.players ?? [];
+                  return (
+                    <article key={position} className="team-depth-room">
+                      <header><div><strong>{position}</strong><small>{positionLabel(position)}</small></div><span>{room.length} · старт {POSITION_STARTER_TARGETS[position]}</span></header>
+                      <div>
+                        {room.map((player) => {
+                          const isHero = "isHero" in player ? player.isHero : false;
+                          return <button type="button" key={player.id} className={isHero ? "is-hero" : ""} onClick={() => setSelectedPlayer(player)}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{"classYear" in player ? player.classYear : player.year} · {player.status === "starter" ? "Старт" : player.status === "rotation" ? "Ротация" : player.status === "injured" ? "Травма" : "Резерв"}</small></div><em>{Math.round(player.overall)}</em></button>;
+                        })}
+                        {room.length === 0 && <div className="data-empty">Позиционная комната пуста</div>}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
           {teamPlayers.length === 0 && <div className="data-empty">Состав пуст</div>}
         </div>
       )}
@@ -188,7 +223,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
               <section className="elite-section">
                 <header className="elite-section__head"><h2>Позиционный план</h2><span>{worldTeam.rosterPlan.lastReviewReason}</span></header>
                 <div className="team-plan-list">
-                  {positionPlan.map((projection) => <article key={projection.position}><span>{projection.position}</span><div><strong>{projection.currentPlayers} в комнате</strong><small>{projection.returningNextYear} вернутся · OVR {Math.round(projection.averageOverall)}</small></div><em>Need {projection.needNextYear}</em><b>+{projection.targetAdds}</b></article>)}
+                  {positionPlan.map((projection) => <article key={projection.position}><span title={positionLabel(projection.position)}>{projection.position}</span><div><strong>{projection.currentPlayers} в комнате</strong><small>{projection.returningNextYear} вернутся · OVR {Math.round(projection.averageOverall)}</small></div><em>Need {projection.needNextYear}</em><b>+{projection.targetAdds}</b></article>)}
                 </div>
               </section>
               <section className="elite-section">

@@ -99,7 +99,7 @@ function FormationBoard({ episode }: { episode: MatchEpisode }) {
             key={assignment.id}
             className={`formation-player formation-player--${assignment.unit}${assignment.isHero ? " is-hero" : ""}`}
             style={style}
-            title={`${assignment.slot}: ${assignment.task}`}
+            title={`${assignment.playerName ?? assignment.slot} · ${assignment.position}${assignment.overall ? ` · OVR ${Math.round(assignment.overall)}` : ""}: ${assignment.task}`}
           >
             {assignment.isHero ? episode.position : assignment.label}
           </span>
@@ -107,6 +107,25 @@ function FormationBoard({ episode }: { episode: MatchEpisode }) {
       })}
       <div className="formation-board__endzone formation-board__endzone--home">OFFENSE</div>
       <span className="formation-board__snap-label">22 PLAYERS · SNAP</span>
+    </section>
+  );
+}
+
+function SnapPersonnel({ episode }: { episode: MatchEpisode }) {
+  return (
+    <section className="snap-personnel">
+      {(["offense", "defense"] as const).map((unit) => (
+        <div key={unit}>
+          <header><strong>{unit === "offense" ? "Атака" : "Защита"}</strong><span>11 игроков</span></header>
+          {episode.assignments.filter((assignment) => assignment.unit === unit).map((assignment) => (
+            <article key={assignment.id} className={assignment.isHero ? "is-hero" : ""}>
+              <span>{assignment.slot}</span>
+              <div><strong>{assignment.playerName ?? assignment.label}</strong><small>{assignment.position} · #{assignment.depthRank ?? "—"} · {assignment.task}</small></div>
+              <em>{assignment.overall ? Math.round(assignment.overall) : "—"}</em>
+            </article>
+          ))}
+        </div>
+      ))}
     </section>
   );
 }
@@ -185,6 +204,10 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
   const assignmentRate = match.advancedStats.snaps > 0
     ? Math.round(match.advancedStats.assignmentWins / match.advancedStats.snaps * 100)
     : 0;
+  const heroAssignment = episode?.assignments.find((assignment) => assignment.isHero);
+  const heroMatchup = heroAssignment?.matchupSlot
+    ? episode?.assignments.find((assignment) => assignment.slot === heroAssignment.matchupSlot && assignment.unit !== heroAssignment.unit)
+    : undefined;
 
   return (
     <div className="compact-section match-section">
@@ -286,6 +309,13 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
               <span><small>Твой слот</small><strong>{episode.heroSlot}</strong></span>
               <span><small>Твоя работа</small><strong>{episode.heroRole}</strong></span>
             </div>
+            {heroAssignment && (
+              <div className="match-personnel-matchup">
+                <article><small>ТЫ</small><strong>{heroAssignment.playerName ?? save.character.identity.fullName}</strong><span>{heroAssignment.position} · OVR {Math.round(heroAssignment.overall ?? football.ratings.overall)}</span></article>
+                <b>VS</b>
+                <article><small>МАТЧАП</small><strong>{heroMatchup?.playerName ?? heroAssignment.matchupSlot ?? "Схема"}</strong><span>{heroMatchup ? `${heroMatchup.position} · OVR ${Math.round(heroMatchup.overall ?? 0)}` : episode.opponentCall.concept}</span></article>
+              </div>
+            )}
           </section>
 
           {lastResult && (
@@ -370,6 +400,7 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
         <div className="match-sheet-stats">
           {stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}
         </div>
+        {episode && <SnapPersonnel episode={episode} />}
         {match.drives.length > 0 && (
           <div className="match-sheet-drives">
             {[...match.drives].reverse().map((drive) => (

@@ -1,8 +1,8 @@
 import type { GameDate } from "../../../core/calendar/types";
-import type { FootballPosition } from "../career/types";
+import type { FootballRosterPosition } from "../team/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 10 as const;
+export const ECOSYSTEM_MODULE_VERSION = 11 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -25,8 +25,17 @@ export type EcosystemPositionRole =
   | "pocket-distributor" | "dual-threat" | "field-general"
   | "zone-runner" | "power-back" | "receiving-back"
   | "separator" | "vertical-threat" | "possession-target"
+  | "inline-receiver" | "seam-threat" | "move-tight-end"
+  | "blindside-anchor" | "zone-tackle" | "power-tackle"
+  | "pull-guard" | "phone-booth-guard" | "zone-guard"
+  | "line-caller" | "reach-center" | "power-center"
+  | "speed-rusher" | "power-rusher" | "edge-setter"
+  | "nose-anchor" | "interior-penetrator" | "three-technique"
   | "run-anchor" | "coverage-backer" | "edge-blitzer"
-  | "press-corner" | "zone-corner" | "ball-hawk";
+  | "press-corner" | "zone-corner" | "ball-hawk"
+  | "box-safety" | "center-fielder" | "match-safety"
+  | "accuracy-kicker" | "power-kicker" | "clutch-kicker"
+  | "directional-punter" | "hangtime-punter" | "field-position-punter";
 export type EcosystemPlayerArchetype = EcosystemPositionRole;
 export type EcosystemUsagePlan = "starter" | "rotation" | "special-teams" | "developmental" | "redshirt";
 export type EcosystemCandidateKind = "high-school" | "juco" | "walk-on" | "transfer";
@@ -101,13 +110,7 @@ export type EcosystemTransactionKind =
   | "tactical-change"
   | "scheme-fit";
 
-export interface EcosystemPositionNeeds {
-  QB: number;
-  RB: number;
-  WR: number;
-  LB: number;
-  CB: number;
-}
+export type EcosystemPositionNeeds = Record<FootballRosterPosition, number>;
 
 
 export interface EcosystemTalentProfile {
@@ -152,7 +155,7 @@ export interface EcosystemIndependentProspect {
   seed: string;
   name: string;
   age: number;
-  position: FootballPosition;
+  position: FootballRosterPosition;
   route: "juco" | "walk-on";
   regionId: string;
   homeState: string;
@@ -192,7 +195,7 @@ export interface EcosystemTalentPipeline {
 export interface EcosystemRosterOpening {
   id: string;
   teamId: string;
-  position: FootballPosition;
+  position: FootballRosterPosition;
   seasonYear: number;
   slots: number;
   scholarshipSlots: number;
@@ -208,7 +211,7 @@ export interface EcosystemMarketNegotiation {
   candidateId: string;
   candidateKind: EcosystemCandidateKind;
   candidateName: string;
-  position: FootballPosition;
+  position: FootballRosterPosition;
   teamId: string;
   status: EcosystemNegotiationStatus;
   scholarship: "none" | "partial" | "full";
@@ -391,7 +394,7 @@ export interface EcosystemProgramResources {
 
 
 export interface EcosystemPositionProjection {
-  position: FootballPosition;
+  position: FootballRosterPosition;
   currentPlayers: number;
   returningNextYear: number;
   returningInTwoYears: number;
@@ -407,8 +410,8 @@ export interface EcosystemPositionProjection {
 
 export interface EcosystemPositionChangePlan {
   playerId: string;
-  fromPosition: FootballPosition;
-  toPosition: FootballPosition;
+  fromPosition: FootballRosterPosition;
+  toPosition: FootballRosterPosition;
   reason: string;
   applied: boolean;
 }
@@ -435,7 +438,7 @@ export interface EcosystemRosterPlan {
   developmentalPlayerIds: string[];
   positionChanges: EcosystemPositionChangePlan[];
   scholarshipDecisions: EcosystemScholarshipDecision[];
-  positionProjections: Record<FootballPosition, EcosystemPositionProjection>;
+  positionProjections: Record<FootballRosterPosition, EcosystemPositionProjection>;
   lastReviewReason: string;
 }
 
@@ -456,7 +459,7 @@ export interface EcosystemTacticalIdentity {
   continuity: number;
   rotationDepth: number;
   headCoachFingerprint: string;
-  positionRoles: Record<FootballPosition, EcosystemRolePriority>;
+  positionRoles: Record<FootballRosterPosition, EcosystemRolePriority>;
 }
 
 export interface EcosystemPlayerTacticalProfile {
@@ -509,7 +512,7 @@ export interface EcosystemPlayer {
   level: EcosystemLevel;
   age: number;
   classYear: "Freshman" | "Sophomore" | "Junior" | "Senior";
-  position: FootballPosition;
+  position: FootballRosterPosition;
   overall: number;
   potential: number;
   health: number;
@@ -528,7 +531,7 @@ export interface EcosystemPlayer {
   eligibility: EcosystemPlayerEligibility;
   talent: EcosystemTalentProfile;
   usagePlan: EcosystemUsagePlan;
-  positionHistory: FootballPosition[];
+  positionHistory: FootballRosterPosition[];
   tactical: EcosystemPlayerTacticalProfile;
 }
 

@@ -10,6 +10,7 @@ import type {
   RosterUnit,
   TeamDynamics,
 } from "./types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS, POSITION_STARTER_TARGETS, rosterUnitForPosition } from "./positions";
 
 const FIRST_NAMES = [
   "Avery", "Brandon", "Caleb", "Dante", "Eli", "Gavin", "Isaiah", "Jace", "Keon", "Leon",
@@ -20,27 +21,18 @@ const LAST_NAMES = [
   "Knox", "Lewis", "Moore", "Nash", "Owens", "Price", "Ross", "Stone", "Turner", "Young",
 ] as const;
 
-const POSITION_COUNTS: Record<FootballRosterPosition, number> = {
-  QB: 3,
-  RB: 4,
-  WR: 7,
-  TE: 3,
-  OL: 8,
-  DL: 7,
-  LB: 6,
-  CB: 6,
-  S: 5,
-  K: 1,
-  P: 1,
-};
+const POSITION_COUNTS: Record<FootballRosterPosition, number> = POSITION_ROOM_TARGETS["high-school"];
 
 const POSITION_STYLES: Record<FootballRosterPosition, readonly string[]> = {
   QB: ["pocket distributor", "vertical passer", "mobile creator"],
   RB: ["inside runner", "open-field slasher", "receiving back"],
   WR: ["route technician", "vertical threat", "possession target", "slot separator"],
   TE: ["inline blocker", "move tight end", "red-zone target"],
-  OL: ["anchor blocker", "mobile lineman", "violent finisher"],
-  DL: ["gap controller", "interior penetrator", "edge disruptor"],
+  OT: ["blindside anchor", "zone tackle", "power tackle"],
+  OG: ["pulling guard", "phone-booth finisher", "zone guard"],
+  C: ["line caller", "reach blocker", "power center"],
+  EDGE: ["speed rusher", "power rusher", "edge setter"],
+  DT: ["nose anchor", "interior penetrator", "three-technique"],
   LB: ["run fitter", "coverage backer", "pressure specialist"],
   CB: ["press corner", "off-man technician", "ball hawk"],
   S: ["box safety", "deep-field eraser", "hybrid defender"],
@@ -53,12 +45,6 @@ const COACH_LAST_NAMES = ["Bishop", "Daniels", "Holloway", "Mercer", "Parker", "
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value)));
-}
-
-function unitFor(position: FootballRosterPosition): RosterUnit {
-  if (["QB", "RB", "WR", "TE", "OL"].includes(position)) return "offense";
-  if (["DL", "LB", "CB", "S"].includes(position)) return "defense";
-  return "special";
 }
 
 function yearBonus(year: PlayerYear): number {
@@ -131,18 +117,19 @@ function createRosterPlayer(
   const potential = clamp(overall + random.integer(2, 16) - Math.max(0, yearBonus(year)), overall, 96);
   const coachStanding = clamp(45 + overall * 0.38 + yearBonus(year) + random.integer(-10, 10));
   const health = clamp(92 + random.integer(-10, 8), 58, 100);
+  const starterCount = POSITION_STARTER_TARGETS[position];
   const status: FootballRosterPlayer["status"] = health < 72
     ? "injured"
-    : index === 0
+    : index < starterCount
       ? "starter"
-      : index <= 2
+      : index < starterCount + 2
         ? "rotation"
         : "backup";
   return {
     id: `player-${school.id}-${position.toLowerCase()}-${index}`,
     name: `${random.pick(FIRST_NAMES)} ${random.pick(LAST_NAMES)}`,
     position,
-    unit: unitFor(position),
+    unit: rosterUnitForPosition(position),
     year,
     overall,
     potential,
@@ -155,7 +142,7 @@ function createRosterPlayer(
 }
 
 function rankPositionRooms(roster: FootballRosterPlayer[]): FootballRosterPlayer[] {
-  const positions = Object.keys(POSITION_COUNTS) as FootballRosterPosition[];
+  const positions = FOOTBALL_ROSTER_POSITIONS;
   const ranked = [...roster];
   for (const position of positions) {
     const room = ranked
@@ -163,7 +150,8 @@ function rankPositionRooms(roster: FootballRosterPlayer[]): FootballRosterPlayer
       .sort((left, right) => (right.overall * 0.72 + right.coachStanding * 0.28) - (left.overall * 0.72 + left.coachStanding * 0.28));
     room.forEach((player, index) => {
       player.depthRank = index + 1;
-      player.status = player.health < 72 ? "injured" : index === 0 ? "starter" : index <= 2 ? "rotation" : "backup";
+      const starterCount = POSITION_STARTER_TARGETS[position];
+      player.status = player.health < 72 ? "injured" : index < starterCount ? "starter" : index < starterCount + 2 ? "rotation" : "backup";
     });
   }
   return ranked;
@@ -175,8 +163,8 @@ export function createFootballRoster(
   heroPosition: FootballPosition,
 ): FootballRosterPlayer[] {
   const roster: FootballRosterPlayer[] = [];
-  for (const [positionKey, count] of Object.entries(POSITION_COUNTS)) {
-    const position = positionKey as FootballRosterPosition;
+  for (const position of FOOTBALL_ROSTER_POSITIONS) {
+    const count = POSITION_COUNTS[position];
     const npcCount = position === heroPosition ? Math.max(2, count - 1) : count;
     for (let index = 0; index < npcCount; index += 1) {
       roster.push(createRosterPlayer(worldSeed, school, position, index));

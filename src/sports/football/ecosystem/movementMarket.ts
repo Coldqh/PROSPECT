@@ -1,6 +1,8 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import { defaultRoleForPosition, tacticalRecruitingFit } from "./tactics";
 import {
   availableNilCapacity,
@@ -24,7 +26,7 @@ import type {
   EcosystemUnifiedMovementMarket,
 } from "./types";
 
-const POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
+const POSITIONS = FOOTBALL_ROSTER_POSITIONS;
 
 interface MarketContext {
   seasonYear: number;
@@ -41,7 +43,7 @@ interface MarketCandidate {
   id: string;
   kind: EcosystemCandidateKind;
   name: string;
-  position: FootballPosition;
+  position: FootballRosterPosition;
   overall: number;
   potential: number;
   homeState: string;
@@ -121,18 +123,18 @@ function candidateKey(kind: EcosystemCandidateKind, id: string): string {
   return `${kind}:${id}`;
 }
 
-function openingId(seasonYear: number, teamId: string, position: FootballPosition): string {
+function openingId(seasonYear: number, teamId: string, position: FootballRosterPosition): string {
   return `${seasonYear}:${teamId}:${position}`;
 }
 
-function roleForOpening(team: EcosystemTeam, position: FootballPosition): EcosystemPromiseRole {
+function roleForOpening(team: EcosystemTeam, position: FootballRosterPosition): EcosystemPromiseRole {
   const projection = team.rosterPlan.positionProjections[position];
   if (projection.needNow >= 78 || projection.currentPlayers <= 1) return "starter-path";
   if (projection.needNow >= 48 || projection.returningNextYear <= 2) return "rotation";
   return "developmental";
 }
 
-function openingReason(team: EcosystemTeam, position: FootballPosition): string {
+function openingReason(team: EcosystemTeam, position: FootballRosterPosition): string {
   const projection = team.rosterPlan.positionProjections[position];
   if (projection.projectedDepartures >= 2) return `${projection.projectedDepartures} игрока уходят из комнаты ${position} в ближайший год.`;
   if (projection.needNow >= 70) return `${position} — срочная позиционная потребность программы.`;
@@ -140,7 +142,7 @@ function openingReason(team: EcosystemTeam, position: FootballPosition): string 
   return `${position} входит в план набора на три года.`;
 }
 
-function committedCandidateIds(players: EcosystemPlayer[], teamId: string, position: FootballPosition): string[] {
+function committedCandidateIds(players: EcosystemPlayer[], teamId: string, position: FootballRosterPosition): string[] {
   return players
     .filter((player) => player.level === "high-school" && player.position === position && player.committedTeamId === teamId)
     .map((player) => candidateKey("high-school", player.id));
@@ -334,7 +336,7 @@ function activeOfferExists(negotiations: EcosystemMarketNegotiation[], candidate
   return negotiations.some((item) => item.candidateId === candidateId && item.teamId === teamId && item.status === "offered");
 }
 
-function relevant(context: MarketContext, teamId: string, position: FootballPosition): boolean {
+function relevant(context: MarketContext, teamId: string, position: FootballRosterPosition): boolean {
   return teamId === context.heroProgramId || (position === context.heroPosition && context.relevantProgramIds.includes(teamId));
 }
 

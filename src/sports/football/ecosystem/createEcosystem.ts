@@ -1,7 +1,9 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { CharacterState } from "../../../core/character/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
-import type { FootballCareerState, FootballPosition } from "../career/types";
+import type { FootballCareerState } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS, POSITION_STARTER_TARGETS, normalizeLegacyRosterPosition } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import type {
   EcosystemCoach,
   EcosystemLevel,
@@ -39,7 +41,7 @@ const PHILOSOPHIES = [
   "Высокий темп и глубокая ротация",
   "Жёсткая дисциплина и контроль ошибок",
 ] as const;
-const CORE_POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
+const CORE_POSITIONS = FOOTBALL_ROSTER_POSITIONS;
 const CLASS_YEARS = ["Freshman", "Sophomore", "Junior", "Senior"] as const;
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -60,13 +62,9 @@ function coachName(random: SeededRandom): string {
 
 function createNeeds(random: SeededRandom, level: EcosystemLevel): EcosystemPositionNeeds {
   const floor = level === "college" ? 22 : 16;
-  return {
-    QB: random.integer(floor, 88),
-    RB: random.integer(floor, 88),
-    WR: random.integer(floor, 88),
-    LB: random.integer(floor, 88),
-    CB: random.integer(floor, 88),
-  };
+  return Object.fromEntries(
+    CORE_POSITIONS.map((position) => [position, random.integer(floor, 88)]),
+  ) as EcosystemPositionNeeds;
 }
 
 function createCoach(
@@ -102,7 +100,7 @@ function createCoach(
 
 function createGeneratedPlayer(
   team: EcosystemTeam,
-  position: FootballPosition,
+  position: FootballRosterPosition,
   depthRank: number,
   random: SeededRandom,
   seasonYear: number,
@@ -130,7 +128,7 @@ function createGeneratedPlayer(
     potential,
     health,
     form,
-    status: health < 62 ? "injured" : depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "backup",
+    status: health < 62 ? "injured" : depthRank <= POSITION_STARTER_TARGETS[position] ? "starter" : depthRank <= POSITION_STARTER_TARGETS[position] + 2 ? "rotation" : "backup",
     depthRank,
     trajectory: form >= 72 ? "surging" : form <= 42 ? "slipping" : "steady",
     nationalRank: team.level === "high-school" ? random.integer(75, 1800) : random.integer(1, 9999),
@@ -144,7 +142,7 @@ function createGeneratedPlayer(
     isHero: false,
     eligibility,
     talent,
-    usagePlan: depthRank === 1 ? "starter" : depthRank === 2 ? "rotation" : "developmental",
+    usagePlan: depthRank <= POSITION_STARTER_TARGETS[position] ? "starter" : depthRank <= POSITION_STARTER_TARGETS[position] + 2 ? "rotation" : "developmental",
     positionHistory: [],
     tactical: createPlayerTacticalProfile({ seed: `${team.seed}:${position}:${depthRank}`, position, overall, potential, classYear }, team.tactical, random.fork("tactical")),
   };
@@ -153,7 +151,7 @@ function createGeneratedPlayer(
 function createTeamPlayers(team: EcosystemTeam, random: SeededRandom, seasonYear: number): EcosystemPlayer[] {
   const players: EcosystemPlayer[] = [];
   for (const position of CORE_POSITIONS) {
-    const roomSize = random.integer(1, team.level === "college" ? 3 : 2);
+    const roomSize = POSITION_ROOM_TARGETS[team.level][position];
     for (let rank = 1; rank <= roomSize; rank += 1) {
       players.push(createGeneratedPlayer(team, position, rank, random.fork(`${position}-${rank}`), seasonYear));
     }
@@ -167,48 +165,41 @@ function createHeroTeamPlayers(
   random: SeededRandom,
   seasonYear: number,
 ): EcosystemPlayer[] {
-  const players: EcosystemPlayer[] = [];
-  for (const position of CORE_POSITIONS) {
-    const room = football.roster
-      .filter((player) => player.position === position)
-      .sort((left, right) => left.depthRank - right.depthRank)
-      .slice(0, 2);
-    if (room.length === 0) {
-      players.push(createGeneratedPlayer(team, position, 1, random.fork(position), seasonYear));
-      continue;
-    }
-    room.forEach((player, index) => {
-      players.push({
-        id: player.id,
-        seed: `${team.seed}:${player.id}`,
-        name: player.name,
-        teamId: team.id,
-        level: "high-school",
-        age: player.year === "Senior" ? 18 : player.year === "Junior" ? 17 : player.year === "Sophomore" ? 16 : 15,
-        classYear: player.year,
-        position,
-        overall: player.overall,
-        potential: player.potential,
-        health: player.health,
-        form: clamp(player.coachStanding),
-        status: player.status,
-        depthRank: index + 1,
-        trajectory: player.coachStanding >= 72 ? "surging" : player.coachStanding <= 42 ? "slipping" : "steady",
-        nationalRank: random.integer(90, 1500),
-        recruitingStage: player.year === "Senior" ? random.pick(["tracked", "offered", "unranked"] as const) : "unranked",
-        eligibilityYears: 4,
-        seasonsPlayed: 0,
-        transferStatus: "none",
-        previousTeamIds: [],
-        isHero: false,
-        eligibility: createPlayerEligibility("high-school", player.year === "Senior" ? 18 : player.year === "Junior" ? 17 : player.year === "Sophomore" ? 16 : 15, player.year, seasonYear, random.fork(`eligibility:${player.id}`)),
-        talent: createTalentProfile({ level: "high-school", classYear: player.year, overall: player.overall, potential: player.potential, nationalRank: random.integer(90, 1500), isHero: false }, team.stateCode, seasonYear, random.fork(`talent:${player.id}`)),
-        usagePlan: index === 0 ? "starter" : "rotation",
-        positionHistory: [],
-        tactical: createPlayerTacticalProfile({ seed: `${team.seed}:${player.id}`, position, overall: player.overall, potential: player.potential, classYear: player.year }, team.tactical, random.fork(`tactical:${player.id}`)),
-      });
-    });
-  }
+  const players: EcosystemPlayer[] = football.roster.map((player, index) => {
+    const position = normalizeLegacyRosterPosition(player.position, player.id);
+    const age = player.year === "Senior" ? 18 : player.year === "Junior" ? 17 : player.year === "Sophomore" ? 16 : 15;
+    const nationalRank = random.fork(`rank:${player.id}`).integer(90, 2200);
+    return {
+      id: player.id,
+      seed: `${team.seed}:${player.id}`,
+      name: player.name,
+      teamId: team.id,
+      level: "high-school",
+      age,
+      classYear: player.year,
+      position,
+      overall: player.overall,
+      potential: player.potential,
+      health: player.health,
+      form: clamp(player.coachStanding),
+      status: player.status,
+      depthRank: player.depthRank,
+      trajectory: player.coachStanding >= 72 ? "surging" : player.coachStanding <= 42 ? "slipping" : "steady",
+      nationalRank,
+      recruitingStage: player.year === "Senior" ? random.fork(`recruiting:${player.id}`).pick(["tracked", "offered", "unranked"] as const) : "unranked",
+      eligibilityYears: 4,
+      seasonsPlayed: 0,
+      transferStatus: "none",
+      previousTeamIds: [],
+      isHero: false,
+      eligibility: createPlayerEligibility("high-school", age, player.year, seasonYear, random.fork(`eligibility:${player.id}`)),
+      talent: createTalentProfile({ level: "high-school", classYear: player.year, overall: player.overall, potential: player.potential, nationalRank, isHero: false }, team.stateCode, seasonYear, random.fork(`talent:${player.id}`)),
+      usagePlan: player.depthRank === 1 ? "starter" : player.depthRank <= 2 ? "rotation" : index % 4 === 0 ? "special-teams" : "developmental",
+      positionHistory: [],
+      tactical: createPlayerTacticalProfile({ seed: `${team.seed}:${player.id}`, position, overall: player.overall, potential: player.potential, classYear: player.year }, team.tactical, random.fork(`tactical:${player.id}`)),
+    };
+  });
+
   players.push({
     id: "hero",
     seed: `${team.seed}:hero`,
@@ -441,7 +432,7 @@ export function createFootballEcosystem(
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 10,
+    moduleVersion: 11,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,

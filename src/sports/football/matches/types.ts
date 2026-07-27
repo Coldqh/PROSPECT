@@ -92,6 +92,11 @@ export interface MatchPlayerAssignment {
   end: MatchPoint;
   delayMs: number;
   matchupSlot?: string | undefined;
+  playerId?: string | undefined;
+  playerName?: string | undefined;
+  overall?: number | undefined;
+  health?: number | undefined;
+  depthRank?: number | undefined;
 }
 
 export interface MatchEpisode {

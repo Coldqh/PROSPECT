@@ -1,4 +1,5 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
 import type {
   EcosystemCoach,
   EcosystemPlayer,
@@ -38,6 +39,40 @@ export interface SocialWeekResult {
   social: EcosystemSocialState;
   players: EcosystemPlayer[];
   stories: SocialStoryDraft[];
+}
+
+interface SocialLookup {
+  bondsByEntity: Map<string, EcosystemSocialBond[]>;
+  culturesByTeam: Map<string, EcosystemTeamCulture>;
+}
+
+let cachedSocialState: EcosystemSocialState | undefined;
+let cachedSocialLookup: SocialLookup | undefined;
+
+export function resetSocialLookupCache(): void {
+  cachedSocialState = undefined;
+  cachedSocialLookup = undefined;
+}
+
+function socialLookup(social: EcosystemSocialState): SocialLookup {
+  if (cachedSocialState === social && cachedSocialLookup) return cachedSocialLookup;
+  const bondsByEntity = new Map<string, EcosystemSocialBond[]>();
+  for (const bond of social.bonds) {
+    if (!bond.active) continue;
+    const left = bondsByEntity.get(bond.entityAId) ?? [];
+    left.push(bond);
+    bondsByEntity.set(bond.entityAId, left);
+    const right = bondsByEntity.get(bond.entityBId) ?? [];
+    right.push(bond);
+    bondsByEntity.set(bond.entityBId, right);
+  }
+  const lookup: SocialLookup = {
+    bondsByEntity,
+    culturesByTeam: new Map(social.teamCultures.map((culture) => [culture.teamId, culture])),
+  };
+  cachedSocialState = social;
+  cachedSocialLookup = lookup;
+  return lookup;
 }
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -107,7 +142,7 @@ function requiredBonds(teams: EcosystemTeam[], players: EcosystemPlayer[], coach
       }
     }
 
-    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
       const room = roster
         .filter((player) => player.position === position)
         .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall);
@@ -575,7 +610,7 @@ export function simulateSocialWeek(
 }
 
 function playerSupportScore(social: EcosystemSocialState, playerId: string): number {
-  const bonds = social.bonds.filter((bond) => bond.active && (bond.entityAId === playerId || bond.entityBId === playerId));
+  const bonds = socialLookup(social).bondsByEntity.get(playerId) ?? [];
   if (bonds.length === 0) return 50;
   return clamp(bonds.reduce((sum, bond) => sum + bond.trust * 0.34 + bond.respect * 0.22 + bond.chemistry * 0.28 - bond.tension * 0.3 + 23, 0) / bonds.length);
 }
@@ -586,18 +621,23 @@ export function playerSocialDevelopmentMultiplier(social: EcosystemSocialState, 
 }
 
 export function playerSocialFormModifier(social: EcosystemSocialState, playerId: string): number {
-  const support = playerSupportScore(social, playerId);
-  const playerBond = social.bonds.find((bond) => bond.active && (bond.entityAId === playerId || bond.entityBId === playerId));
-  const culture = playerBond?.teamId ? social.teamCultures.find((item) => item.teamId === playerBond.teamId) : undefined;
+  const lookup = socialLookup(social);
+  const bonds = lookup.bondsByEntity.get(playerId) ?? [];
+  const support = bonds.length === 0
+    ? 50
+    : clamp(bonds.reduce((sum, bond) => sum + bond.trust * 0.34 + bond.respect * 0.22 + bond.chemistry * 0.28 - bond.tension * 0.3 + 23, 0) / bonds.length);
+  const teamId = bonds.find((bond) => bond.teamId)?.teamId;
+  const culture = teamId ? lookup.culturesByTeam.get(teamId) : undefined;
   const cultureDelta = culture ? (culture.morale - culture.conflict - 10) / 55 : 0;
   return Math.max(-2.2, Math.min(2.2, (support - 50) / 20 + cultureDelta));
 }
 
 export function playerTransferPressure(social: EcosystemSocialState, playerId: string): number {
-  const bonds = social.bonds.filter((bond) => bond.active && (bond.entityAId === playerId || bond.entityBId === playerId));
+  const lookup = socialLookup(social);
+  const bonds = lookup.bondsByEntity.get(playerId) ?? [];
   if (bonds.length === 0) return 0.04;
   const teamId = bonds.find((bond) => bond.teamId)?.teamId;
-  const culture = social.teamCultures.find((item) => item.teamId === teamId);
+  const culture = teamId ? lookup.culturesByTeam.get(teamId) : undefined;
   const averageTrust = bonds.reduce((sum, bond) => sum + bond.trust, 0) / bonds.length;
   const averageTension = bonds.reduce((sum, bond) => sum + bond.tension, 0) / bonds.length;
   return Math.max(0, Math.min(0.26, Math.max(0, 48 - averageTrust) * 0.0025 + Math.max(0, averageTension - 45) * 0.003 + Math.max(0, (culture?.conflict ?? 45) - 55) * 0.002));

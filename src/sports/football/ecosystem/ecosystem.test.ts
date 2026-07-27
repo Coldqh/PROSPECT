@@ -7,6 +7,7 @@ import { advanceFootballEcosystem } from "./simulateEcosystem";
 import { placeHeroInCollegeEcosystem } from "./heroIntegration";
 import { CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { ECOSYSTEM_MODULE_VERSION } from "./types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS, POSITION_STARTER_TARGETS } from "../team/positions";
 
 function createSave(seed = "ecosystem-test-seed"): CareerSave {
   const generated = createFootballCareerState(seed, createLegacyFootballSetup(seed));
@@ -57,6 +58,26 @@ describe("football ecosystem", () => {
     expect(left.world.social.teamCultures).toHaveLength(left.world.teams.length);
     expect(left.world.social.bonds.length).toBeGreaterThan(left.world.teams.length);
     expect(left.world.social.bonds.some((bond) => bond.kind === "mentor")).toBe(true);
+  });
+
+  it("creates complete football rooms for every high-school and college team", () => {
+    const save = createSave("full-roster-rooms");
+    for (const team of save.world.teams) {
+      const roster = save.world.players.filter((player) => player.teamId === team.id);
+      const target = POSITION_ROOM_TARGETS[team.level];
+      const expectedSize = FOOTBALL_ROSTER_POSITIONS.reduce((sum, position) => sum + target[position], 0);
+      expect(roster.length).toBeGreaterThanOrEqual(expectedSize);
+      expect(Object.keys(team.positionNeeds).sort()).toEqual([...FOOTBALL_ROSTER_POSITIONS].sort());
+      expect(Object.keys(team.rosterPlan.positionProjections).sort()).toEqual([...FOOTBALL_ROSTER_POSITIONS].sort());
+      for (const position of FOOTBALL_ROSTER_POSITIONS) {
+        const room = roster.filter((player) => player.position === position);
+        expect(room.length).toBeGreaterThanOrEqual(target[position]);
+        expect(room.filter((player) => player.depthRank <= POSITION_STARTER_TARGETS[position]).length).toBeGreaterThanOrEqual(POSITION_STARTER_TARGETS[position]);
+        expect(room.map((player) => player.depthRank).sort((left, right) => left - right)).toEqual(
+          Array.from({ length: room.length }, (_, index) => index + 1),
+        );
+      }
+    }
   });
 
   it("advances the market and synchronizes college needs with hero recruiting", () => {

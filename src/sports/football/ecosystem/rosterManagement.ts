@@ -1,5 +1,6 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
-import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_CHANGE_OPTIONS, POSITION_STARTER_TARGETS, positionRoomTarget } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import type { WorldConstitution } from "./constitution";
 import { createPlayerTacticalProfile } from "./tactics";
 import type {
@@ -14,15 +15,7 @@ import type {
   EcosystemUsagePlan,
 } from "./types";
 
-const POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
-
-const POSITION_CHANGE_OPTIONS: Record<FootballPosition, readonly FootballPosition[]> = {
-  QB: ["WR"],
-  RB: ["WR", "LB"],
-  WR: ["CB", "RB"],
-  LB: ["RB"],
-  CB: ["WR"],
-};
+const POSITIONS = FOOTBALL_ROSTER_POSITIONS;
 
 export interface RosterManagementDraft {
   kind: "roster-plan" | "position-change" | "redshirt" | "scholarship";
@@ -72,7 +65,7 @@ function strategyFor(team: EcosystemTeam, players: EcosystemPlayer[], coach: Eco
   return "balanced";
 }
 
-function emptyProjection(position: FootballPosition): EcosystemPositionProjection {
+function emptyProjection(position: FootballRosterPosition): EcosystemPositionProjection {
   return {
     position,
     currentPlayers: 0,
@@ -94,7 +87,7 @@ export function createEmptyRosterPlan(team: Pick<EcosystemTeam, "level" | "compl
     ...emptyProjection(position),
     needNow: team.positionNeeds[position],
     needNextYear: team.positionNeeds[position],
-  }])) as Record<FootballPosition, EcosystemPositionProjection>;
+  }])) as Record<FootballRosterPosition, EcosystemPositionProjection>;
   return {
     version: 1,
     seasonYear,
@@ -117,7 +110,7 @@ export function createEmptyRosterPlan(team: Pick<EcosystemTeam, "level" | "compl
 
 function positionProjection(
   team: EcosystemTeam,
-  position: FootballPosition,
+  position: FootballRosterPosition,
   room: EcosystemPlayer[],
   seasonYear: number,
   strategy: EcosystemRosterStrategy,
@@ -130,7 +123,7 @@ function positionProjection(
   const bestOverall = room.length > 0 ? Math.max(...room.map((player) => player.overall)) : 0;
   const averagePotential = average(room.map((player) => player.potential));
   const averageSchemeFit = average(room.map((player) => player.tactical.schemeFit));
-  const desiredDetailedDepth = team.level === "college" ? (position === "WR" || position === "CB" ? 4 : 3) : 2;
+  const desiredDetailedDepth = positionRoomTarget(position, team.level);
   const shortageNow = Math.max(0, desiredDetailedDepth - room.length);
   const shortageNext = Math.max(0, desiredDetailedDepth - returningNextYear);
   const qualityNeed = clamp((team.expectation - bestOverall) * 1.35 + (72 - averageOverall) * 0.7, 0, 65);
@@ -138,7 +131,8 @@ function positionProjection(
   const fitNeed = room.length === 0 ? 18 : Math.max(0, 68 - averageSchemeFit) * 0.42;
   const needNow = clamp(team.positionNeeds[position] * 0.35 + shortageNow * 22 + qualityNeed * 0.4 + fitNeed + strategyBoost, 5, 98);
   const needNextYear = clamp(needNow * 0.48 + shortageNext * 27 + projectedDepartures * 12 + (78 - averagePotential) * 0.25, 5, 99);
-  const targetAdds = Math.max(0, Math.min(3, Math.ceil((needNextYear - 30) / 25) + (shortageNext > 0 ? 1 : 0)));
+  const positionCap = position === "WR" || position === "CB" || position === "LB" ? 5 : position === "OT" || position === "OG" || position === "EDGE" || position === "DT" || position === "S" ? 4 : 3;
+  const targetAdds = Math.max(0, Math.min(positionCap, Math.ceil((needNextYear - 30) / 25) + Math.min(2, shortageNext)));
   return {
     position,
     currentPlayers: room.length,
@@ -158,16 +152,17 @@ function positionProjection(
 function usageForPlayer(player: EcosystemPlayer, redshirtIds: Set<string>, developmentalIds: Set<string>): EcosystemUsagePlan {
   if (redshirtIds.has(player.id)) return "redshirt";
   if (developmentalIds.has(player.id)) return "developmental";
-  if (player.depthRank === 1) return "starter";
-  if (player.depthRank === 2) return "rotation";
-  if (player.depthRank === 3 && player.form >= 62 && player.health >= 72) return "special-teams";
+  const starterCount = POSITION_STARTER_TARGETS[player.position];
+  if (player.depthRank <= starterCount) return "starter";
+  if (player.depthRank <= starterCount + 2) return "rotation";
+  if (player.depthRank === starterCount + 3 && player.form >= 62 && player.health >= 72) return "special-teams";
   return "developmental";
 }
 
 function choosePositionChanges(
   team: EcosystemTeam,
   players: EcosystemPlayer[],
-  projections: Record<FootballPosition, EcosystemPositionProjection>,
+  projections: Record<FootballRosterPosition, EcosystemPositionProjection>,
   random: SeededRandom,
   excludedPlayerIds: ReadonlySet<string>,
 ): EcosystemPositionChangePlan[] {
@@ -184,7 +179,7 @@ function choosePositionChanges(
         && player.depthRank >= 3
         && player.classYear !== "Senior"
         && POSITION_CHANGE_OPTIONS[player.position].includes(target)
-        && projections[player.position].currentPlayers > Math.max(2, projections[player.position].targetAdds + 1))
+        && projections[player.position].currentPlayers > Math.max(1, positionRoomTarget(player.position, team.level) - 1))
       .sort((left, right) => (right.potential + right.form * 0.25) - (left.potential + left.form * 0.25));
     const candidate = candidates[0];
     if (!candidate || plans.some((plan) => plan.playerId === candidate.id)) continue;
@@ -239,7 +234,7 @@ export function buildRosterPlan(
   const positionProjections = Object.fromEntries(POSITIONS.map((position) => [
     position,
     positionProjection(team, position, teamPlayers.filter((player) => player.position === position), seasonYear, strategy),
-  ])) as Record<FootballPosition, EcosystemPositionProjection>;
+  ])) as Record<FootballRosterPosition, EcosystemPositionProjection>;
   const availableRosterSpots = Math.max(0, team.compliance.rosterLimit - team.compliance.estimatedRosterSize);
   const availableScholarships = Math.max(0, team.compliance.fundedScholarships - team.compliance.scholarshipsUsed);
   const projectedDepartures = teamPlayers.filter((player) => yearsRemaining(player, seasonYear) <= 1).length;

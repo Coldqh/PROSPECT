@@ -1,4 +1,5 @@
-import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import type {
   EcosystemCoachVacancy,
   EcosystemMarketNegotiation,
@@ -86,8 +87,8 @@ export function getCoachTransactions(world: FootballEcosystemState): EcosystemTr
   return world.transactions.filter((item) => COACH_TRANSACTION_KINDS.has(item.kind)).slice().sort((left, right) => right.seasonYear - left.seasonYear || right.week - left.week).slice(0, 60);
 }
 
-export function getPositionPressure(world: FootballEcosystemState): Array<{ position: FootballPosition; openings: number; targetAdds: number; activeOffers: number }> {
-  const positions: FootballPosition[] = ["QB", "RB", "WR", "LB", "CB"];
+export function getPositionPressure(world: FootballEcosystemState): Array<{ position: FootballRosterPosition; openings: number; targetAdds: number; activeOffers: number }> {
+  const positions = FOOTBALL_ROSTER_POSITIONS;
   return positions.map((position) => ({
     position,
     openings: world.movementMarket.openings.filter((item) => item.position === position && item.status === "open").reduce((sum, item) => sum + Math.max(0, item.slots - item.filledByCandidateIds.length), 0),

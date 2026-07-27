@@ -59,7 +59,7 @@ function createTeam(seed = "tactical-team", offenseStyle = "Air raid", defenseSt
     championships: 0,
     offenseStyle,
     defenseStyle,
-    positionNeeds: { QB: 65, RB: 65, WR: 65, LB: 65, CB: 65 },
+    positionNeeds: { QB: 65, RB: 65, WR: 65, TE: 65, OT: 65, OG: 65, C: 65, EDGE: 65, DT: 65, LB: 65, CB: 65, S: 65, K: 65, P: 65 },
     rosterIds: [] as string[],
     coachIds: [] as string[],
     trend: "stable" as const,

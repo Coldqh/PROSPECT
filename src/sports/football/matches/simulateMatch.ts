@@ -3,6 +3,8 @@ import type { CareerSave } from "../../../storage/saves/schema";
 import { applyCompletedMatchToSeason } from "../season/updateSeason";
 import { updateRecruitingAfterMatch } from "../recruiting/updateRecruiting";
 import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import { buildSnapAssignments, callPlay, describeHeroAssignment } from "./playbook";
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats } from "./createMatchState";
 import type {
@@ -29,6 +31,12 @@ interface TeamRatings {
   defense: number;
   coaching: number;
   cohesion: number;
+}
+
+interface SpecialistSnapshot {
+  name: string;
+  overall: number;
+  health: number;
 }
 
 interface SnapSimulation {
@@ -226,6 +234,40 @@ function ratingsForSide(save: CareerSave, side: MatchTeamSide): TeamRatings {
   return side === "hero" ? ownTeamRatings(save) : opponentTeamRatings(save, save.football.match.opponentId);
 }
 
+function specialistForSide(
+  save: CareerSave,
+  side: MatchTeamSide,
+  position: "K" | "P",
+): SpecialistSnapshot {
+  const teamId = side === "hero" ? heroTeamId(save) : save.football.match.opponentId;
+  const player = save.world.players
+    .filter((candidate) => candidate.teamId === teamId
+      && candidate.position === position
+      && candidate.status !== "injured"
+      && candidate.eligibility.athleticallyEligible)
+    .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall)[0]
+    ?? save.world.players
+      .filter((candidate) => candidate.teamId === teamId && candidate.position === position)
+      .sort((left, right) => right.overall - left.overall)[0];
+  const fallback = ratingsForSide(save, side);
+  return {
+    name: player?.name ?? (position === "K" ? "Кикер" : "Пантер"),
+    overall: player?.overall ?? clamp((fallback.offense + fallback.coaching) / 2),
+    health: player?.health ?? 88,
+  };
+}
+
+function fieldGoalChance(kicker: SpecialistSnapshot, distance: number, coaching: number): number {
+  const distancePenalty = Math.max(0, distance - 31) * .0185;
+  const specialistBonus = (kicker.overall - 65) * .0075 + (kicker.health - 85) * .002;
+  const coachingBonus = (coaching - 65) * .0025;
+  return Math.max(.12, Math.min(.96, .82 - distancePenalty + specialistBonus + coachingBonus));
+}
+
+function puntNetYards(punter: SpecialistSnapshot, random: SeededRandom): number {
+  return clampInteger(34 + (punter.overall - 60) * .24 + (punter.health - 80) * .04 + random.integer(-6, 7), 25, 52);
+}
+
 function heroSkillValue(save: CareerSave, optionValue: MatchDecisionOption): number {
   const ratings = save.football.ratings;
   const heroTacticalFit = save.world.players.find((player) => player.isHero)?.tactical.schemeFit ?? 65;
@@ -254,6 +296,67 @@ function gradeFromScore(score: number): MatchOutcomeGrade {
   if (score >= 64) return "B";
   if (score >= 47) return "C";
   return "D";
+}
+
+function heroTeamId(save: CareerSave): string {
+  return save.meta.phase === "college-season"
+    ? save.football.college.heroCareer?.teamId ?? save.football.college.signedProgramId ?? save.football.school.id
+    : save.football.school.id;
+}
+
+function assignmentPosition(value: string): FootballRosterPosition | undefined {
+  return (FOOTBALL_ROSTER_POSITIONS as readonly string[]).includes(value)
+    ? value as FootballRosterPosition
+    : undefined;
+}
+
+function bindRosterToAssignments(
+  save: CareerSave,
+  match: FootballMatchState,
+  assignments: MatchPlayerAssignment[],
+): MatchPlayerAssignment[] {
+  const teamIds: Record<MatchTeamSide, string> = {
+    hero: heroTeamId(save),
+    opponent: match.opponentId,
+  };
+  const usedByRoom = new Map<string, number>();
+  return assignments.map((assignment) => {
+    const position = assignmentPosition(assignment.position);
+    if (!position) return assignment;
+    if (assignment.isHero) {
+      const hero = save.world.players.find((player) => player.isHero);
+      return {
+        ...assignment,
+        playerId: hero?.id ?? "hero",
+        playerName: save.character.identity.fullName,
+        overall: hero?.overall ?? save.football.ratings.overall,
+        health: hero?.health ?? save.character.condition.health,
+        depthRank: hero?.depthRank ?? save.football.depthChart.rank,
+      };
+    }
+    const roomKey = `${assignment.side}:${position}`;
+    const roomIndex = usedByRoom.get(roomKey) ?? 0;
+    usedByRoom.set(roomKey, roomIndex + 1);
+    const room = save.world.players
+      .filter((player) => player.teamId === teamIds[assignment.side]
+        && player.position === position
+        && !player.isHero
+        && player.status !== "injured"
+        && player.eligibility.athleticallyEligible)
+      .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall || right.form - left.form);
+    const player = room[roomIndex] ?? room[roomIndex % Math.max(1, room.length)] ?? save.world.players
+      .filter((candidate) => candidate.teamId === teamIds[assignment.side] && candidate.position === position && !candidate.isHero)
+      .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall)[roomIndex];
+    if (!player) return assignment;
+    return {
+      ...assignment,
+      playerId: player.id,
+      playerName: player.name,
+      overall: player.overall,
+      health: player.health,
+      depthRank: player.depthRank,
+    };
+  });
 }
 
 function canHeroCheck(save: CareerSave): boolean {
@@ -304,14 +407,14 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     match.quarter,
     match.clockSeconds,
   );
-  const assignments = buildSnapAssignments(
+  const assignments = bindRosterToAssignments(save, match, buildSnapAssignments(
     offenseCall,
     defenseCall,
     offenseSide,
     match.heroUnit,
     save.football.position,
     `${save.meta.worldSeed}:${match.gameId}:assignments:${index}`,
-  );
+  ));
   const heroAssignment = describeHeroAssignment(save.football.position, match.heroUnit, assignments, offenseCall, defenseCall);
   const hero = assignments.find((assignment) => assignment.isHero);
   const playCall = match.heroUnit === "offense" ? offenseCall : defenseCall;
@@ -398,8 +501,15 @@ function simulateSnap(
   const heroInfluenceBase = (assignmentScore - 60) * (episode.heroInvolvement === "primary" ? .24 : episode.heroInvolvement === "secondary" ? .13 : .07);
   const heroInfluence = match.heroUnit === "offense" ? heroInfluenceBase : -heroInfluenceBase;
   const fatiguePenalty = match.heroFatigue * .05;
-  const offenseExecution = offenseRatings.offense * .64 + offenseRatings.coaching * .19 + offenseRatings.cohesion * .17 + random.integer(-14, 14);
-  const defenseExecution = defenseRatings.defense * .64 + defenseRatings.coaching * .19 + defenseRatings.cohesion * .17 + random.integer(-14, 14);
+  const offenseAssignments = episode.assignments.filter((assignment) => assignment.unit === "offense");
+  const defenseAssignments = episode.assignments.filter((assignment) => assignment.unit === "defense");
+  const lineupQuality = (items: MatchPlayerAssignment[]): number => items.length === 0
+    ? 65
+    : items.reduce((sum, assignment) => sum + (assignment.overall ?? 65) * .82 + (assignment.health ?? 82) * .18, 0) / items.length;
+  const offenseLineup = lineupQuality(offenseAssignments);
+  const defenseLineup = lineupQuality(defenseAssignments);
+  const offenseExecution = offenseRatings.offense * .51 + offenseRatings.coaching * .16 + offenseRatings.cohesion * .13 + offenseLineup * .2 + random.integer(-14, 14);
+  const defenseExecution = defenseRatings.defense * .51 + defenseRatings.coaching * .16 + defenseRatings.cohesion * .13 + defenseLineup * .2 + random.integer(-14, 14);
   const teamEdge = offenseExecution - defenseExecution + matchupModifier(offenseCall, defenseCall) + heroInfluence - fatiguePenalty * (match.heroUnit === "offense" ? 1 : -1);
   const teamExecutionScore = clamp(62 + teamEdge * 1.05);
   const passLike = offenseCall.playType === "pass" || offenseCall.playType === "play-action" || offenseCall.playType === "screen";
@@ -666,8 +776,11 @@ function backgroundDrive(
     points = 7;
     yards = Math.min(100 - startFieldPosition, Math.max(yards, 35));
   } else if (edge >= 7 && startFieldPosition + yards >= 55) {
-    outcome = "field-goal";
-    points = 3;
+    const kicker = specialistForSide(save, offenseSide, "K");
+    const kickDistance = clampInteger(117 - clampInteger(startFieldPosition + yards, 1, 99), 18, 69);
+    const made = random.chance(fieldGoalChance(kicker, kickDistance, offenseRatings.coaching));
+    outcome = made ? "field-goal" : "missed-field-goal";
+    points = made ? 3 : 0;
   } else if (edge <= -18 && random.chance(.62)) {
     outcome = "turnover";
   } else {
@@ -675,11 +788,14 @@ function backgroundDrive(
   }
   const heroScoreDelta = offenseSide === "hero" ? points : 0;
   const opponentScoreDelta = offenseSide === "opponent" ? points : 0;
+  const punter = specialistForSide(save, offenseSide, "P");
   const nextControlledFieldPosition = outcome === "turnover"
     ? random.integer(38, 68)
     : outcome === "punt"
-      ? random.integer(18, 41)
-      : 25;
+      ? clampInteger(100 - Math.min(99, startFieldPosition + yards + puntNetYards(punter, random)), 8, 45)
+      : outcome === "missed-field-goal"
+        ? clampInteger(100 - clampInteger(startFieldPosition + yards, 1, 99), 20, 75)
+        : 25;
   return {
     summary: {
       id: `drive-${driveNumber}-auto`,
@@ -694,7 +810,15 @@ function backgroundDrive(
       yards,
       points,
       outcome,
-      description: outcome === "touchdown" ? "Автоматический драйв завершается тачдауном." : outcome === "field-goal" ? "Автоматический драйв приносит филд-гол." : outcome === "turnover" ? "Защита забирает мяч на автоматическом драйве." : "Драйв заканчивается пантом.",
+      description: outcome === "touchdown"
+        ? "Автоматический драйв завершается тачдауном."
+        : outcome === "field-goal"
+          ? "Кикер автоматического юнита реализует филд-гол."
+          : outcome === "missed-field-goal"
+            ? "Кикер автоматического юнита не реализует филд-гол."
+            : outcome === "turnover"
+              ? "Защита забирает мяч на автоматическом драйве."
+              : "Пантер автоматического юнита меняет позицию поля.",
       controlled: false,
     },
     heroScoreDelta,
@@ -966,6 +1090,7 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
   let drivePlays = match.drivePlays + 1;
   let driveYards = match.driveYards + simulation.yards;
   let drives = [...match.drives];
+  let nextPossessionStartFieldPosition: number | undefined;
 
   if (!driveEnded) {
     const temporary = {
@@ -982,17 +1107,23 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
     if (special === "punt") {
       driveEnded = true;
       driveOutcome = "punt";
-      driveDescription = "После третьего down штаб выпускает punt unit.";
+      const punter = specialistForSide(save, episode.possession, "P");
+      const netYards = Math.min(99 - nextFieldPosition, puntNetYards(punter, random));
+      nextPossessionStartFieldPosition = clampInteger(100 - (nextFieldPosition + netYards), 8, 45);
+      driveDescription = `${punter.name} выполняет пант на ${netYards} ярдов.`;
       gameClockSeconds = Math.max(0, gameClockSeconds - random.integer(8, 16));
     } else if (special === "field-goal") {
       driveEnded = true;
       const kickDistance = 117 - nextFieldPosition;
       const offenseRatings = ratingsForSide(save, episode.possession);
-      const makeChance = Math.max(.28, Math.min(.92, .91 - Math.max(0, kickDistance - 32) * .018 + (offenseRatings.coaching - 65) * .004));
-      const made = random.chance(makeChance);
+      const kicker = specialistForSide(save, episode.possession, "K");
+      const made = random.chance(fieldGoalChance(kicker, kickDistance, offenseRatings.coaching));
       driveOutcome = made ? "field-goal" : "missed-field-goal";
       drivePoints = made ? 3 : 0;
-      driveDescription = made ? `Кикер реализует филд-гол с ${kickDistance} ярдов.` : `Филд-гол с ${kickDistance} ярдов не проходит.`;
+      driveDescription = made
+        ? `${kicker.name} реализует филд-гол с ${kickDistance} ярдов.`
+        : `${kicker.name} не реализует филд-гол с ${kickDistance} ярдов.`;
+      nextPossessionStartFieldPosition = made ? 25 : clampInteger(100 - nextFieldPosition, 20, 75);
       if (made) {
         if (episode.possession === "hero") heroScore += 3;
         else opponentScore += 3;
@@ -1052,9 +1183,10 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
       );
     } else {
       const backgroundOffense = otherSide(episode.possession);
-      const backgroundStart = driveOutcome === "turnover" || driveOutcome === "turnover-on-downs"
-        ? clampInteger(100 - nextFieldPosition, 20, 75)
-        : 25;
+      const backgroundStart = nextPossessionStartFieldPosition
+        ?? (driveOutcome === "turnover" || driveOutcome === "turnover-on-downs" || driveOutcome === "missed-field-goal"
+          ? clampInteger(100 - nextFieldPosition, 20, 75)
+          : 25);
       const background = backgroundDrive(
         save,
         backgroundOffense,

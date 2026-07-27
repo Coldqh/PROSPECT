@@ -4,7 +4,9 @@ import type { LifeState } from "../../../core/life/types";
 import type { RelationshipState } from "../../../core/relationships/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createPlayerTacticalProfile, reevaluatePlayerTacticalProfile, refreshTacticalIdentityAfterCoachChange, tacticalDepthScore, tacticalDevelopmentMultiplier, tacticalTeamModifier } from "./tactics";
-import type { FootballCareerState, FootballPosition } from "../career/types";
+import type { FootballCareerState } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS, POSITION_STARTER_TARGETS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import type { RecruitingProgram } from "../recruiting/types";
 import { evaluateDepthChart } from "../team/evaluateDepthChart";
 import type { FootballRosterPlayer } from "../team/types";
@@ -34,7 +36,7 @@ import {
 import { reviewRosterManagement } from "./rosterManagement";
 import { advanceUnifiedMovementMarket, applyCoachMovementConsequences } from "./movementMarket";
 import { resetCompetitionForSeason, simulateCompetitionPostseason, simulateCompetitionWeek } from "./competition";
-import { playerSocialDevelopmentMultiplier, playerTransferPressure, simulateSocialWeek } from "./social";
+import { playerSocialDevelopmentMultiplier, playerTransferPressure, resetSocialLookupCache, simulateSocialWeek } from "./social";
 
 
 interface EcosystemCareerState {
@@ -137,7 +139,8 @@ function updatePlayersDaily(
       health = clamp(health + playerRandom.integer(2, 6) + recoveryBoost);
       form = clamp(form - playerRandom.integer(0, 2));
       if (health >= 72) {
-        status = player.depthRank === 1 ? "starter" : player.depthRank === 2 ? "rotation" : "backup";
+        const starterCount = POSITION_STARTER_TARGETS[player.position];
+        status = player.depthRank <= starterCount ? "starter" : player.depthRank <= starterCount + 2 ? "rotation" : "backup";
       }
     } else {
       form = clamp(form + playerRandom.integer(-3, 3) + (team?.trend === "rising" ? 1 : team?.trend === "falling" ? -1 : 0));
@@ -210,7 +213,7 @@ function reorderDepthCharts(
   const next = [...players];
   const teamIds = [...new Set(players.map((player) => player.teamId))];
   for (const teamId of teamIds) {
-    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[]) {
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
       const room = next
         .filter((player) => player.teamId === teamId && player.position === position)
         .sort((left, right) => {
@@ -227,16 +230,16 @@ function reorderDepthCharts(
         next[targetIndex] = {
           ...original,
           depthRank: nextRank,
-          status: original.status === "injured" ? "injured" : nextRank === 1 ? "starter" : nextRank === 2 ? "rotation" : "backup",
+          status: original.status === "injured" ? "injured" : nextRank <= POSITION_STARTER_TARGETS[position] ? "starter" : nextRank <= POSITION_STARTER_TARGETS[position] + 2 ? "rotation" : "backup",
         };
         const directlyRelevant = teamId === (save.football.college.signedProgramId ?? save.football.school.id) || teamId === save.football.season.nextOpponent.id;
-        if (changed && nextRank === 1 && (directlyRelevant || player.overall >= 72)) {
+        if (changed && nextRank <= POSITION_STARTER_TARGETS[position] && (directlyRelevant || player.overall >= 72)) {
           stories.push(story(
             save,
             day,
             "depth-change",
-            `${player.name} забрал стартовое место`,
-            `${playerLabel(player)} поднялся на первую строку после изменения формы внутри команды.`,
+            `${player.name} вошёл в стартовый пакет`,
+            `${playerLabel(player)} вошёл в основной пакет после изменения формы внутри команды.`,
             directlyRelevant ? 4 : 2,
             [teamId],
             [player.id],
@@ -287,33 +290,54 @@ function recalculateTeamStrength(
   return teams.map((team) => {
     const roster = players.filter((player) => player.teamId === team.id);
     if (roster.length === 0) return team;
-    const starters = roster.filter((player) => player.depthRank === 1);
-    const rotation = roster.filter((player) => player.depthRank <= 2);
-    const lineup = starters.length >= 3 ? starters : rotation;
+
+    const lineup = FOOTBALL_ROSTER_POSITIONS.flatMap((position) => {
+      const required = POSITION_STARTER_TARGETS[position];
+      return roster
+        .filter((player) => player.position === position)
+        .sort((left, right) => {
+          const leftAvailability = isPlayerAvailable(left) ? 0 : -40;
+          const rightAvailability = isPlayerAvailable(right) ? 0 : -40;
+          return (right.overall + right.form * 0.18 + rightAvailability) - (left.overall + left.form * 0.18 + leftAvailability);
+        })
+        .slice(0, required);
+    });
+    const rotation = roster.filter((player) => player.status === "starter" || player.status === "rotation");
     const lineupStrength = lineup.reduce((total, player) => {
-      const availability = isPlayerAvailable(player) ? 1 : 0.62;
+      const availability = isPlayerAvailable(player) ? 1 : 0.58;
       return total + (player.overall * 0.68 + player.form * 0.2 + player.health * 0.12) * availability;
     }, 0) / Math.max(1, lineup.length);
     const depthStrength = rotation.reduce((total, player) => total + player.overall, 0) / Math.max(1, rotation.length);
+    const missingStarterSlots = FOOTBALL_ROSTER_POSITIONS.reduce((total, position) => {
+      const healthy = roster.filter((player) => player.position === position && isPlayerAvailable(player)).length;
+      return total + Math.max(0, POSITION_STARTER_TARGETS[position] - healthy);
+    }, 0);
     const resourceEnvironment = playerDevelopmentEnvironment(team.resources);
     const nextRating = clamp(
-      team.rating * 0.54
-        + lineupStrength * 0.32
+      team.rating * 0.5
+        + lineupStrength * 0.36
         + depthStrength * 0.07
         + resourceEnvironment * 0.07
-        + tacticalTeamModifier(team, roster),
+        + tacticalTeamModifier(team, roster)
+        - missingStarterSlots * 0.85,
       42,
       96,
     );
     const positionNeeds = { ...team.positionNeeds };
-    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[]) {
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
       const room = roster.filter((player) => player.position === position);
-      if (room.length === 0) continue;
+      const targetRoom = team.level === "college" ? POSITION_STARTER_TARGETS[position] + 2 : POSITION_STARTER_TARGETS[position] + 1;
+      if (room.length === 0) {
+        positionNeeds[position] = 99;
+        continue;
+      }
       const best = Math.max(...room.map((player) => player.overall));
       const healthyDepth = room.filter(isPlayerAvailable).length;
       const departing = room.filter((player) => player.classYear === "Senior").length;
-      const structuralNeed = clamp((82 - best) * 1.35 + Math.max(0, 2 - healthyDepth) * 13 + departing * 6, 8, 96);
-      positionNeeds[position] = clamp(positionNeeds[position] * 0.58 + structuralNeed * 0.42, 8, 96);
+      const starterShortage = Math.max(0, POSITION_STARTER_TARGETS[position] - healthyDepth);
+      const depthShortage = Math.max(0, targetRoom - healthyDepth);
+      const structuralNeed = clamp((82 - best) * 1.2 + starterShortage * 22 + depthShortage * 8 + departing * 6, 8, 99);
+      positionNeeds[position] = clamp(positionNeeds[position] * 0.54 + structuralNeed * 0.46, 8, 99);
     }
     return { ...team, rating: nextRating, positionNeeds };
   });
@@ -456,7 +480,7 @@ function syncEcosystemIntoFootball(
 
 const PORTAL_FIRST_NAMES = ["Avery", "Cam", "Darius", "Eli", "Isaiah", "Jalen", "Malik", "Noah", "Trey", "Xavier"] as const;
 const PORTAL_LAST_NAMES = ["Banks", "Coleman", "Davis", "Fields", "Grant", "Harris", "Moore", "Reed", "Turner", "Walker"] as const;
-const POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
+const POSITIONS = FOOTBALL_ROSTER_POSITIONS;
 
 function conferencePairs(teamIds: string[], round: number): Array<[string, string]> {
   const ids = [...teamIds].sort();
@@ -632,7 +656,7 @@ function nextClassYear(value: EcosystemPlayer["classYear"]): EcosystemPlayer["cl
   return value === "Freshman" ? "Sophomore" : value === "Sophomore" ? "Junior" : value === "Junior" ? "Senior" : undefined;
 }
 
-function createIncomingPlayer(team: EcosystemTeam, position: FootballPosition, seasonYear: number, slot: number, random: SeededRandom): EcosystemPlayer {
+function createIncomingPlayer(team: EcosystemTeam, position: FootballRosterPosition, seasonYear: number, slot: number, random: SeededRandom): EcosystemPlayer {
   const overall = clamp(team.rating - 13 + random.integer(-7, 8), 45, 88);
   return {
     id: `${team.id}:incoming:${seasonYear}:${position}:${slot}`,
@@ -675,8 +699,9 @@ function ensureMinimumCollegePositionRooms(
   const next = [...players];
   for (const team of teams.filter((item) => item.level === "college")) {
     for (const position of POSITIONS) {
-      let room = next.filter((player) => player.teamId === team.id && player.position === position);
-      while (room.length < 2) {
+      let room = next.filter((player) => player.teamId === team.id && player.position === position && !player.isHero);
+      const target = POSITION_ROOM_TARGETS.college[position];
+      while (room.length < target) {
         let slot = 0;
         while (next.some((player) => player.id === `${team.id}:incoming:${seasonYear}:${position}:${slot}`)) slot += 1;
         const incoming = createIncomingPlayer(
@@ -1293,6 +1318,7 @@ function buildDigest(stories: EcosystemStory[], world: FootballEcosystemState): 
 }
 
 export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T): T {
+  resetSocialLookupCache();
   let world = save.world;
   let talentPipeline = world.talentPipeline;
   let programs = save.football.recruitment.programs;

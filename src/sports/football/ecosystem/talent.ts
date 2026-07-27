@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createPlayerTacticalProfile } from "./tactics";
-import type { FootballPosition } from "../career/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
+import type { FootballRosterPosition } from "../team/types";
 import { createPlayerEligibility, refreshTeamCompliance, type WorldCycleState } from "./constitution";
 import { availableNilCapacity, availableRecruitingBudget, reserveRecruitingResources } from "./resources";
 import type {
@@ -17,7 +18,7 @@ import type {
   FootballEcosystemState,
 } from "./types";
 
-const CORE_POSITIONS = ["QB", "RB", "WR", "LB", "CB"] as const satisfies readonly FootballPosition[];
+const CORE_POSITIONS = FOOTBALL_ROSTER_POSITIONS;
 const FIRST_NAMES = [
   "Aiden", "Amari", "Bryson", "Cade", "Darius", "Devin", "Emmanuel", "Isaac", "Jayden", "Khalil",
   "Landon", "Marcus", "Mason", "Nico", "Roman", "Samir", "Tariq", "Tyson", "Wesley", "Zaire",
@@ -304,7 +305,7 @@ function chooseIndependentDestination(
 
 function createFreshman(
   team: EcosystemTeam,
-  position: FootballPosition,
+  position: FootballRosterPosition,
   seasonYear: number,
   pipeline: EcosystemTalentPipeline,
   random: SeededRandom,

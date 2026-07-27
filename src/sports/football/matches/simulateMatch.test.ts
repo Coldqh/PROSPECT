@@ -64,6 +64,9 @@ function expectPlayableSnap(save: CareerSave): void {
   expect(episode.assignments.filter((assignment) => assignment.unit === "offense")).toHaveLength(11);
   expect(episode.assignments.filter((assignment) => assignment.unit === "defense")).toHaveLength(11);
   expect(episode.assignments.filter((assignment) => assignment.isHero)).toHaveLength(1);
+  expect(episode.assignments.every((assignment) => Boolean(assignment.playerId && assignment.playerName))).toBe(true);
+  expect(episode.assignments.every((assignment) => typeof assignment.overall === "number" && typeof assignment.health === "number")).toBe(true);
+  expect(new Set(episode.assignments.map((assignment) => assignment.playerId)).size).toBe(22);
   expect(episode.options).toHaveLength(3);
   expect(episode.playCall.calledBy).not.toBe("hero");
   expect(episode.opponentCall.calledBy).not.toBe("hero");

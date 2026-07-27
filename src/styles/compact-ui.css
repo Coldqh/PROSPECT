@@ -478,3 +478,55 @@
 @media (prefers-reduced-motion: reduce) {
   :root .formation-route { animation: none; }
 }
+
+/* 0.34.0 full roster depth chart */
+:root .team-depth-chart { display: grid; gap: 10px; }
+:root .team-depth-chart__unit { display: grid; gap: 6px; }
+:root .team-depth-chart__unit > header { min-height: 34px; padding: 0 2px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+:root .team-depth-chart__unit > header h2 { margin: 0; font-size: var(--type-section-size); }
+:root .team-depth-chart__unit > header span { color: var(--muted); }
+:root .team-depth-chart__rooms { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+:root .team-depth-room { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+:root .team-depth-room > header { min-height: 42px; padding: 6px 9px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+:root .team-depth-room > header div { min-width: 0; display: flex; align-items: baseline; gap: 7px; }
+:root .team-depth-room > header strong { color: var(--accent); }
+:root .team-depth-room > header small,
+:root .team-depth-room > header span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .team-depth-room > div { display: grid; }
+:root .team-depth-room button { width: 100%; min-height: 42px; padding: 5px 8px; display: grid; grid-template-columns: 28px minmax(0,1fr) 30px; align-items: center; gap: 7px; color: var(--text); border: 0; border-bottom: 1px solid var(--line); background: transparent; font: inherit; text-align: left; }
+:root .team-depth-room button:last-child { border-bottom: 0; }
+:root .team-depth-room button:hover { background: var(--surface-2); }
+:root .team-depth-room button.is-hero { color: var(--accent); }
+:root .team-depth-room button > span { color: var(--muted); font-weight: 700; }
+:root .team-depth-room button div { min-width: 0; }
+:root .team-depth-room button strong,
+:root .team-depth-room button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .team-depth-room button small { color: var(--muted); }
+:root .team-depth-room button em { font-style: normal; font-weight: 800; text-align: right; }
+
+@media (max-width: 720px) {
+  :root .team-depth-chart__rooms { grid-template-columns: 1fr; }
+}
+
+/* 0.34.0 real snap personnel */
+:root .match-personnel-matchup { display: grid; grid-template-columns: minmax(0,1fr) 24px minmax(0,1fr); align-items: center; gap: 7px; }
+:root .match-personnel-matchup article { min-width: 0; min-height: 48px; padding: 7px 9px; display: grid; align-content: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+:root .match-personnel-matchup article:last-child { text-align: right; }
+:root .match-personnel-matchup small,
+:root .match-personnel-matchup span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .match-personnel-matchup strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .match-personnel-matchup > b { color: var(--muted); text-align: center; }
+:root .snap-personnel { margin-top: 10px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+:root .snap-personnel > div { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+:root .snap-personnel > div > header { min-height: 36px; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+:root .snap-personnel > div > header span { color: var(--muted); }
+:root .snap-personnel article { min-height: 39px; padding: 5px 7px; display: grid; grid-template-columns: 31px minmax(0,1fr) 28px; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); }
+:root .snap-personnel article:last-child { border-bottom: 0; }
+:root .snap-personnel article.is-hero { color: var(--accent); background: var(--accent-soft); }
+:root .snap-personnel article > span { color: var(--muted); font-weight: 700; }
+:root .snap-personnel article div { min-width: 0; }
+:root .snap-personnel article strong,
+:root .snap-personnel article small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .snap-personnel article small { color: var(--muted); }
+:root .snap-personnel article em { font-style: normal; font-weight: 800; text-align: right; }
+@media (max-width: 620px) { :root .snap-personnel { grid-template-columns: 1fr; } }

@@ -1,4 +1,5 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
 import { tacticalTeamModifier } from "./tactics";
 import { teamSocialGameModifier } from "./social";
 import type {
@@ -565,7 +566,7 @@ function annualAwards(players: EcosystemPlayer[], teams: EcosystemTeam[], season
   if (national) {
     awards.push({ id: `award:${seasonYear}:national:${national.id}`, seasonYear, kind: "national-player", playerId: national.id, teamId: national.teamId, title: `${national.name} — национальный игрок года`, detail: `${national.position} из ${teams.find((team) => team.id === national.teamId)?.shortName ?? national.teamId} стал лицом сезона.` });
   }
-  for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
+  for (const position of FOOTBALL_ROSTER_POSITIONS) {
     const player = ordered.find((item) => item.position === position);
     if (!player) continue;
     awards.push({ id: `award:${seasonYear}:position:${position}:${player.id}`, seasonYear, kind: "position-award", playerId: player.id, teamId: player.teamId, title: `${player.name} — лучший ${position}`, detail: `Сочетание уровня, формы и соответствия системе сделало его лучшим игроком позиции.` });

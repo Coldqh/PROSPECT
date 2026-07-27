@@ -3,6 +3,7 @@ import { createFootballCareerState, createLegacyFootballSetup } from "../../spor
 import { migrateCareerSave } from "./migrations";
 import { CURRENT_SCHEMA_VERSION } from "./schema";
 import { ECOSYSTEM_MODULE_VERSION } from "../../sports/football/ecosystem/types";
+import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS } from "../../sports/football/team/positions";
 
 const legacySave = {
   meta: {
@@ -600,6 +601,49 @@ describe("migrateCareerSave", () => {
     expect(result.save.history.at(-1)?.title).toBe("Герой вернулся в живой мир");
   });
 
+
+  it("migrates version twenty-four saves into complete football rosters", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const versionTwentyFour = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 24 as const },
+      world: {
+        ...current.world,
+        moduleVersion: 10 as const,
+        players: current.world.players
+          .filter((player) => player.position !== "K" && player.position !== "P")
+          .map((player) => ({
+            ...player,
+            position: ["OT", "OG", "C"].includes(player.position)
+              ? "OL"
+              : ["EDGE", "DT"].includes(player.position)
+                ? "DL"
+                : player.position === "TE"
+                  ? "WR"
+                  : player.position === "S"
+                    ? "CB"
+                    : player.position,
+          })),
+      },
+    };
+    const result = migrateCareerSave(versionTwentyFour);
+    expect(result.migratedFrom).toBe(24);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    for (const team of result.save.world.teams) {
+      const roster = result.save.world.players.filter((player) => player.teamId === team.id);
+      for (const position of FOOTBALL_ROSTER_POSITIONS) {
+        expect(roster.filter((player) => player.position === position && !player.isHero).length).toBeGreaterThanOrEqual(
+          POSITION_ROOM_TARGETS[team.level][position],
+        );
+      }
+    }
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
+      expect(result.save.football.roster.filter((player) => player.position === position).length).toBeGreaterThanOrEqual(
+        POSITION_ROOM_TARGETS["high-school"][position],
+      );
+    }
+  });
 
   it("migrates version twenty-three saves into the professional market", () => {
     const current = migrateCareerSave(legacySave).save;

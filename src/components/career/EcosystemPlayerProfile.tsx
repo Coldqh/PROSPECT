@@ -1,5 +1,7 @@
 import type { CareerSave } from "../../storage/saves/schema";
+import { positionRoleLabel } from "../../sports/football/ecosystem/tactics";
 import type { EcosystemPlayer } from "../../sports/football/ecosystem/types";
+import { normalizeLegacyRosterPosition, positionLabel } from "../../sports/football/team/positions";
 import type { FootballRosterPlayer } from "../../sports/football/team/types";
 import { Icon } from "../ui/Icon";
 import { OverlayDialog } from "../ui/OverlayDialog";
@@ -30,6 +32,10 @@ function trajectoryLabel(value: EcosystemPlayer["trajectory"]): string {
   return { surging: "Растёт", steady: "Стабилен", slipping: "Сдаёт" }[value];
 }
 
+function profilePosition(player: ProfilePlayer) {
+  return normalizeLegacyRosterPosition(player.position, player.id);
+}
+
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
@@ -45,7 +51,7 @@ export function EcosystemPlayerProfile({ save, player, onClose, onOpenTeam }: Ec
   const bonds = worldPlayer ? save.world.social.bonds.filter((bond) => bond.entityAId === worldPlayer.id || bond.entityBId === worldPlayer.id).filter((bond) => bond.active).slice(0, 6) : [];
 
   return (
-    <OverlayDialog open={Boolean(player)} title={player?.name ?? "Игрок"} eyebrow={player ? `${player.position} · ${isWorldPlayer(player) ? player.classYear : player.year}` : "ИГРОК"} wide onClose={onClose}>
+    <OverlayDialog open={Boolean(player)} title={player?.name ?? "Игрок"} eyebrow={player ? `${profilePosition(player)} · ${positionLabel(profilePosition(player))} · ${isWorldPlayer(player) ? player.classYear : player.year}` : "ИГРОК"} wide onClose={onClose}>
       {player && (
         <div className="player-overlay-profile">
           <header className="player-overlay-profile__hero">
@@ -70,10 +76,12 @@ export function EcosystemPlayerProfile({ save, player, onClose, onOpenTeam }: Ec
                 <div className="player-overlay-profile__facts">
                   <span><small>Возраст</small><strong>{worldPlayer.age}</strong></span>
                   <span><small>Траектория</small><strong>{trajectoryLabel(worldPlayer.trajectory)}</strong></span>
-                  <span><small>Архетип</small><strong>{worldPlayer.tactical.archetype}</strong></span>
+                  <span><small>Архетип</small><strong>{positionRoleLabel(worldPlayer.tactical.archetype)}</strong></span>
                   <span><small>Обучение</small><strong>{Math.round(worldPlayer.tactical.learning)}</strong></span>
                   <span><small>Универсальность</small><strong>{Math.round(worldPlayer.tactical.versatility)}</strong></span>
                   <span><small>Eligibility</small><strong>{worldPlayer.eligibilityYears}</strong></span>
+                  <span><small>Позиция</small><strong>{positionLabel(worldPlayer.position)}</strong></span>
+                  <span><small>Основная роль</small><strong>{positionRoleLabel(worldPlayer.tactical.preferredRole)}</strong></span>
                 </div>
               </section>
 

@@ -361,7 +361,7 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     [world.talentPipeline.classHistory.length, 20, "talentPipeline.classHistory"],
     [world.movementMarket.negotiations.length, 180, "movementMarket.negotiations"],
     [world.movementMarket.coachVacancies.length, 60, "movementMarket.coachVacancies"],
-    [world.social.bonds.length, 3000, "social.bonds"],
+    [world.social.bonds.length, 12000, "social.bonds"],
     [world.social.incidents.length, 180, "social.incidents"],
   ];
   for (const [actual, maximum, scope] of bounds) {
@@ -431,6 +431,9 @@ export function runAutonomousStabilitySimulation<T extends EcosystemSimulationSa
   const observedTransactionIds = new Set(initialSave.world.transactions.map((transaction) => transaction.id));
 
   for (let checkpoint = 1; checkpoint <= requestedSeasons; checkpoint += 1) {
+    // Observer mode jumps whole seasons in one process. A JSON boundary mirrors a
+    // persisted save/load cycle and prevents old shared object graphs from accumulating.
+    save = JSON.parse(JSON.stringify(save)) as T;
     const checkpointDate: GameDate = {
       year: startDate.year + checkpoint,
       month: startDate.month,
