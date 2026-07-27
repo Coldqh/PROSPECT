@@ -1,0 +1,16 @@
+APPLY_PATCH_0.32.0.ps1
+APPLY_PATCH_0.32.0.sh
+CHANGELOG.md
+PATCH_0.32.0.md
+PATCH_FILES_0.32.0.txt
+package.json
+package-lock.json
+public/version.json
+src/components/career/MatchDashboard.tsx
+src/sports/football/matches/createMatchState.ts
+src/sports/football/matches/playbook.ts
+src/sports/football/matches/simulateMatch.test.ts
+src/sports/football/matches/simulateMatch.ts
+src/sports/football/matches/types.ts
+src/storage/saves/schema.ts
+src/styles/compact-ui.css

@@ -3,12 +3,20 @@ import { createInitialLifeState } from "../../../core/life/createInitialLifeStat
 import { createFootballCareerState } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
-import type { FootballCareerSetup } from "../career/types";
+import type { FootballCareerSetup, FootballPosition } from "../career/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { resolveMatchDecision, startMatch } from "./simulateMatch";
 
-function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
-  const archetypeId = position === "WR" ? "route-technician" : position === "LB" ? "run-stopper" : "press-corner";
+const setupByPosition: Record<FootballPosition, { archetypeId: string; jerseyNumber: number }> = {
+  QB: { archetypeId: "field-general", jerseyNumber: 12 },
+  RB: { archetypeId: "slasher", jerseyNumber: 22 },
+  WR: { archetypeId: "route-technician", jerseyNumber: 1 },
+  LB: { archetypeId: "run-stopper", jerseyNumber: 7 },
+  CB: { archetypeId: "press-corner", jerseyNumber: 2 },
+};
+
+function makeSave(position: FootballPosition = "WR"): CareerSave {
+  const positionSetup = setupByPosition[position];
   const setup: FootballCareerSetup = {
     character: {
       firstName: "Jalen",
@@ -23,8 +31,8 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
       mindset: "composed",
     },
     position,
-    archetypeId,
-    jerseyNumber: position === "WR" ? 1 : 7,
+    archetypeId: positionSetup.archetypeId,
+    jerseyNumber: positionSetup.jerseyNumber,
   };
   const generated = createFootballCareerState(`match-${position}`, setup);
   const life = createInitialLifeState();
@@ -49,30 +57,39 @@ function makeSave(position: "WR" | "LB" | "CB" = "WR"): CareerSave {
   };
 }
 
+function expectPlayableSnap(save: CareerSave): void {
+  const episode = save.football.match.currentEpisode;
+  if (!episode) throw new Error("No active snap");
+  expect(episode.assignments).toHaveLength(22);
+  expect(episode.assignments.filter((assignment) => assignment.unit === "offense")).toHaveLength(11);
+  expect(episode.assignments.filter((assignment) => assignment.unit === "defense")).toHaveLength(11);
+  expect(episode.assignments.filter((assignment) => assignment.isHero)).toHaveLength(1);
+  expect(episode.options).toHaveLength(3);
+  expect(episode.playCall.calledBy).not.toBe("hero");
+  expect(episode.opponentCall.calledBy).not.toBe("hero");
+}
+
 function finish(save: CareerSave): CareerSave {
   let current = startMatch(save);
+  let guard = 0;
   while (current.football.match.status === "in-progress") {
+    expectPlayableSnap(current);
     const optionId = current.football.match.currentEpisode?.options[1]?.id;
     if (!optionId) throw new Error("No match option");
     current = resolveMatchDecision(current, optionId);
+    guard += 1;
+    if (guard > 80) throw new Error("Match did not finish");
   }
   return current;
 }
 
 describe("football match simulation", () => {
-  it("creates offensive decisions for a wide receiver", () => {
-    const started = startMatch(makeSave("WR"));
-    expect(started.football.match.heroUnit).toBe("offense");
-    expect(started.football.match.currentEpisode?.position).toBe("WR");
-    expect(started.football.match.currentEpisode?.options).toHaveLength(3);
-  });
-
-  it("creates playable defensive decisions for linebackers and cornerbacks", () => {
-    for (const position of ["LB", "CB"] as const) {
+  it("creates a staff-called 22-player snap for every playable position", () => {
+    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
       const started = startMatch(makeSave(position));
-      expect(started.football.match.heroUnit).toBe("defense");
-      expect(started.football.match.currentEpisode?.unit).toBe("defense");
-      expect(started.football.match.currentEpisode?.options.length).toBeGreaterThanOrEqual(3);
+      expect(started.football.match.heroUnit).toBe(position === "LB" || position === "CB" ? "defense" : "offense");
+      expect(started.football.match.currentEpisode?.position).toBe(position);
+      expectPlayableSnap(started);
     }
   });
 
@@ -85,21 +102,92 @@ describe("football match simulation", () => {
 
   it("keeps a receiver active without forcing a target on every snap", () => {
     const completed = finish(makeSave("WR"));
-    expect(completed.football.match.completedEpisodes).toHaveLength(16);
-    expect(completed.football.match.stats.targets).toBeLessThan(completed.football.match.completedEpisodes.length);
-    expect(completed.football.match.completedEpisodes.some((episode) => !episode.involved)).toBe(true);
-    expect(completed.football.match.completedEpisodes.every((episode) => episode.assignmentScore >= 0 && episode.assignmentScore <= 100)).toBe(true);
+    const match = completed.football.match;
+    expect(match.completedEpisodes.length).toBeGreaterThan(12);
+    expect(match.stats.targets).toBeGreaterThan(0);
+    expect(match.stats.targets).toBeLessThan(match.completedEpisodes.length);
+    expect(match.completedEpisodes.some((episode) => !episode.involved)).toBe(true);
+    expect(match.completedEpisodes.every((episode) => episode.assignmentScore >= 0 && episode.assignmentScore <= 100)).toBe(true);
+    expect(match.advancedStats.snaps).toBe(match.completedEpisodes.length);
+    expect(match.advancedStats.routeWins).toBeGreaterThan(0);
+    expect(match.stats.turnovers).toBe(0);
   });
 
-  it("completes a full snap sequence and updates the season record", () => {
-    const completed = finish(makeSave("LB"));
-    expect(completed.football.match.status).toBe("complete");
-    expect(completed.football.match.completedEpisodes).toHaveLength(16);
-    expect(completed.football.season.wins + completed.football.season.losses).toBe(1);
-    expect(completed.football.season.schedule[0]?.status).toBe("complete");
-    expect(completed.football.season.standings.some((team) => team.wins + team.losses > 0)).toBe(true);
-    expect(completed.football.season.heroTotals.tackles).toBe(completed.football.match.stats.tackles);
-    expect(completed.football.match.finalResult?.spotlight.length).toBeGreaterThan(5);
-    expect(() => careerSaveSchema.parse(completed)).not.toThrow();
+  it("tracks real drives, possession changes and the complete game clock", () => {
+    const completed = finish(makeSave("QB"));
+    const match = completed.football.match;
+    expect(match.status).toBe("complete");
+    expect(match.gameClockSeconds).toBe(0);
+    expect(match.quarter).toBe(4);
+    expect(match.drives.length).toBeGreaterThan(2);
+    expect(match.drives.some((drive) => drive.controlled)).toBe(true);
+    expect(match.drives.some((drive) => !drive.controlled)).toBe(true);
+    expect(match.drives.every((drive) => drive.plays > 0 && (
+      drive.startQuarter < drive.endQuarter || drive.startClockSeconds >= drive.endClockSeconds
+    ))).toBe(true);
+    expect(match.completedEpisodes.every((episode) => match.drives.some((drive) => drive.id === episode.driveId))).toBe(true);
+    for (let index = 1; index < match.drives.length; index += 1) {
+      const previous = match.drives[index - 1]!;
+      const current = match.drives[index]!;
+      if (previous.offense === current.offense) expect(previous.outcome).toBe("defensive-touchdown");
+    }
+    const turnoverIndex = match.drives.findIndex((drive) => drive.controlled && drive.outcome === "turnover");
+    if (turnoverIndex >= 0) {
+      const turnover = match.drives[turnoverIndex]!;
+      const nextDrive = match.drives[turnoverIndex + 1];
+      expect(nextDrive?.startFieldPosition).toBe(Math.max(20, Math.min(75, 100 - turnover.endFieldPosition)));
+    }
+    expect(match.heroScore).not.toBe(match.opponentScore);
+  });
+
+  it("does not grant the opponent two possessions when the snap limit ends on a drive boundary", () => {
+    const source = makeSave("WR");
+    let probe = startMatch(source);
+    const firstControlledDriveId = probe.football.match.currentDriveId;
+    let guard = 0;
+    while (probe.football.match.status === "in-progress" && !probe.football.match.drives.some((drive) => drive.id === firstControlledDriveId)) {
+      const optionId = probe.football.match.currentEpisode?.options[1]?.id;
+      if (!optionId) throw new Error("No match option");
+      probe = resolveMatchDecision(probe, optionId);
+      guard += 1;
+      if (guard > 20) throw new Error("Controlled drive did not finish");
+    }
+    const cutoff = probe.football.match.episodeIndex;
+    expect(cutoff).toBeGreaterThan(0);
+
+    let exact = startMatch(source);
+    exact = {
+      ...exact,
+      football: {
+        ...exact.football,
+        match: { ...exact.football.match, totalEpisodes: cutoff },
+      },
+    };
+    while (exact.football.match.status === "in-progress") {
+      const optionId = exact.football.match.currentEpisode?.options[1]?.id;
+      if (!optionId) throw new Error("No match option");
+      exact = resolveMatchDecision(exact, optionId);
+    }
+
+    const drives = exact.football.match.drives;
+    for (let index = 1; index < drives.length; index += 1) {
+      const previous = drives[index - 1]!;
+      const current = drives[index]!;
+      if (previous.offense === current.offense) expect(previous.outcome).toBe("defensive-touchdown");
+    }
+  });
+
+  it("completes and serializes a match for all five positions", () => {
+    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
+      const completed = finish(makeSave(position));
+      const match = completed.football.match;
+      expect(match.status).toBe("complete");
+      expect(match.completedEpisodes.length).toBeGreaterThan(0);
+      expect(match.advancedStats.snaps).toBe(match.completedEpisodes.length);
+      expect(match.finalResult?.spotlight.length).toBeGreaterThan(5);
+      expect(completed.football.season.wins + completed.football.season.losses).toBe(1);
+      expect(completed.football.season.schedule[0]?.status).toBe("complete");
+      expect(() => careerSaveSchema.parse(completed)).not.toThrow();
+    }
   });
 });

@@ -216,6 +216,30 @@ const matchStatLineSchema = z.object({
   interceptions: z.number().int().nonnegative(),
 });
 
+const matchAdvancedStatLineSchema = z.object({
+  snaps: z.number().int().nonnegative(),
+  assignmentWins: z.number().int().nonnegative(),
+  assignmentLosses: z.number().int().nonnegative(),
+  routeWins: z.number().int().nonnegative(),
+  separationWins: z.number().int().nonnegative(),
+  blocksWon: z.number().int().nonnegative(),
+  pressures: z.number().int().nonnegative(),
+  coverageWins: z.number().int().nonnegative(),
+  missedTackles: z.number().int().nonnegative(),
+});
+
+const emptyAdvancedMatchStats = {
+  snaps: 0,
+  assignmentWins: 0,
+  assignmentLosses: 0,
+  routeWins: 0,
+  separationWins: 0,
+  blocksWon: 0,
+  pressures: 0,
+  coverageWins: 0,
+  missedTackles: 0,
+} as const;
+
 const matchDecisionOptionSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(2),
@@ -228,6 +252,7 @@ const matchDecisionOptionSchema = z.object({
 });
 
 const matchPlayCallSchema = z.object({
+  id: z.string().min(1).default("legacy-call"),
   formation: z.string().min(2),
   personnel: z.string().min(1),
   concept: z.string().min(2),
@@ -235,14 +260,66 @@ const matchPlayCallSchema = z.object({
   strength: z.enum(["left", "right", "middle"]),
   calledBy: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator"]),
   canCheck: z.boolean(),
+  aggression: z.number().min(0).max(100).default(50),
+  primarySlot: z.string().min(1).optional(),
+  progression: z.array(z.string().min(1)).default([]),
+  runLane: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).default([]),
 });
+
+const matchPointSchema = z.object({
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+});
+
+const matchPlayerAssignmentSchema = z.object({
+  id: z.string().min(1),
+  side: z.enum(["hero", "opponent"]),
+  unit: z.enum(["offense", "defense"]),
+  slot: z.string().min(1),
+  position: z.string().min(1),
+  label: z.string().min(1),
+  isHero: z.boolean(),
+  kind: z.enum(["handoff", "carry", "pass-read", "route", "run-block", "pass-protection", "rush", "run-fit", "zone-coverage", "man-coverage", "spy", "contain"]),
+  task: z.string().min(2),
+  start: matchPointSchema,
+  end: matchPointSchema,
+  delayMs: z.number().int().nonnegative().max(5000),
+  matchupSlot: z.string().min(1).optional(),
+});
+
+const legacyPlayCall = {
+  id: "legacy-call",
+  formation: "Legacy",
+  personnel: "11",
+  concept: "Legacy Call",
+  playType: "pass" as const,
+  strength: "middle" as const,
+  calledBy: "offensive-coordinator" as const,
+  canCheck: false,
+  aggression: 50,
+  progression: [],
+  tags: [],
+};
+
+const legacyOpponentCall = {
+  ...legacyPlayCall,
+  id: "legacy-defense",
+  formation: "Legacy Front",
+  concept: "Legacy Coverage",
+  playType: "coverage" as const,
+  calledBy: "defensive-coordinator" as const,
+};
 
 const matchEpisodeSchema = z.object({
   id: z.string().min(1),
+  driveId: z.string().min(1).default("legacy-drive"),
+  possession: z.enum(["hero", "opponent"]).default("hero"),
   unit: z.enum(["offense", "defense"]),
   position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
   quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   clockSeconds: z.number().int().min(0).max(900),
+  playClockSeconds: z.number().int().min(0).max(40).default(25),
   down: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   distance: z.number().int().min(1).max(99),
   fieldPosition: z.number().int().min(0).max(100),
@@ -251,27 +328,56 @@ const matchEpisodeSchema = z.object({
   situation: z.string().min(2),
   assignment: z.string().min(2),
   read: z.string().min(2),
-  playCall: matchPlayCallSchema.default({ formation: "Legacy", personnel: "11", concept: "Legacy Call", playType: "pass", strength: "middle", calledBy: "offensive-coordinator", canCheck: false }),
+  playCall: matchPlayCallSchema.default(legacyPlayCall),
+  opponentCall: matchPlayCallSchema.default(legacyOpponentCall),
   heroInvolvement: z.enum(["primary", "secondary", "assignment-only"]).default("primary"),
   heroRole: z.string().min(2).default("Выполнить назначение"),
+  heroSlot: z.string().min(1).default("HERO"),
+  assignments: z.array(matchPlayerAssignmentSchema).default([]),
   options: z.array(matchDecisionOptionSchema).min(3).max(4),
 });
 
 const matchEpisodeResultSchema = z.object({
   id: z.string().min(1),
   episodeId: z.string().min(1),
+  driveId: z.string().min(1).default("legacy-drive"),
   optionId: z.string().min(1),
   grade: z.enum(["A", "B", "C", "D"]),
+  snapResult: z.enum(["run", "completion", "incomplete", "sack", "turnover", "touchdown", "defensive-touchdown", "penalty", "punt", "field-goal", "missed-field-goal", "turnover-on-downs"]).default("run"),
   headline: z.string().min(2),
   description: z.string().min(2),
   yards: z.number().int(),
   points: z.number().int().nonnegative(),
+  scoringSide: z.enum(["hero", "opponent"]).optional(),
   coachDelta: z.number(),
   confidenceDelta: z.number(),
   fatigueDelta: z.number(),
   assignmentScore: z.number().min(0).max(100).default(50),
+  teamExecutionScore: z.number().min(0).max(100).default(50),
   involved: z.boolean().default(true),
+  firstDown: z.boolean().default(false),
+  driveEnded: z.boolean().default(false),
+  targetSlot: z.string().min(1).optional(),
+  ballCarrierSlot: z.string().min(1).optional(),
   statDelta: matchStatLineSchema,
+  advancedDelta: matchAdvancedStatLineSchema.default(emptyAdvancedMatchStats),
+});
+
+const matchDriveSummarySchema = z.object({
+  id: z.string().min(1),
+  offense: z.enum(["hero", "opponent"]),
+  startQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  startClockSeconds: z.number().int().min(0).max(900),
+  endQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  endClockSeconds: z.number().int().min(0).max(900),
+  startFieldPosition: z.number().int().min(0).max(100),
+  endFieldPosition: z.number().int().min(0).max(100),
+  plays: z.number().int().nonnegative(),
+  yards: z.number().int(),
+  points: z.number().int().nonnegative(),
+  outcome: z.enum(["active", "touchdown", "defensive-touchdown", "field-goal", "missed-field-goal", "punt", "turnover", "turnover-on-downs", "end-half", "end-game"]),
+  description: z.string().min(2),
+  controlled: z.boolean(),
 });
 
 const footballMatchSchema = z.object({
@@ -289,6 +395,10 @@ const footballMatchSchema = z.object({
   opponentScore: z.number().int().nonnegative(),
   quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   clockSeconds: z.number().int().min(0).max(900),
+  gameClockSeconds: z.number().int().min(0).max(3600).default(48 * 60),
+  playClockSeconds: z.number().int().min(0).max(40).default(25),
+  possession: z.enum(["hero", "opponent"]).default("hero"),
+  openingKickoffReceiver: z.enum(["hero", "opponent"]).default("hero"),
   heroFatigue: z.number().min(0).max(100),
   coachGrade: z.number().min(0).max(100),
   episodeIndex: z.number().int().nonnegative(),
@@ -297,9 +407,19 @@ const footballMatchSchema = z.object({
   driveDistance: z.number().int().min(1).max(99).default(10),
   driveFieldPosition: z.number().int().min(0).max(100).default(25),
   driveNumber: z.number().int().min(1).default(1),
+  currentDriveId: z.string().min(1).default("legacy-drive"),
+  driveStartQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
+  driveStartClockSeconds: z.number().int().min(0).max(900).default(720),
+  driveStartFieldPosition: z.number().int().min(0).max(100).default(25),
+  drivePlays: z.number().int().nonnegative().default(0),
+  driveYards: z.number().int().default(0),
+  timeoutsHero: z.number().int().min(0).max(3).default(3),
+  timeoutsOpponent: z.number().int().min(0).max(3).default(3),
   currentEpisode: matchEpisodeSchema.optional(),
   completedEpisodes: z.array(matchEpisodeResultSchema),
+  drives: z.array(matchDriveSummarySchema).default([]),
   stats: matchStatLineSchema,
+  advancedStats: matchAdvancedStatLineSchema.default(emptyAdvancedMatchStats),
   finalResult: z.object({
     won: z.boolean(),
     heroScore: z.number().int().nonnegative(),

@@ -4,7 +4,7 @@ import type { CareerSave } from "../../../storage/saves/schema";
 import type { FootballPosition } from "../career/types";
 import type { EcosystemCompetitionGame } from "../ecosystem/types";
 import type { FootballSeasonState } from "../season/types";
-import type { FootballMatchState, MatchStatLine, MatchUnit } from "./types";
+import type { FootballMatchState, MatchAdvancedStatLine, MatchStatLine, MatchTeamSide, MatchUnit } from "./types";
 
 function addDays(date: GameDate, days: number): GameDate {
   const value = new Date(Date.UTC(date.year, date.month - 1, date.day + days));
@@ -35,6 +35,25 @@ export function createEmptyMatchStats(): MatchStatLine {
   };
 }
 
+
+export function createEmptyAdvancedMatchStats(): MatchAdvancedStatLine {
+  return {
+    snaps: 0,
+    assignmentWins: 0,
+    assignmentLosses: 0,
+    routeWins: 0,
+    separationWins: 0,
+    blocksWon: 0,
+    pressures: 0,
+    coverageWins: 0,
+    missedTackles: 0,
+  };
+}
+
+function controlledPossession(unit: MatchUnit): MatchTeamSide {
+  return unit === "offense" ? "hero" : "opponent";
+}
+
 export function createInitialMatchState(
   worldSeed: string,
   position: FootballPosition,
@@ -53,6 +72,7 @@ export function createInitialMatchState(
   const profile = season.opponents.find((item) => item.id === opponentId);
   const random = new SeededRandom(`${worldSeed}:match:${week}:${opponentId}`);
   const daysUntilSaturday = (5 - dayIndex + 7) % 7;
+  const openingFieldPosition = random.integer(18, 34);
   return {
     moduleVersion: 1,
     gameId: game?.id ?? `game-${week}-${opponentId}`,
@@ -68,16 +88,30 @@ export function createInitialMatchState(
     opponentScore: 0,
     quarter: 1,
     clockSeconds: 12 * 60,
+    gameClockSeconds: 48 * 60,
+    playClockSeconds: 25,
+    possession: controlledPossession(matchUnitForPosition(position)),
+    openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
     heroFatigue: random.integer(4, 10),
     coachGrade: 55,
     episodeIndex: 0,
-    totalEpisodes: 16,
+    totalEpisodes: 24,
     driveDown: 1,
     driveDistance: 10,
-    driveFieldPosition: random.integer(18, 34),
+    driveFieldPosition: openingFieldPosition,
     driveNumber: 1,
+    currentDriveId: `drive-${week}-1`,
+    driveStartQuarter: 1,
+    driveStartClockSeconds: 12 * 60,
+    driveStartFieldPosition: openingFieldPosition,
+    drivePlays: 0,
+    driveYards: 0,
+    timeoutsHero: 3,
+    timeoutsOpponent: 3,
     completedEpisodes: [],
+    drives: [],
     stats: createEmptyMatchStats(),
+    advancedStats: createEmptyAdvancedMatchStats(),
   };
 }
 
@@ -103,13 +137,14 @@ export function createCollegeMatchState(
   const opponent = save.world.teams.find((team) => team.id === opponentId);
   const random = new SeededRandom(`${save.meta.worldSeed}:college-match:${game.id}`);
   const role = career?.role ?? "developmental";
+  const openingFieldPosition = random.integer(18, 34);
   const totalEpisodes = role === "starter"
-    ? 18
+    ? 30
     : role === "rotation"
-      ? 14
+      ? 22
       : role === "special-teams"
-        ? 10
-        : 8;
+        ? 14
+        : 10;
 
   return {
     moduleVersion: 1,
@@ -128,15 +163,29 @@ export function createCollegeMatchState(
     opponentScore: 0,
     quarter: 1,
     clockSeconds: 12 * 60,
+    gameClockSeconds: 48 * 60,
+    playClockSeconds: 25,
+    possession: controlledPossession(matchUnitForPosition(save.football.position)),
+    openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
     heroFatigue: random.integer(4, 12),
     coachGrade: Math.max(45, Math.min(70, Math.round((career?.coachTrust ?? 55) * 0.35 + 36))),
     episodeIndex: 0,
     totalEpisodes,
     driveDown: 1,
     driveDistance: 10,
-    driveFieldPosition: random.integer(18, 34),
+    driveFieldPosition: openingFieldPosition,
     driveNumber: 1,
+    currentDriveId: `drive-${game.week}-1`,
+    driveStartQuarter: 1,
+    driveStartClockSeconds: 12 * 60,
+    driveStartFieldPosition: openingFieldPosition,
+    drivePlays: 0,
+    driveYards: 0,
+    timeoutsHero: 3,
+    timeoutsOpponent: 3,
     completedEpisodes: [],
+    drives: [],
     stats: createEmptyMatchStats(),
+    advancedStats: createEmptyAdvancedMatchStats(),
   };
 }
