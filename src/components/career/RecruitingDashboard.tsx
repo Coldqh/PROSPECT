@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import type { RecruitingActionId, RecruitingProgram, RecruitingStage } from "../../sports/football/recruiting/types";
 import { recruitingActionsRemaining, recruitingRoleLabel, recruitingStageLabel } from "../../sports/football/recruiting/updateRecruiting";
-import { BottomSheet } from "../ui/BottomSheet";
+import { OverlayDialog } from "../ui/OverlayDialog";
 import { Icon } from "../ui/Icon";
 
 const actionCopy: Record<RecruitingActionId, { label: string; effect: string }> = {
@@ -105,7 +105,7 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
         <div className="recruiting-activity-data">{recruitment.activity.slice(-8).reverse().map((entry) => <article key={entry.id}><span>W{entry.week}</span><div><strong>{entry.title}</strong><small>{entry.kind}</small></div></article>)}{recruitment.activity.length === 0 && <div className="data-empty">Нет активности</div>}</div>
       </section>
 
-      <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(undefined)} eyebrow={selected ? tierLabel(selected) : "PROGRAM"} title={selected?.shortName ?? "Программа"}>
+      <OverlayDialog open={Boolean(selected)} onClose={() => setSelectedId(undefined)} eyebrow={selected ? tierLabel(selected) : "PROGRAM"} title={selected?.shortName ?? "Программа"} wide>
         {selected && <div className="recruiting-program-sheet recruiting-program-sheet--data">
           <div className="sheet-metric-pair"><article><small>ИНТЕРЕС</small><strong>{Math.round(selected.interest)}</strong></article><article><small>FIT</small><strong>{Math.round(selected.fit)}</strong></article></div>
           <div className="recruiting-fit-grid">
@@ -126,7 +126,7 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
           {!recruitment.commitment && selected.offer && <button type="button" className="button button--primary button--wide" disabled={mutating || !selected.academicEligible} onClick={() => void onCommit(selected.id).then(() => setSelectedId(undefined))}>Коммит</button>}
           {!recruitment.commitment && <div className="recruiting-actions">{availableActions(selected).map((actionId) => <button type="button" key={actionId} disabled={mutating || actionsRemaining <= 0} onClick={() => void runAction(actionId)}><strong>{actionCopy[actionId].label}</strong><small>{actionCopy[actionId].effect}</small></button>)}</div>}
         </div>}
-      </BottomSheet>
+      </OverlayDialog>
     </div>
   );
 }

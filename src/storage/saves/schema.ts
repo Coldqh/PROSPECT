@@ -227,6 +227,16 @@ const matchDecisionOptionSchema = z.object({
   mistakeRisk: z.number().min(0).max(100),
 });
 
+const matchPlayCallSchema = z.object({
+  formation: z.string().min(2),
+  personnel: z.string().min(1),
+  concept: z.string().min(2),
+  playType: z.enum(["run", "pass", "play-action", "screen", "blitz", "coverage"]),
+  strength: z.enum(["left", "right", "middle"]),
+  calledBy: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator"]),
+  canCheck: z.boolean(),
+});
+
 const matchEpisodeSchema = z.object({
   id: z.string().min(1),
   unit: z.enum(["offense", "defense"]),
@@ -241,6 +251,9 @@ const matchEpisodeSchema = z.object({
   situation: z.string().min(2),
   assignment: z.string().min(2),
   read: z.string().min(2),
+  playCall: matchPlayCallSchema.default({ formation: "Legacy", personnel: "11", concept: "Legacy Call", playType: "pass", strength: "middle", calledBy: "offensive-coordinator", canCheck: false }),
+  heroInvolvement: z.enum(["primary", "secondary", "assignment-only"]).default("primary"),
+  heroRole: z.string().min(2).default("Выполнить назначение"),
   options: z.array(matchDecisionOptionSchema).min(3).max(4),
 });
 
@@ -256,6 +269,8 @@ const matchEpisodeResultSchema = z.object({
   coachDelta: z.number(),
   confidenceDelta: z.number(),
   fatigueDelta: z.number(),
+  assignmentScore: z.number().min(0).max(100).default(50),
+  involved: z.boolean().default(true),
   statDelta: matchStatLineSchema,
 });
 
@@ -278,6 +293,10 @@ const footballMatchSchema = z.object({
   coachGrade: z.number().min(0).max(100),
   episodeIndex: z.number().int().nonnegative(),
   totalEpisodes: z.number().int().min(1),
+  driveDown: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
+  driveDistance: z.number().int().min(1).max(99).default(10),
+  driveFieldPosition: z.number().int().min(0).max(100).default(25),
+  driveNumber: z.number().int().min(1).default(1),
   currentEpisode: matchEpisodeSchema.optional(),
   completedEpisodes: z.array(matchEpisodeResultSchema),
   stats: matchStatLineSchema,

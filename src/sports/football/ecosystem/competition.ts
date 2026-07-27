@@ -34,6 +34,12 @@ export interface CompetitionWeekResult {
   playedTeamIds: string[];
 }
 
+export interface CompetitionGameOverride {
+  gameId: string;
+  homeScore: number;
+  awayScore: number;
+}
+
 export interface CompetitionPostseasonResult extends CompetitionWeekResult {
   conferences: EcosystemConference[];
   complete: boolean;
@@ -275,6 +281,31 @@ function completeGame(game: EcosystemCompetitionGame, teams: EcosystemTeam[], pl
   return { ...game, status: "complete", homeScore, awayScore, winnerTeamId, loserTeamId, upset: winner.rating + 7 < loser.rating };
 }
 
+function completeGameFromOverride(
+  game: EcosystemCompetitionGame,
+  teams: EcosystemTeam[],
+  override: CompetitionGameOverride,
+): EcosystemCompetitionGame {
+  const home = teams.find((team) => team.id === game.homeTeamId);
+  const away = teams.find((team) => team.id === game.awayTeamId);
+  if (!home || !away) return game;
+  let homeScore = Math.max(0, Math.round(override.homeScore));
+  let awayScore = Math.max(0, Math.round(override.awayScore));
+  if (homeScore === awayScore) homeScore += 3;
+  const homeWon = homeScore > awayScore;
+  const winner = homeWon ? home : away;
+  const loser = homeWon ? away : home;
+  return {
+    ...game,
+    status: "complete",
+    homeScore,
+    awayScore,
+    winnerTeamId: winner.id,
+    loserTeamId: loser.id,
+    upset: winner.rating + 7 < loser.rating,
+  };
+}
+
 function updateTeamsFromGames(teams: EcosystemTeam[], games: EcosystemCompetitionGame[]): EcosystemTeam[] {
   const teamMap = new Map(teams.map((team) => [team.id, { ...team }]));
   for (const game of games) {
@@ -420,9 +451,16 @@ export function simulateCompetitionWeek(
   week: number,
   random: SeededRandom,
   social?: EcosystemSocialState,
+  overrides: CompetitionGameOverride[] = [],
 ): CompetitionWeekResult {
   const scheduled = competition.schedule.filter((game) => game.seasonYear === seasonYear && game.week === week && game.status === "scheduled");
-  const completed = scheduled.map((game) => completeGame(game, teams, players, random.fork(game.id), social));
+  const overrideMap = new Map(overrides.map((override) => [override.gameId, override]));
+  const completed = scheduled.map((game) => {
+    const override = overrideMap.get(game.id);
+    return override
+      ? completeGameFromOverride(game, teams, override)
+      : completeGame(game, teams, players, random.fork(game.id), social);
+  });
   const completedMap = new Map(completed.map((game) => [game.id, game]));
   const nextSchedule = competition.schedule.map((game) => completedMap.get(game.id) ?? game);
   const nextTeams = updateTeamsFromGames(teams, completed);

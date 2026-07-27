@@ -30,7 +30,7 @@ const trainingIcons: Record<TrainingFocusId, IconName> = {
 };
 
 const weekdayLabels = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"] as const;
-type TodayView = "overview" | "training" | "plan" | "schedule";
+type TodayView = "overview" | "plan" | "schedule";
 type SheetId = "condition" | "result" | "training-result" | "medical" | "event" | null;
 
 function signed(value: number, digits = 1): string {
@@ -75,7 +75,6 @@ export function TodayDashboard({
   const [selectedTemplate, setSelectedTemplate] = useState<WeeklyPlanTemplateId>(life.weeklyPlan.templateId);
   const [selectedIntensity, setSelectedIntensity] = useState<TrainingIntensity>(life.weeklyPlan.intensity);
   const [selectedTrainingFocus, setSelectedTrainingFocus] = useState<TrainingFocusId>(football.training.plan.focusId);
-  const [selectedTrainingIntensity, setSelectedTrainingIntensity] = useState<TrainingIntensity>(football.training.plan.intensity);
 
   useEffect(() => {
     setSelectedTemplate(life.weeklyPlan.templateId);
@@ -84,8 +83,7 @@ export function TodayDashboard({
 
   useEffect(() => {
     setSelectedTrainingFocus(football.training.plan.focusId);
-    setSelectedTrainingIntensity(football.training.plan.intensity);
-  }, [football.training.plan.focusId, football.training.plan.intensity]);
+  }, [football.training.plan.focusId]);
 
   const activeTemplate = getWeeklyPlanTemplate(selectedTemplate);
   const activeIntensity = getIntensityDescriptor(selectedIntensity);
@@ -102,13 +100,19 @@ export function TodayDashboard({
   );
   const weekStart = addGameDays(save.meta.currentDate, -life.dayIndex);
   const planChanged = selectedTemplate !== life.weeklyPlan.templateId || selectedIntensity !== life.weeklyPlan.intensity;
-  const trainingPlanChanged = selectedTrainingFocus !== football.training.plan.focusId || selectedTrainingIntensity !== football.training.plan.intensity;
+  const trainingPlanChanged = selectedTrainingFocus !== football.training.plan.focusId || selectedIntensity !== football.training.plan.intensity;
+  const weeklySetupChanged = planChanged || trainingPlanChanged;
   const projectedLoad = Math.round((activeTemplate.focus.training * 0.58 + 25) * activeIntensity.loadMultiplier);
-  const trainingLoad = Math.round(activeTrainingFocus.load * getIntensityDescriptor(selectedTrainingIntensity).loadMultiplier);
+  const trainingLoad = Math.round(activeTrainingFocus.load * activeIntensity.loadMultiplier);
   const recoveryMargin = Math.round(activeTemplate.focus.recovery * 1.45 - projectedLoad * 0.42);
   const nextActivity = schedule[0];
   const body = football.training.body;
   const currentTrainingFocus = getTrainingFocus(football.position, football.training.plan.focusId);
+
+  async function applyWeeklySetup() {
+    if (planChanged) await onUpdatePlan(selectedTemplate, selectedIntensity);
+    if (trainingPlanChanged) await onUpdateTrainingPlan(selectedTrainingFocus, selectedIntensity);
+  }
 
   return (
     <div className="compact-section today-section">
@@ -141,7 +145,7 @@ export function TodayDashboard({
       {view !== "overview" && (
         <header className="subview-head">
           <button type="button" className="icon-button icon-button--quiet" onClick={() => setView("overview")} aria-label="К сводке дня"><Icon name="arrow-left" /></button>
-          <div><small>Сегодня</small><strong>{view === "training" ? "Тренировка" : view === "plan" ? "Недельный режим" : "Расписание"}</strong></div>
+          <div><small>Сегодня</small><strong>{view === "plan" ? "Недельный режим" : "Расписание"}</strong></div>
         </header>
       )}
 
@@ -172,12 +176,6 @@ export function TodayDashboard({
               </button>
             );
           })()}
-
-          <button type="button" className="training-brief" onClick={() => setView("training")}>
-            <span className="training-brief__icon"><Icon name={trainingIcons[currentTrainingFocus.id]} /></span>
-            <div><small>Тренировочный акцент</small><strong>{currentTrainingFocus.name}</strong><p>{getIntensityDescriptor(football.training.plan.intensity).name} · готовность {Math.round(body.readiness)}</p></div>
-            <Icon name="arrow-right" />
-          </button>
 
           {body.activeIssue ? (
             <button type="button" className="medical-alert" onClick={() => setSheet("medical")}>
@@ -227,53 +225,6 @@ export function TodayDashboard({
         </div>
       )}
 
-      {view === "training" && (
-        <div className="compact-view training-view">
-          <div className="training-body-strip">
-            <button type="button" onClick={() => setSheet("medical")}><small>Готовность</small><strong>{Math.round(body.readiness)}</strong></button>
-            <button type="button" onClick={() => setSheet("medical")}><small>Боль</small><strong>{Math.round(body.pain)}</strong></button>
-            <button type="button" onClick={() => setSheet("medical")}><small>Риск</small><strong>{Math.round(body.injuryRisk)}</strong></button>
-            <button type="button" onClick={() => setSheet("medical")}><small>Допуск</small><strong>{medicalLabel(body.medicalStatus)}</strong></button>
-          </div>
-
-          <div className="training-focus-list">
-            {trainingCatalog.map((focus) => (
-              <button
-                type="button"
-                className={selectedTrainingFocus === focus.id ? "is-active" : ""}
-                onClick={() => setSelectedTrainingFocus(focus.id)}
-                key={focus.id}
-              >
-                <span><Icon name={trainingIcons[focus.id]} /></span>
-                <div><strong>{focus.name}</strong><small>TEC {focus.multipliers.technique.toFixed(2)} · ATH {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)} · REC {focus.multipliers.recovery.toFixed(2)}</small></div>
-                <em>{focus.load}</em>
-              </button>
-            ))}
-          </div>
-
-          <section className="training-control-card">
-            <header><div><small>Интенсивность</small><strong>Ожидаемая нагрузка {trainingLoad}</strong></div><span>{getIntensityDescriptor(selectedTrainingIntensity).loadMultiplier.toFixed(2)}×</span></header>
-            <div className="compact-segmented">
-              {intensityDescriptors.map((item) => (
-                <button type="button" className={selectedTrainingIntensity === item.id ? "is-active" : ""} onClick={() => setSelectedTrainingIntensity(item.id)} key={item.id}>
-                  {item.name}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <button
-            type="button"
-            className="training-apply-row"
-            disabled={!trainingPlanChanged || mutating}
-            onClick={() => void onUpdateTrainingPlan(selectedTrainingFocus, selectedTrainingIntensity)}
-          >
-            <span><small>{activeTrainingFocus.shortName} · {getIntensityDescriptor(selectedTrainingIntensity).name}</small><strong>{mutating ? "Сохранение…" : trainingPlanChanged ? "Применить" : "Выбрано"}</strong></span>
-            <Icon name={trainingPlanChanged ? "arrow-right" : "check"} />
-          </button>
-        </div>
-      )}
-
       {view === "plan" && (
         <div className="compact-view">
           <div className="plan-list-compact">
@@ -286,8 +237,21 @@ export function TodayDashboard({
             ))}
           </div>
 
+          <section className="weekly-training-block">
+            <header><div><small>Футбольный акцент</small><strong>{activeTrainingFocus.name}</strong></div><span>{trainingLoad}</span></header>
+            <div className="training-focus-list training-focus-list--inline">
+              {trainingCatalog.map((focus) => (
+                <button type="button" className={selectedTrainingFocus === focus.id ? "is-active" : ""} onClick={() => setSelectedTrainingFocus(focus.id)} key={focus.id}>
+                  <span><Icon name={trainingIcons[focus.id]} /></span>
+                  <div><strong>{focus.shortName}</strong><small>TEC {focus.multipliers.technique.toFixed(2)} · ATH {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)}</small></div>
+                  <em>{focus.load}</em>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section className="compact-control-card">
-            <header><div><small>Интенсивность недели</small><strong>Нагрузка</strong></div><span>{activeIntensity.loadMultiplier.toFixed(2)}×</span></header>
+            <header><div><small>Единая интенсивность</small><strong>Неделя и тренировки</strong></div><span>{activeIntensity.loadMultiplier.toFixed(2)}×</span></header>
             <div className="compact-segmented">
               {intensityDescriptors.map((item) => (
                 <button type="button" className={selectedIntensity === item.id ? "is-active" : ""} onClick={() => setSelectedIntensity(item.id)} key={item.id}>{item.name}</button>
@@ -301,9 +265,9 @@ export function TodayDashboard({
             <span><small>Стабильность</small><strong>{Math.round(life.consistency)}</strong></span>
           </div>
 
-          <button type="button" className="training-apply-row" disabled={!planChanged || mutating} onClick={() => void onUpdatePlan(selectedTemplate, selectedIntensity)}>
-            <span><small>{activeTemplate.shortName} · {activeIntensity.name}</small><strong>{mutating ? "Сохранение…" : planChanged ? "Применить" : "Выбрано"}</strong></span>
-            <Icon name={planChanged ? "arrow-right" : "check"} />
+          <button type="button" className="training-apply-row" disabled={!weeklySetupChanged || mutating} onClick={() => void applyWeeklySetup()}>
+            <span><small>{activeTemplate.shortName} · {activeTrainingFocus.shortName} · {activeIntensity.name}</small><strong>{mutating ? "Сохранение…" : weeklySetupChanged ? "Применить" : "Выбрано"}</strong></span>
+            <Icon name={weeklySetupChanged ? "arrow-right" : "check"} />
           </button>
         </div>
       )}

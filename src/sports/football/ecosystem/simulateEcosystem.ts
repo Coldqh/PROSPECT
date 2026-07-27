@@ -1193,14 +1193,17 @@ function processOffseason(
     if (player.isHero) {
       if (player.level === "college") {
         const nextEligibility = rollEligibilityIntoNextSeason(player, seasonYear + 1, random.fork(`eligibility:${player.id}`), world.constitution);
-        const nextYear = nextClassYear(player.classYear) ?? "Senior";
+        const consumedSeason = player.eligibility.model === "age-based-five-year"
+          || player.eligibility.gamesPlayedThisSeason > world.constitution.legacyRedshirtGameLimit;
+        const nextYear = consumedSeason ? nextClassYear(player.classYear) ?? "Senior" : player.classYear;
         players.push({
           ...player,
           age: Math.min(24, player.age + 1),
           classYear: nextYear,
-          eligibilityYears: Math.max(0, player.eligibilityYears - 1),
-          seasonsPlayed: player.seasonsPlayed + 1,
-          transferStatus: "none",
+          eligibilityYears: Math.max(0, player.eligibilityYears - (consumedSeason ? 1 : 0)),
+          seasonsPlayed: player.seasonsPlayed + (consumedSeason ? 1 : 0),
+          transferStatus: player.transferStatus,
+          usagePlan: consumedSeason ? player.usagePlan : "redshirt",
           eligibility: nextEligibility,
         });
       } else {
@@ -1735,7 +1738,38 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       }));
 
       if (cycle.phase === "regular-season" && world.seasonYear === cycle.seasonYear && world.seasonWeek <= 10) {
-        const round = simulateCompetitionWeek(competition, teams, players, coaches, cycle.seasonYear, world.seasonWeek, random.fork("competition-week"), social);
+        const interactiveMatch = save.football.college.heroCareer
+          && save.football.match.status === "complete"
+          && save.football.match.finalResult
+          && save.football.college.heroCareer?.teamId
+          ? save.football.match
+          : undefined;
+        const interactiveGame = interactiveMatch
+          ? competition.schedule.find((game) => game.id === interactiveMatch.gameId && game.status === "scheduled")
+          : undefined;
+        const heroTeamId = save.football.college.heroCareer?.teamId;
+        const overrides = interactiveGame && interactiveMatch?.finalResult && heroTeamId
+          ? [{
+              gameId: interactiveGame.id,
+              homeScore: interactiveGame.homeTeamId === heroTeamId
+                ? interactiveMatch.finalResult.heroScore
+                : interactiveMatch.finalResult.opponentScore,
+              awayScore: interactiveGame.awayTeamId === heroTeamId
+                ? interactiveMatch.finalResult.heroScore
+                : interactiveMatch.finalResult.opponentScore,
+            }]
+          : [];
+        const round = simulateCompetitionWeek(
+          competition,
+          teams,
+          players,
+          coaches,
+          cycle.seasonYear,
+          world.seasonWeek,
+          random.fork("competition-week"),
+          social,
+          overrides,
+        );
         competition = round.competition;
         teams = round.teams;
         coaches = round.coaches;

@@ -27,6 +27,7 @@ interface CollegeCareerDashboardProps {
   onExit(): void;
   onAdvanceDay(): Promise<void>;
   onUpdateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
+  onResolveRelationshipEvent(optionId: string): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
   onStartMatch(): Promise<void>;
   onResolveMatchDecision(optionId: string): Promise<void>;
@@ -38,7 +39,7 @@ function roleLabel(role: string): string {
   return { starter: "Стартер", rotation: "Ротация", "special-teams": "Спецкоманды", developmental: "Развитие" }[role] ?? role;
 }
 
-export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen, onDrawerOpenChange, onExit, onAdvanceDay, onUpdateTrainingPlan, onResolveDecision, onStartMatch, onResolveMatchDecision, onFinalizeMatch, onOpenProfessionalDraft }: CollegeCareerDashboardProps) {
+export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen, onDrawerOpenChange, onExit, onAdvanceDay, onUpdateTrainingPlan, onResolveRelationshipEvent, onResolveDecision, onStartMatch, onResolveMatchDecision, onFinalizeMatch, onOpenProfessionalDraft }: CollegeCareerDashboardProps) {
   const [primaryView, setPrimaryView] = useState<CareerPrimaryView>("home");
   const [secondaryView, setSecondaryView] = useState<CareerSecondaryView>();
   const [selectedTeamId, setSelectedTeamId] = useState<string>();
@@ -87,7 +88,7 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
     if (secondaryView === "season") return <CollegeSectionsDashboard save={save} view="season" />;
     if (secondaryView === "matches") return <CollegeSectionsDashboard save={save} view="matches" />;
     if (secondaryView === "standings") return <CollegeSectionsDashboard save={save} view="standings" />;
-    if (secondaryView === "social") return <SocialLifeDashboard save={save} />;
+    if (secondaryView === "social") return <SocialLifeDashboard save={save} mutating={mutating} onResolveRelationshipEvent={onResolveRelationshipEvent} />;
     if (secondaryView === "feed") return <WorldDashboard save={save} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     if (secondaryView === "rankings") return <WorldDashboard save={save} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     return null;

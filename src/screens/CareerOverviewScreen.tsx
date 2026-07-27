@@ -54,7 +54,7 @@ export default function CareerOverviewScreen() {
 
   if (careerSave.meta.phase === "college-season") return (
     <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
-      <CollegeCareerDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} drawerOpen={drawerOpen} onDrawerOpenChange={setDrawerOpen} onExit={() => navigate("/")} onAdvanceDay={state.advanceDay} onUpdateTrainingPlan={state.updateTrainingPlan} onResolveDecision={state.resolveCollegeHeroDecision} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeMatch={state.finalizeCollegeMatch} onOpenProfessionalDraft={state.openProfessionalDraft} />
+      <CollegeCareerDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} drawerOpen={drawerOpen} onDrawerOpenChange={setDrawerOpen} onExit={() => navigate("/")} onAdvanceDay={state.advanceDay} onUpdateTrainingPlan={state.updateTrainingPlan} onResolveRelationshipEvent={state.resolveRelationshipEvent} onResolveDecision={state.resolveCollegeHeroDecision} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeMatch={state.finalizeCollegeMatch} onOpenProfessionalDraft={state.openProfessionalDraft} />
     </ScreenShell>
   );
 
@@ -78,7 +78,7 @@ export default function CareerOverviewScreen() {
     if (secondaryView === "season") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="season" />;
     if (secondaryView === "matches") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="schedule" />;
     if (secondaryView === "standings") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="standings" />;
-    if (secondaryView === "social") return <SocialLifeDashboard save={careerSave} />;
+    if (secondaryView === "social") return <SocialLifeDashboard save={careerSave} mutating={mutating} onResolveRelationshipEvent={state.resolveRelationshipEvent} />;
     if (secondaryView === "recruiting") return <RecruitingDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={state.performRecruitingAction} onCommit={state.commitToCollege} onWithdrawCommitment={state.withdrawCollegeCommitment} />;
     if (secondaryView === "feed") return <WorldDashboard save={careerSave} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     return <WorldDashboard save={careerSave} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;

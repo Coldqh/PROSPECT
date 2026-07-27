@@ -83,10 +83,18 @@ describe("football match simulation", () => {
     expect(resolveMatchDecision(started, optionId)).toEqual(resolveMatchDecision(started, optionId));
   });
 
-  it("completes six episodes and updates the season record", () => {
+  it("keeps a receiver active without forcing a target on every snap", () => {
+    const completed = finish(makeSave("WR"));
+    expect(completed.football.match.completedEpisodes).toHaveLength(16);
+    expect(completed.football.match.stats.targets).toBeLessThan(completed.football.match.completedEpisodes.length);
+    expect(completed.football.match.completedEpisodes.some((episode) => !episode.involved)).toBe(true);
+    expect(completed.football.match.completedEpisodes.every((episode) => episode.assignmentScore >= 0 && episode.assignmentScore <= 100)).toBe(true);
+  });
+
+  it("completes a full snap sequence and updates the season record", () => {
     const completed = finish(makeSave("LB"));
     expect(completed.football.match.status).toBe("complete");
-    expect(completed.football.match.completedEpisodes).toHaveLength(6);
+    expect(completed.football.match.completedEpisodes).toHaveLength(16);
     expect(completed.football.season.wins + completed.football.season.losses).toBe(1);
     expect(completed.football.season.schedule[0]?.status).toBe("complete");
     expect(completed.football.season.standings.some((team) => team.wins + team.losses > 0)).toBe(true);

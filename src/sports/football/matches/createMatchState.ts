@@ -71,7 +71,11 @@ export function createInitialMatchState(
     heroFatigue: random.integer(4, 10),
     coachGrade: 55,
     episodeIndex: 0,
-    totalEpisodes: 6,
+    totalEpisodes: 16,
+    driveDown: 1,
+    driveDistance: 10,
+    driveFieldPosition: random.integer(18, 34),
+    driveNumber: 1,
     completedEpisodes: [],
     stats: createEmptyMatchStats(),
   };
@@ -100,12 +104,12 @@ export function createCollegeMatchState(
   const random = new SeededRandom(`${save.meta.worldSeed}:college-match:${game.id}`);
   const role = career?.role ?? "developmental";
   const totalEpisodes = role === "starter"
-    ? 10
+    ? 18
     : role === "rotation"
-      ? 7
+      ? 14
       : role === "special-teams"
-        ? 5
-        : 3;
+        ? 10
+        : 8;
 
   return {
     moduleVersion: 1,
@@ -128,6 +132,10 @@ export function createCollegeMatchState(
     coachGrade: Math.max(45, Math.min(70, Math.round((career?.coachTrust ?? 55) * 0.35 + 36))),
     episodeIndex: 0,
     totalEpisodes,
+    driveDown: 1,
+    driveDistance: 10,
+    driveFieldPosition: random.integer(18, 34),
+    driveNumber: 1,
     completedEpisodes: [],
     stats: createEmptyMatchStats(),
   };

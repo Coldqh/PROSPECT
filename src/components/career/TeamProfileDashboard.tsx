@@ -1,8 +1,10 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { defenseSystemLabel, offenseSystemLabel } from "../../sports/football/ecosystem/tactics";
-import type { EcosystemTeam } from "../../sports/football/ecosystem/types";
+import type { EcosystemPlayer, EcosystemTeam } from "../../sports/football/ecosystem/types";
+import type { FootballRosterPlayer } from "../../sports/football/team/types";
 import { Icon } from "../ui/Icon";
+import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 
 type TeamView = "overview" | "roster" | "staff" | "system" | "resources";
 
@@ -35,6 +37,7 @@ function roleLabel(role: string): string {
 
 export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps) {
   const [view, setView] = useState<TeamView>("overview");
+  const [selectedPlayer, setSelectedPlayer] = useState<EcosystemPlayer | FootballRosterPlayer>();
   const worldTeam = useMemo(() => {
     const currentCollegeId = save.football.college.heroCareer?.teamId ?? save.football.college.program?.id;
     return save.world.teams.find((team) => team.id === (teamId ?? currentCollegeId ?? save.football.school.id));
@@ -121,7 +124,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
           <section className="elite-section elite-team-leaders">
             <header className="elite-section__head"><h2>Лидеры состава</h2><span>{teamPlayers.length}</span></header>
             <div>
-              {leaders.map((player) => <article key={player.id}><span className="elite-depth-badge">#{player.depthRank}</span><div className="elite-roster-silhouette" aria-hidden="true">{player.position}</div><small>{player.position}</small><strong>{player.name}</strong><em>OVR {Math.round(player.overall)}</em></article>)}
+              {leaders.map((player) => <button type="button" key={player.id} onClick={() => setSelectedPlayer(player)}><span className="elite-depth-badge">#{player.depthRank}</span><div className="elite-roster-silhouette" aria-hidden="true">{player.position}</div><small>{player.position}</small><strong>{player.name}</strong><em>OVR {Math.round(player.overall)}</em></button>)}
             </div>
           </section>
 
@@ -161,7 +164,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
         <div className="team-profile__roster">
           {teamPlayers.map((player) => {
             const isHero = "isHero" in player ? player.isHero : false;
-            return <article key={player.id} className={isHero ? "is-hero" : ""}><span>{player.position}</span><div><strong>{player.name}</strong><small>{"classYear" in player ? player.classYear : player.year} · #{player.depthRank}</small></div><em>{Math.round(player.overall)}</em></article>;
+            return <button type="button" key={player.id} className={isHero ? "is-hero" : ""} onClick={() => setSelectedPlayer(player)}><span>{player.position}</span><div><strong>{player.name}</strong><small>{"classYear" in player ? player.classYear : player.year} · #{player.depthRank}</small></div><em>{Math.round(player.overall)}</em></button>;
           })}
           {teamPlayers.length === 0 && <div className="data-empty">Состав пуст</div>}
         </div>
@@ -223,6 +226,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
           )}
         </div>
       )}
+      <EcosystemPlayerProfile save={save} player={selectedPlayer} onClose={() => setSelectedPlayer(undefined)} />
     </div>
   );
 }

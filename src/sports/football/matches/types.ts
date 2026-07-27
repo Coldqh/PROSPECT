@@ -5,6 +5,8 @@ export type MatchUnit = "offense" | "defense";
 export type MatchStatus = "upcoming" | "in-progress" | "complete";
 export type DecisionRisk = "safe" | "balanced" | "aggressive";
 export type MatchOutcomeGrade = "A" | "B" | "C" | "D";
+export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage";
+export type MatchHeroInvolvement = "primary" | "secondary" | "assignment-only";
 
 export interface MatchDecisionOption {
   id: string;
@@ -15,6 +17,16 @@ export interface MatchDecisionOption {
   difficulty: number;
   upside: number;
   mistakeRisk: number;
+}
+
+export interface MatchPlayCall {
+  formation: string;
+  personnel: string;
+  concept: string;
+  playType: MatchPlayType;
+  strength: "left" | "right" | "middle";
+  calledBy: "head-coach" | "offensive-coordinator" | "defensive-coordinator";
+  canCheck: boolean;
 }
 
 export interface MatchEpisode {
@@ -31,6 +43,9 @@ export interface MatchEpisode {
   situation: string;
   assignment: string;
   read: string;
+  playCall: MatchPlayCall;
+  heroInvolvement: MatchHeroInvolvement;
+  heroRole: string;
   options: MatchDecisionOption[];
 }
 
@@ -64,6 +79,8 @@ export interface MatchEpisodeResult {
   coachDelta: number;
   confidenceDelta: number;
   fatigueDelta: number;
+  assignmentScore: number;
+  involved: boolean;
   statDelta: MatchStatLine;
 }
 
@@ -98,6 +115,10 @@ export interface FootballMatchState {
   coachGrade: number;
   episodeIndex: number;
   totalEpisodes: number;
+  driveDown: 1 | 2 | 3 | 4;
+  driveDistance: number;
+  driveFieldPosition: number;
+  driveNumber: number;
   currentEpisode?: MatchEpisode | undefined;
   completedEpisodes: MatchEpisodeResult[];
   stats: MatchStatLine;

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import type { EcosystemPlayer, EcosystemStory, EcosystemTeam, FootballEcosystemState } from "../../sports/football/ecosystem/types";
 import { BottomSheet } from "../ui/BottomSheet";
+import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 import { Icon } from "../ui/Icon";
 
 export type WorldPrimaryView = "feed" | "rankings";
@@ -102,7 +103,6 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
     ? stories.filter((story) => `${story.title} ${story.detail}`.toLowerCase().includes(normalizedQuery)).slice(0, 8)
     : [];
 
-  const selectedPlayerTeam = selectedPlayer ? world.teams.find((team) => team.id === selectedPlayer.teamId) : undefined;
   const selectedStoryTeam = selectedStory ? teamForStory(selectedStory, world.teams) : undefined;
 
   function openTeam(teamId: string) {
@@ -190,15 +190,7 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
         )}
       </BottomSheet>
 
-      <BottomSheet open={Boolean(selectedPlayer)} onClose={() => setSelectedPlayer(undefined)} eyebrow={selectedPlayer ? `${selectedPlayer.position} · ${selectedPlayer.classYear}` : "ИГРОК"} title={selectedPlayer?.name ?? "Игрок"}>
-        {selectedPlayer && (
-          <div className="world-v27-player">
-            <section><span><small>OVR</small><strong>{Math.round(selectedPlayer.overall)}</strong></span><span><small>POT</small><strong>{Math.round(selectedPlayer.potential)}</strong></span><span><small>Форма</small><strong>{Math.round(selectedPlayer.form)}</strong></span><span><small>Depth</small><strong>#{selectedPlayer.depthRank}</strong></span></section>
-            <section><span><small>Здоровье</small><strong>{Math.round(selectedPlayer.health)}</strong></span><span><small>Fit</small><strong>{Math.round(selectedPlayer.tactical.schemeFit)}</strong></span><span><small>Роль</small><strong>{selectedPlayer.usagePlan}</strong></span><span><small>Eligibility</small><strong>{selectedPlayer.eligibilityYears}</strong></span></section>
-            {selectedPlayerTeam && onOpenTeam && <button type="button" className="button button--primary" onClick={() => { setSelectedPlayer(undefined); openTeam(selectedPlayerTeam.id); }}>{selectedPlayerTeam.name}<Icon name="arrow-right" /></button>}
-          </div>
-        )}
-      </BottomSheet>
+      <EcosystemPlayerProfile save={save} player={selectedPlayer} onClose={() => setSelectedPlayer(undefined)} {...(onOpenTeam ? { onOpenTeam: openTeam } : {})} />
     </div>
   );
 }

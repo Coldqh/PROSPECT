@@ -165,7 +165,7 @@
   scrollbar-width: none;
 }
 .elite-team-leaders > div::-webkit-scrollbar { display: none; }
-.elite-team-leaders article {
+.elite-team-leaders button {
   position: relative;
   min-width: 0;
   min-height: 158px;
@@ -180,9 +180,9 @@
   border-radius: 10px;
   background: #0b0e13;
 }
-.elite-team-leaders article:nth-child(2) { animation-delay: 45ms; }
-.elite-team-leaders article:nth-child(3) { animation-delay: 90ms; }
-.elite-team-leaders article:nth-child(4) { animation-delay: 135ms; }
+.elite-team-leaders button:nth-child(2) { animation-delay: 45ms; }
+.elite-team-leaders button:nth-child(3) { animation-delay: 90ms; }
+.elite-team-leaders button:nth-child(4) { animation-delay: 135ms; }
 .elite-depth-badge {
   position: absolute;
   z-index: 2;
@@ -211,9 +211,9 @@
   font-size: var(--type-section-size);
   font-weight: 800;
 }
-.elite-team-leaders article small { color: var(--accent); }
-.elite-team-leaders article strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.elite-team-leaders article em { color: var(--muted); font-style: normal; }
+.elite-team-leaders button small { color: var(--accent); }
+.elite-team-leaders button strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.elite-team-leaders button em { color: var(--muted); font-style: normal; }
 
 .elite-schedule-rail {
   display: grid;
@@ -261,7 +261,7 @@
 .team-profile__body,
 .team-profile__resources,
 .team-profile__results { display: grid; gap: 6px; }
-.team-profile__roster article,
+.team-profile__roster button,
 .team-profile__results article {
   min-height: 56px;
   padding: 8px 12px;
@@ -271,9 +271,9 @@
   gap: 10px;
   border-bottom: 1px solid var(--line);
 }
-.team-profile__roster article.is-hero { color: var(--accent); }
-.team-profile__roster article > span { color: var(--muted); font-weight: 700; }
-.team-profile__roster article div,
+.team-profile__roster button.is-hero { color: var(--accent); }
+.team-profile__roster button > span { color: var(--muted); font-weight: 700; }
+.team-profile__roster button div,
 .team-profile__results article div { min-width: 0; }
 .team-profile__roster strong,
 .team-profile__results strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

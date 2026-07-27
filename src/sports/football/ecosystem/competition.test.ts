@@ -43,6 +43,28 @@ describe("football competition ecosystem", () => {
     expect(result.competition.schedule.filter((game) => game.week === 1 && game.status === "complete")).toHaveLength(12);
   });
 
+  it("uses an interactive hero score as the official national result", () => {
+    const world = createWorld("competition-override");
+    const game = world.competition.schedule.find((item) => item.week === 1);
+    if (!game) throw new Error("No opening-week game");
+    const result = simulateCompetitionWeek(
+      world.competition,
+      world.teams,
+      world.players,
+      world.coaches,
+      2026,
+      1,
+      new SeededRandom("competition-override:round"),
+      world.social,
+      [{ gameId: game.id, homeScore: 31, awayScore: 17 }],
+    );
+    const completed = result.competition.schedule.find((item) => item.id === game.id);
+    expect(completed?.status).toBe("complete");
+    expect(completed?.homeScore).toBe(31);
+    expect(completed?.awayScore).toBe(17);
+    expect(completed?.winnerTeamId).toBe(game.homeTeamId);
+  });
+
   it("turns sustained competitive failure into visible coach pressure", () => {
     const world = createWorld("competition-coach-pressure");
     const fragileCoaches = world.coaches.map((coach) => coach.role === "head-coach"
