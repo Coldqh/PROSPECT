@@ -4,7 +4,8 @@ const files = {
   types: readFileSync("src/sports/football/matches/types.ts", "utf8"),
   forecast: readFileSync("src/sports/football/matches/decisionForecast.ts", "utf8"),
   simulation: readFileSync("src/sports/football/matches/simulateMatch.ts", "utf8"),
-  field: readFileSync("src/components/career/MatchField.tsx", "utf8"),
+  engine: readFileSync("src/sports/football/matches/realTimeEngine.ts", "utf8"),
+  field: readFileSync("src/components/career/RealTimeMatchField.tsx", "utf8"),
   dashboard: readFileSync("src/components/career/MatchDashboard.tsx", "utf8"),
   today: readFileSync("src/components/career/TodayDashboard.tsx", "utf8"),
   repository: readFileSync("src/storage/saves/CareerRepository.ts", "utf8"),
@@ -18,17 +19,23 @@ const required = [
   ["types", "lastResolvedEpisode"],
   ["types", "startFieldPosition"],
   ["forecast", "decisionScoreCenter"],
-  ["simulation", "decisionScoreCenter(save, match, selected)"],
-  ["simulation", "selected.upside"],
   ["simulation", "advanceAutomatic"],
-  ["simulation", "const directPressureMoment"],
-  ["simulation", "const decisivePrimaryRole"],
+  ["simulation", "decodeLivePlayOutcome"],
   ["simulation", "grossPuntYards"],
-  ["field", 'MatchPlaybackPhase = "pre-snap"'],
-  ["field", "match-field__first-down"],
+  ["engine", "stepLivePlayEngine"],
+  ["engine", "function quarterbackStep"],
+  ["engine", "function defenderStep"],
+  ["engine", "function tackleCarrier"],
+  ["engine", "function startPass"],
+  ["engine", "liveRoleActions"],
+  ["engine", "passCompleted"],
+  ["field", "requestAnimationFrame"],
+  ["field", "liveReceiverTargets"],
+  ["field", "live-dpad"],
   ["dashboard", '"key-moments"'],
   ["dashboard", "Analysis Mode"],
-  ["dashboard", "calculateDecisionForecast"],
+  ["dashboard", "RealTimeMatchField"],
+  ["dashboard", "encodeLivePlayOutcome"],
   ["today", "is-game"],
   ["today", "Матч против"],
   ["repository", "toGameDateKey(current.meta.currentDate)"],
@@ -36,9 +43,16 @@ const required = [
   ["migrations", "migrateVersionTwentySix"],
   ["tests", "supports automatic, key-moment and every-snap participation"],
 ];
-const failures = required.filter(([file, token]) => !files[file].includes(token)).map(([file, token]) => `${file}: missing ${token}`);
-if (files.dashboard.includes("function optionSuccess")) failures.push("dashboard: legacy fake success percentage remains");
-if (files.simulation.includes('episode.playCall.canCheck || episode.opponentCall.canCheck')) failures.push("simulation: key moments still stop on every available pre-snap check");
+
+const failures = required
+  .filter(([file, token]) => !files[file].includes(token))
+  .map(([file, token]) => `${file}: missing ${token}`);
+
+if (files.dashboard.includes("elite-match-options--v36")) failures.push("dashboard: legacy precomputed decision cards remain in live gameplay");
+if (files.field.includes("MatchPlaybackPhase")) failures.push("field: scripted playback phases remain in the real-time field");
 if (!files.simulation.includes("simulation.puntReturnYards ?? 0")) failures.push("simulation: punt return statistic is still reconstructed");
-if (failures.length) { console.error(failures.join("\n")); process.exit(1); }
-console.log("Match experience architecture: OK (timeline, modes, calendar, forecasts, exact play results)");
+if (failures.length) {
+  console.error(failures.join("\n"));
+  process.exit(1);
+}
+console.log("Match experience architecture: OK (real-time agents, direct controls, live ball, tackles, modes, calendar)");

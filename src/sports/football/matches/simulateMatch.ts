@@ -8,6 +8,7 @@ import type { FootballRosterPosition } from "../team/types";
 import { buildSnapAssignments, buildSpecialTeamsAssignments, callPlay, describeHeroAssignment } from "./playbook";
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats } from "./createMatchState";
 import { calculateDecisionForecast, decisionScoreCenter } from "./decisionForecast";
+import { decodeLivePlayOutcome } from "./realTimeEngine";
 import type {
   FootballMatchState,
   MatchAdvancedStatLine,
@@ -1184,20 +1185,47 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
   const match = save.football.match;
   const episode = match.currentEpisode;
   if (match.status !== "in-progress" || !episode) throw new Error("Match has no active episode");
-  const selected = episode.options.find((item) => item.id === optionId);
+  const liveOutcome = decodeLivePlayOutcome(optionId);
+  const selected = liveOutcome
+    ? episode.options.find((item) => item.risk === "balanced") ?? episode.options[0]
+    : episode.options.find((item) => item.id === optionId);
   if (!selected) throw new Error("Unknown match decision");
 
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:${episode.id}:${optionId}`);
-  const assignmentScore = clamp(decisionScoreCenter(save, match, selected) + random.integer(-16, 16));
+  const assignmentScore = liveOutcome
+    ? clamp(liveOutcome.assignmentScore)
+    : clamp(decisionScoreCenter(save, match, selected) + random.integer(-16, 16));
   const grade = gradeFromScore(assignmentScore);
-  const simulation = simulateSnap(save, match, episode, assignmentScore, selected, random);
-  const statResolution = makeStatDelta(save, episode, simulation, grade, random);
+  const simulation: SnapSimulation = liveOutcome
+    ? {
+        snapResult: liveOutcome.snapResult,
+        yards: liveOutcome.yards,
+        points: liveOutcome.points,
+        ...(liveOutcome.scoringSide ? { scoringSide: liveOutcome.scoringSide } : {}),
+        turnover: liveOutcome.turnover,
+        firstDown: liveOutcome.yards >= episode.distance,
+        repeatDown: false,
+        ...(liveOutcome.targetSlot ? { targetSlot: liveOutcome.targetSlot } : {}),
+        ...(liveOutcome.ballCarrierSlot ? { ballCarrierSlot: liveOutcome.ballCarrierSlot } : {}),
+        teamExecutionScore: liveOutcome.teamExecutionScore,
+        description: liveOutcome.description,
+        pressureOccurred: liveOutcome.pressureOccurred,
+        ...(liveOutcome.grossPuntYards !== undefined ? { grossPuntYards: liveOutcome.grossPuntYards } : {}),
+        ...(liveOutcome.puntReturnYards !== undefined ? { puntReturnYards: liveOutcome.puntReturnYards } : {}),
+        ...(liveOutcome.kickDistance !== undefined ? { kickDistance: liveOutcome.kickDistance } : {}),
+      }
+    : simulateSnap(save, match, episode, assignmentScore, selected, random);
+  const statResolution = liveOutcome
+    ? { stats: liveOutcome.statDelta, advanced: liveOutcome.advancedDelta, involved: liveOutcome.heroInvolved }
+    : makeStatDelta(save, episode, simulation, grade, random);
   const coachDelta = round(grade === "A" ? 2.4 : grade === "B" ? 1 : grade === "C" ? -.6 : -2.6, 1);
   const confidenceDelta = round(grade === "A" ? 1.3 : grade === "B" ? .5 : grade === "C" ? -.3 : -1.1, 1);
   const fatigueDelta = round(1 + selected.difficulty * .013 + (selected.risk === "aggressive" ? .65 : 0), 1);
-  const snapTime = simulation.snapResult === "incomplete" || simulation.snapResult === "penalty"
-    ? random.integer(7, 16)
-    : random.integer(24, 39);
+  const snapTime = liveOutcome
+    ? clampInteger(liveOutcome.elapsedSeconds + (simulation.snapResult === "incomplete" ? 8 : 24), 8, 42)
+    : simulation.snapResult === "incomplete" || simulation.snapResult === "penalty"
+      ? random.integer(7, 16)
+      : random.integer(24, 39);
   let gameClockSeconds = Math.max(0, match.gameClockSeconds - snapTime);
   const clock = clockParts(gameClockSeconds);
   const advance = advanceDrive(episode, simulation);
@@ -1206,7 +1234,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     id: `${episode.id}-result`,
     episodeId: episode.id,
     driveId: episode.driveId,
-    optionId,
+    optionId: liveOutcome?.actionId ?? optionId,
     grade,
     snapResult: simulation.snapResult,
     ...copy,

@@ -1,0 +1,216 @@
+import { describe, expect, it } from "vitest";
+import type { FootballPosition } from "../career/types";
+import {
+  createLivePlayEngine,
+  decodeLivePlayOutcome,
+  encodeLivePlayOutcome,
+  issueLivePlayCommand,
+  liveReceiverTargets,
+  liveRoleActions,
+  stepLivePlayEngine,
+  type MatchLivePlayOutcome,
+} from "./realTimeEngine";
+import type { MatchEpisode, MatchPlayerAssignment, MatchPlayCall } from "./types";
+
+function call(side: "offense" | "defense"): MatchPlayCall {
+  return side === "offense"
+    ? {
+        id: "gun-mesh",
+        formation: "Gun Doubles",
+        personnel: "11",
+        concept: "Mesh",
+        playType: "pass",
+        strength: "middle",
+        calledBy: "offensive-coordinator",
+        canCheck: false,
+        aggression: 52,
+        primarySlot: "H",
+        progression: ["H", "Y", "RB", "X", "Z"],
+        tags: ["short", "man-beater"],
+      }
+    : {
+        id: "nickel-one",
+        formation: "Nickel 4–2–5",
+        personnel: "Nickel",
+        concept: "Cover 1 Robber",
+        playType: "coverage",
+        strength: "middle",
+        calledBy: "defensive-coordinator",
+        canCheck: false,
+        aggression: 55,
+        progression: [],
+        tags: ["man", "single-high"],
+      };
+}
+
+function assignment(
+  id: string,
+  side: "hero" | "opponent",
+  unit: "offense" | "defense",
+  slot: string,
+  position: string,
+  kind: MatchPlayerAssignment["kind"],
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  isHero = false,
+  matchupSlot?: string,
+): MatchPlayerAssignment {
+  return {
+    id,
+    playerId: id,
+    playerName: id,
+    side,
+    unit,
+    slot,
+    position,
+    label: slot,
+    isHero,
+    kind,
+    task: kind,
+    start,
+    end,
+    delayMs: 0,
+    overall: isHero ? 82 : 72,
+    health: 92,
+    depthRank: 1,
+    ...(matchupSlot ? { matchupSlot } : {}),
+  };
+}
+
+function episode(heroPosition: FootballPosition = "QB"): MatchEpisode {
+  const offense: MatchPlayerAssignment[] = [
+    assignment("o-qb", "hero", "offense", "QB", "QB", "pass-read", { x: 50, y: 68 }, { x: 50, y: 74 }, heroPosition === "QB"),
+    assignment("o-rb", "hero", "offense", "RB", "RB", "route", { x: 55, y: 72 }, { x: 61, y: 42 }, heroPosition === "RB"),
+    assignment("o-x", "hero", "offense", "X", "WR", "route", { x: 12, y: 55 }, { x: 22, y: 22 }, heroPosition === "WR"),
+    assignment("o-z", "hero", "offense", "Z", "WR", "route", { x: 88, y: 55 }, { x: 78, y: 24 }),
+    assignment("o-h", "hero", "offense", "H", "WR", "route", { x: 30, y: 54 }, { x: 45, y: 34 }),
+    assignment("o-y", "hero", "offense", "Y", "TE", "route", { x: 72, y: 56 }, { x: 60, y: 35 }, heroPosition === "TE"),
+    assignment("o-lt", "hero", "offense", "LT", "OT", "pass-protection", { x: 35, y: 58 }, { x: 35, y: 52 }, heroPosition === "OT", "LE"),
+    assignment("o-lg", "hero", "offense", "LG", "OG", "pass-protection", { x: 42, y: 58 }, { x: 42, y: 52 }, heroPosition === "OG", "DT1"),
+    assignment("o-c", "hero", "offense", "C", "C", "pass-protection", { x: 50, y: 58 }, { x: 50, y: 52 }, heroPosition === "C", "MIKE"),
+    assignment("o-rg", "hero", "offense", "RG", "OG", "pass-protection", { x: 58, y: 58 }, { x: 58, y: 52 }, false, "DT2"),
+    assignment("o-rt", "hero", "offense", "RT", "OT", "pass-protection", { x: 65, y: 58 }, { x: 65, y: 52 }, false, "RE"),
+  ];
+  const defense: MatchPlayerAssignment[] = [
+    assignment("d-le", "opponent", "defense", "LE", "EDGE", "rush", { x: 34, y: 48 }, { x: 42, y: 62 }, heroPosition === "EDGE", "LT"),
+    assignment("d-dt1", "opponent", "defense", "DT1", "DT", "rush", { x: 43, y: 48 }, { x: 47, y: 62 }, heroPosition === "DT", "LG"),
+    assignment("d-dt2", "opponent", "defense", "DT2", "DT", "rush", { x: 57, y: 48 }, { x: 53, y: 62 }, false, "RG"),
+    assignment("d-re", "opponent", "defense", "RE", "EDGE", "rush", { x: 66, y: 48 }, { x: 58, y: 62 }, false, "RT"),
+    assignment("d-mike", "opponent", "defense", "MIKE", "LB", "zone-coverage", { x: 50, y: 40 }, { x: 50, y: 34 }, heroPosition === "LB"),
+    assignment("d-will", "opponent", "defense", "WILL", "LB", "zone-coverage", { x: 35, y: 39 }, { x: 35, y: 30 }),
+    assignment("d-sam", "opponent", "defense", "SAM", "LB", "zone-coverage", { x: 65, y: 39 }, { x: 65, y: 30 }),
+    assignment("d-lcb", "opponent", "defense", "LCB", "CB", "man-coverage", { x: 12, y: 42 }, { x: 18, y: 23 }, heroPosition === "CB", "X"),
+    assignment("d-rcb", "opponent", "defense", "RCB", "CB", "man-coverage", { x: 88, y: 42 }, { x: 80, y: 23 }, false, "Z"),
+    assignment("d-fs", "opponent", "defense", "FS", "S", "zone-coverage", { x: 45, y: 25 }, { x: 45, y: 18 }, heroPosition === "S"),
+    assignment("d-ss", "opponent", "defense", "SS", "S", "zone-coverage", { x: 58, y: 27 }, { x: 58, y: 20 }),
+  ];
+  return {
+    id: `episode-${heroPosition}`,
+    driveId: "drive-1",
+    possession: "hero",
+    unit: ["EDGE", "DT", "LB", "CB", "S"].includes(heroPosition) ? "defense" : "offense",
+    position: heroPosition,
+    quarter: 1,
+    clockSeconds: 720,
+    playClockSeconds: 25,
+    down: 1,
+    distance: 10,
+    fieldPosition: 25,
+    scoreMargin: 0,
+    title: "Live snap",
+    situation: "1st & 10",
+    assignment: "Execute",
+    read: "Read the field",
+    playCall: call("offense"),
+    opponentCall: call("defense"),
+    heroInvolvement: "primary",
+    heroRole: "Direct control",
+    heroSlot: heroPosition,
+    assignments: [...defense, ...offense],
+    options: [],
+  };
+}
+
+function runUntilWhistle(position: FootballPosition, onFrame?: (frame: number, state: ReturnType<typeof createLivePlayEngine>) => void): ReturnType<typeof createLivePlayEngine> {
+  const state = createLivePlayEngine(episode(position), position, `test-${position}`);
+  issueLivePlayCommand(state, { type: "snap" });
+  for (let frame = 0; frame < 900 && !state.outcome; frame += 1) {
+    onFrame?.(frame, state);
+    stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+  }
+  return state;
+}
+
+describe("real-time football engine", () => {
+  it("moves all agents and resolves a user-selected QB target", () => {
+    const state = runUntilWhistle("QB", (frame, current) => {
+      if (frame === 55) {
+        const target = liveReceiverTargets(current).find((player) => player.slot === "H");
+        expect(target).toBeDefined();
+        if (target) issueLivePlayCommand(current, { type: "throw", targetId: target.id });
+      }
+    });
+
+    expect(state.players).toHaveLength(22);
+    expect(state.players.filter((player) => player.unit === "defense").some((player) => Math.hypot(player.x - player.startX, player.y - player.startY) > 1)).toBe(true);
+    expect(state.events.some((event) => event.type === "throw" && event.text.includes("H"))).toBe(true);
+    expect(state.events.some((event) => ["catch", "drop", "breakup", "interception"].includes(event.type))).toBe(true);
+    expect(state.outcome).toBeDefined();
+  });
+
+  it("lets the QB commit to a scramble instead of selecting a scripted result", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "qb-run");
+    issueLivePlayCommand(state, { type: "snap" });
+    issueLivePlayCommand(state, { type: "run" });
+    for (let frame = 0; frame < 900 && !state.outcome; frame += 1) {
+      stepLivePlayEngine(state, { moveX: 0.15, moveY: -1 }, 1 / 60);
+    }
+    expect(state.runCommitted).toBe(true);
+    expect(state.events.some((event) => event.type === "throw")).toBe(false);
+    expect(state.outcome).toBeDefined();
+    expect(["run", "sack", "touchdown"]).toContain(state.outcome?.snapResult);
+  });
+
+  it("keeps role controls deliberately small", () => {
+    const positions: FootballPosition[] = ["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S", "K", "P"];
+    for (const position of positions) {
+      const actions = liveRoleActions(position);
+      expect(actions.length).toBeGreaterThan(0);
+      expect(actions.length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("serializes the actual live outcome for the save pipeline", () => {
+    const outcome: MatchLivePlayOutcome = {
+      version: 1,
+      actionId: "live-qb",
+      snapResult: "completion",
+      yards: 12,
+      points: 0,
+      turnover: false,
+      targetSlot: "H",
+      ballCarrierSlot: "H",
+      teamExecutionScore: 78,
+      assignmentScore: 81,
+      pressureOccurred: true,
+      elapsedSeconds: 4,
+      description: "Pass completed.",
+      heroInvolved: true,
+      statDelta: {
+        passingAttempts: 1, completions: 1, passingYards: 12, rushingAttempts: 0, rushingYards: 0,
+        targets: 0, receptions: 0, receivingYards: 0, touchdowns: 0, turnovers: 0,
+        tackles: 0, tacklesForLoss: 0, sacks: 0, passBreakups: 0, interceptions: 0,
+        sacksAllowed: 0, pressuresAllowed: 0, pancakes: 0, hurries: 0, runStops: 0,
+        coverageSnaps: 0, fieldGoalsAttempted: 0, fieldGoalsMade: 0, longestFieldGoal: 0,
+        punts: 0, puntYards: 0, puntsInside20: 0, returnYardsAllowed: 0,
+      },
+      advancedDelta: {
+        snaps: 1, assignmentWins: 1, assignmentLosses: 0, routeWins: 0, separationWins: 0,
+        blocksWon: 0, pressures: 0, coverageWins: 0, missedTackles: 0,
+        passProtectionWins: 0, runBlockWins: 0, doubleTeamWins: 0, kickQuality: 0, puntQuality: 0,
+      },
+      events: [],
+    };
+    expect(decodeLivePlayOutcome(encodeLivePlayOutcome(outcome))).toEqual(outcome);
+  });
+});
