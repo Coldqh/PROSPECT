@@ -88,7 +88,7 @@ function expectPlayableSnap(save: CareerSave): void {
 }
 
 function finish(save: CareerSave): CareerSave {
-  let current = startMatch(save);
+  let current = startMatch(save, "every-snap", true);
   let guard = 0;
   while (current.football.match.status === "in-progress") {
     expectPlayableSnap(current);
@@ -96,7 +96,7 @@ function finish(save: CareerSave): CareerSave {
     if (!optionId) throw new Error("No match option");
     current = resolveMatchDecision(current, optionId);
     guard += 1;
-    if (guard > 80) throw new Error("Match did not finish");
+    if (guard > 120) throw new Error("Match did not finish");
   }
   return current;
 }
@@ -198,6 +198,28 @@ describe("football match simulation", () => {
       const current = drives[index]!;
       if (previous.offense === current.offense) expect(previous.outcome).toBe("defensive-touchdown");
     }
+  });
+
+  it("supports automatic, key-moment and every-snap participation", () => {
+    const automatic = startMatch(makeSave("WR"), "auto", true);
+    expect(automatic.football.match.status).toBe("complete");
+    expect(automatic.football.match.advancedStats.snaps).toBe(automatic.football.match.completedEpisodes.length);
+    expect(automatic.football.match.stats.targets).toBeLessThan(automatic.football.match.advancedStats.snaps);
+
+    const keyMoments = startMatch(makeSave("QB"), "key-moments", true);
+    expect(keyMoments.football.match.status).toBe("in-progress");
+    expect(keyMoments.football.match.currentEpisode).toBeDefined();
+    const before = keyMoments.football.match.completedEpisodes.length;
+    const optionId = keyMoments.football.match.currentEpisode?.options[1]?.id;
+    if (!optionId) throw new Error("No key-moment option");
+    const advanced = resolveMatchDecision(keyMoments, optionId);
+    expect(advanced.football.match.completedEpisodes.length).toBeGreaterThan(before);
+    expect(advanced.football.match.lastResolvedResult?.startFieldPosition).toBeTypeOf("number");
+    expect(advanced.football.match.lastResolvedResult?.endFieldPosition).toBeTypeOf("number");
+
+    const everySnap = startMatch(makeSave("LB"), "every-snap", false);
+    expect(everySnap.football.match.participationMode).toBe("every-snap");
+    expect(everySnap.football.match.analysisMode).toBe(false);
   });
 
   it("completes and serializes a match for all fourteen positions", () => {

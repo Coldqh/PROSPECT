@@ -192,6 +192,16 @@ interface LegacyFivePositionCareerSave {
   history: HistoryEntry[];
 }
 
+interface LegacyMatchExperienceSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 26 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: CareerSave["football"];
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
+  history: HistoryEntry[];
+}
+
 interface LegacyProfessionalSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 23 };
   character: CareerSave["character"];
@@ -447,6 +457,23 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
   };
 }
 
+
+function migrateVersionTwentySix(input: LegacyMatchExperienceSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v27`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Матчевый опыт обновлён",
+        description: "Сохранение получило режимы участия, анализ решений, плавное воспроизведение и точную фиксацию результата розыгрыша.",
+      },
+    ],
+  });
+}
 
 function migrateVersionTwentyFive(input: LegacyFivePositionCareerSave): CareerSave {
   return parseMigratedSave({
@@ -1113,6 +1140,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 26) return migratedResult(migrateVersionTwentySix(input as LegacyMatchExperienceSave), 26);
   if (schemaVersion === 25) return migratedResult(migrateVersionTwentyFive(input as LegacyFivePositionCareerSave), 25);
   if (schemaVersion === 24) return migratedResult(migrateVersionTwentyFour(input as LegacyFullRosterSave), 24);
   if (schemaVersion === 23) return migratedResult(migrateVersionTwentyThree(input as LegacyProfessionalSave), 23);

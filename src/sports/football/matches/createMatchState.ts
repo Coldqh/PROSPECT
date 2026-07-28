@@ -111,10 +111,12 @@ export function createInitialMatchState(
     playClockSeconds: 25,
     possession: controlledPossession(matchUnitForPosition(position)),
     openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
+    participationMode: "key-moments",
+    analysisMode: false,
     heroFatigue: random.integer(4, 10),
     coachGrade: 55,
     episodeIndex: 0,
-    totalEpisodes: position === "K" || position === "P" ? 7 : 24,
+    totalEpisodes: position === "K" || position === "P" ? 8 : 92,
     driveDown: 1,
     driveDistance: 10,
     driveFieldPosition: openingFieldPosition,
@@ -158,14 +160,14 @@ export function createCollegeMatchState(
   const role = career?.role ?? "developmental";
   const openingFieldPosition = random.integer(18, 34);
   const totalEpisodes = save.football.position === "K" || save.football.position === "P"
-    ? role === "starter" ? 8 : role === "rotation" || role === "special-teams" ? 6 : 4
+    ? role === "starter" ? 9 : role === "rotation" || role === "special-teams" ? 7 : 4
     : role === "starter"
-      ? 30
+      ? 92
       : role === "rotation"
-        ? 22
+        ? 46
         : role === "special-teams"
-          ? 14
-          : 10;
+          ? 24
+          : 16;
 
   return {
     moduleVersion: 1,
@@ -188,6 +190,8 @@ export function createCollegeMatchState(
     playClockSeconds: 25,
     possession: controlledPossession(matchUnitForPosition(save.football.position)),
     openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
+    participationMode: "key-moments",
+    analysisMode: false,
     heroFatigue: random.integer(4, 12),
     coachGrade: Math.max(45, Math.min(70, Math.round((career?.coachTrust ?? 55) * 0.35 + 36))),
     episodeIndex: 0,

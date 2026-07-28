@@ -602,6 +602,30 @@ describe("migrateCareerSave", () => {
   });
 
 
+  it("migrates version twenty-six saves into the rebuilt match experience", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const {
+      participationMode: _participationMode,
+      analysisMode: _analysisMode,
+      lastResolvedEpisode: _lastResolvedEpisode,
+      lastResolvedResult: _lastResolvedResult,
+      ...legacyMatch
+    } = current.football.match;
+    const versionTwentySix = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 26 as const },
+      football: { ...current.football, match: legacyMatch },
+    };
+    const result = migrateCareerSave(versionTwentySix);
+    expect(result.migratedFrom).toBe(26);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.match.participationMode).toBe("key-moments");
+    expect(result.save.football.match.analysisMode).toBe(false);
+    expect(result.save.football.match.lastResolvedEpisode).toBeUndefined();
+    expect(result.save.football.match.lastResolvedResult).toBeUndefined();
+    expect(result.save.history.at(-1)?.title).toBe("Матчевый опыт обновлён");
+  });
+
   it("migrates version twenty-five saves into all-position career statistics", () => {
     const current = migrateCareerSave(legacySave).save;
     const stripStats = (stats: typeof current.football.match.stats) => {

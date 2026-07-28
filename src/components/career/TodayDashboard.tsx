@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon, type IconName } from "../ui/Icon";
 import { BottomSheet } from "../ui/BottomSheet";
-import { addGameDays, formatGameDate, formatWeekday } from "../../core/calendar/types";
+import { addGameDays, formatGameDate, formatWeekday, toGameDateKey } from "../../core/calendar/types";
 import {
   getIntensityDescriptor,
   getWeeklyPlanTemplate,
@@ -89,16 +89,32 @@ export function TodayDashboard({
   const activeIntensity = getIntensityDescriptor(selectedIntensity);
   const trainingCatalog = getTrainingFocusCatalog(football.position);
   const activeTrainingFocus = getTrainingFocus(football.position, selectedTrainingFocus);
-  const schedule = useMemo(
-    () => buildDaySchedule(life.dayIndex, {
+  const weekStart = addGameDays(save.meta.currentDate, -life.dayIndex);
+  const scheduledMatch = football.match.status === "upcoming" || football.match.status === "in-progress" || football.match.status === "complete"
+    ? football.match
+    : undefined;
+  const isCurrentMatchDate = scheduledMatch && toGameDateKey(scheduledMatch.scheduledDate) === toGameDateKey(save.meta.currentDate);
+  const schedule = useMemo(() => {
+    const base = buildDaySchedule(life.dayIndex, {
       ...life.weeklyPlan,
       templateId: selectedTemplate,
       intensity: selectedIntensity,
       focus: activeTemplate.focus,
-    }),
-    [activeTemplate.focus, life.dayIndex, life.weeklyPlan, selectedIntensity, selectedTemplate],
-  );
-  const weekStart = addGameDays(save.meta.currentDate, -life.dayIndex);
+    });
+    if (!isCurrentMatchDate || !scheduledMatch) return base;
+    const withoutScrimmage = base.filter((activity) => activity.id !== "scrimmage" && activity.id !== "extra-work");
+    withoutScrimmage.push({
+      id: `game-${scheduledMatch.gameId}`,
+      time: "19:00",
+      durationMinutes: 180,
+      type: "football",
+      title: `Матч против ${scheduledMatch.opponentName}`,
+      location: "Стадион",
+      mandatory: true,
+      impact: "Сезон · Статистика · Рекрутинг",
+    });
+    return withoutScrimmage.sort((left, right) => left.time.localeCompare(right.time));
+  }, [activeTemplate.focus, isCurrentMatchDate, life.dayIndex, life.weeklyPlan, scheduledMatch, selectedIntensity, selectedTemplate]);
   const planChanged = selectedTemplate !== life.weeklyPlan.templateId || selectedIntensity !== life.weeklyPlan.intensity;
   const trainingPlanChanged = selectedTrainingFocus !== football.training.plan.focusId || selectedIntensity !== football.training.plan.intensity;
   const weeklySetupChanged = planChanged || trainingPlanChanged;
@@ -132,11 +148,13 @@ export function TodayDashboard({
       <div className="mini-week" aria-label="Текущая игровая неделя">
         {weekdayLabels.map((label, index) => {
           const date = addGameDays(weekStart, index);
-          const className = index < life.dayIndex ? "is-complete" : index === life.dayIndex ? "is-current" : "";
+          const matchOnDate = scheduledMatch && toGameDateKey(scheduledMatch.scheduledDate) === toGameDateKey(date);
+          const className = [index < life.dayIndex ? "is-complete" : index === life.dayIndex ? "is-current" : "", matchOnDate ? "is-game" : ""].filter(Boolean).join(" ");
           return (
-            <span className={className} key={label}>
+            <span className={className} key={label} title={matchOnDate ? `Матч против ${scheduledMatch.opponentName}` : undefined}>
               <small>{label}</small>
               <strong>{date.day}</strong>
+              {matchOnDate && <em>{scheduledMatch.status === "complete" ? "FINAL" : "GAME"}</em>}
             </span>
           );
         })}
@@ -211,9 +229,9 @@ export function TodayDashboard({
               <span><small>Требуется решение</small><strong>Ответить</strong></span>
               <Icon name="message" />
             </button>
-          ) : life.dayIndex === 5 && football.match.status !== "complete" ? (
+          ) : isCurrentMatchDate && football.match.status !== "complete" ? (
             <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={onOpenMatch}>
-              <span><small>Суббота · {football.match.opponentName}</small><strong>Перейти к матчу</strong></span>
+              <span><small>Сегодня · {football.match.opponentName}</small><strong>Перейти к матчу</strong></span>
               <Icon name="arrow-right" />
             </button>
           ) : (

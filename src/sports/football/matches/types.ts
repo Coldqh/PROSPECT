@@ -4,6 +4,7 @@ import type { FootballPosition } from "../career/types";
 export type MatchUnit = "offense" | "defense" | "special";
 export type MatchTeamSide = "hero" | "opponent";
 export type MatchStatus = "upcoming" | "in-progress" | "complete";
+export type MatchParticipationMode = "auto" | "key-moments" | "every-snap";
 export type DecisionRisk = "safe" | "balanced" | "aggressive";
 export type MatchOutcomeGrade = "A" | "B" | "C" | "D";
 export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage" | "field-goal" | "punt";
@@ -199,6 +200,12 @@ export interface MatchEpisodeResult {
   involved: boolean;
   firstDown: boolean;
   driveEnded: boolean;
+  startFieldPosition: number;
+  endFieldPosition: number;
+  pressureOccurred: boolean;
+  grossPuntYards?: number | undefined;
+  puntReturnYards?: number | undefined;
+  kickDistance?: number | undefined;
   targetSlot?: string | undefined;
   ballCarrierSlot?: string | undefined;
   statDelta: MatchStatLine;
@@ -253,6 +260,8 @@ export interface FootballMatchState {
   playClockSeconds: number;
   possession: MatchTeamSide;
   openingKickoffReceiver: MatchTeamSide;
+  participationMode: MatchParticipationMode;
+  analysisMode: boolean;
   heroFatigue: number;
   coachGrade: number;
   episodeIndex: number;
@@ -270,6 +279,8 @@ export interface FootballMatchState {
   timeoutsHero: number;
   timeoutsOpponent: number;
   currentEpisode?: MatchEpisode | undefined;
+  lastResolvedEpisode?: MatchEpisode | undefined;
+  lastResolvedResult?: MatchEpisodeResult | undefined;
   completedEpisodes: MatchEpisodeResult[];
   drives: MatchDriveSummary[];
   stats: MatchStatLine;

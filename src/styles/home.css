@@ -401,3 +401,9 @@
   .relationship-event-teaser,
   .medical-alert { grid-template-columns: 38px minmax(0, 1fr) 18px; padding-inline: 10px; }
 }
+
+/* Match markers in the weekly calendar. */
+.mini-week span.is-game { position: relative; border: 1px solid var(--accent-border); }
+.mini-week span.is-game::after { content: ""; position: absolute; top: 5px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.mini-week span.is-game em { position: absolute; right: 2px; bottom: 2px; left: 2px; overflow: hidden; color: var(--accent); font-size: var(--type-caption-size); line-height: 10px; font-style: normal; font-weight: 900; text-align: center; letter-spacing: .05em; }
+.mini-week span.is-current.is-game em { color: #fff; }

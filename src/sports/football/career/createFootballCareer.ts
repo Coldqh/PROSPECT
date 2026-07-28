@@ -10,6 +10,7 @@ import {
   getPositionDescriptor,
   type ArchetypeDescriptor,
 } from "./catalog";
+import { CAREER_FOOTBALL_POSITIONS } from "./types";
 import type {
   FootballCareerSetup,
   FootballCareerState,

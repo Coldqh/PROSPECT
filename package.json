@@ -1,13 +1,13 @@
 {
   "name": "prospect",
   "private": true,
-  "version": "0.35.0",
+  "version": "0.36.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && tsc -b && vite build",
+    "build": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && tsc -b && vite build",
     "preview": "vite preview",
-    "test": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run test:architecture && vitest run",
+    "test": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run test:architecture && vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "check:boundaries": "node scripts/check-source-boundaries.mjs",
@@ -16,7 +16,8 @@
     "check:ui": "node scripts/check-ui-architecture.mjs",
     "check:ecosystem-visibility": "node scripts/check-ecosystem-visibility.mjs",
     "check:full-rosters": "node scripts/check-full-rosters.mjs",
-    "check:playable-positions": "node scripts/check-playable-positions.mjs"
+    "check:playable-positions": "node scripts/check-playable-positions.mjs",
+    "check:match-experience": "node scripts/check-match-experience.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

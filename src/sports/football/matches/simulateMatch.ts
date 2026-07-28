@@ -7,6 +7,7 @@ import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
 import type { FootballRosterPosition } from "../team/types";
 import { buildSnapAssignments, buildSpecialTeamsAssignments, callPlay, describeHeroAssignment } from "./playbook";
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats } from "./createMatchState";
+import { calculateDecisionForecast, decisionScoreCenter } from "./decisionForecast";
 import type {
   FootballMatchState,
   MatchAdvancedStatLine,
@@ -18,6 +19,7 @@ import type {
   MatchFinalResult,
   MatchOutcomeGrade,
   MatchPlayerAssignment,
+  MatchParticipationMode,
   MatchSnapResult,
   MatchStatLine,
   MatchTeamSide,
@@ -51,6 +53,10 @@ interface SnapSimulation {
   ballCarrierSlot?: string | undefined;
   teamExecutionScore: number;
   description: string;
+  pressureOccurred?: boolean;
+  grossPuntYards?: number;
+  puntReturnYards?: number;
+  kickDistance?: number;
 }
 
 interface DriveAdvance {
@@ -287,29 +293,6 @@ function fieldGoalChance(kicker: SpecialistSnapshot, distance: number, coaching:
 
 function puntNetYards(punter: SpecialistSnapshot, random: SeededRandom): number {
   return clampInteger(34 + (punter.overall - 60) * .24 + (punter.health - 80) * .04 + random.integer(-6, 7), 25, 52);
-}
-
-function heroSkillValue(save: CareerSave, optionValue: MatchDecisionOption): number {
-  const ratings = save.football.ratings;
-  const heroTacticalFit = save.world.players.find((player) => player.isHero)?.tactical.schemeFit ?? 65;
-  const coachTrust = save.meta.phase === "college-season"
-    ? save.football.college.heroCareer?.coachTrust ?? save.football.depthChart.coachTrust
-    : save.football.depthChart.coachTrust;
-  const focus = {
-    technique: ratings.technique,
-    athleticism: ratings.athleticism,
-    "football-iq": ratings.footballIq,
-    competitiveness: ratings.competitiveness,
-  }[optionValue.focus];
-  return (
-    focus * .45 +
-    ratings.technique * .14 +
-    ratings.footballIq * .13 +
-    save.character.condition.confidence * .09 +
-    save.football.training.body.readiness * .08 +
-    coachTrust * .05 +
-    heroTacticalFit * .06
-  );
 }
 
 function gradeFromScore(score: number): MatchOutcomeGrade {
@@ -585,6 +568,8 @@ function simulateSpecialTeamsSnap(
       repeatDown: false,
       teamExecutionScore: clamp(accuracy),
       description: made ? `Удар с ${distance} ярдов проходит между стойками.` : `Удар с ${distance} ярдов уходит мимо створа.`,
+      pressureOccurred: false,
+      kickDistance: distance,
     };
   }
   const gross = clampInteger(34 + (assignmentScore - 55) * .28 + (selected.id === "p-power" ? 6 : selected.id === "p-hang" ? 1 : -1) + random.integer(-6, 7), 25, 62);
@@ -599,6 +584,9 @@ function simulateSpecialTeamsSnap(
     repeatDown: false,
     teamExecutionScore: clamp(assignmentScore),
     description: `Пант летит на ${gross} ярдов, возврат — ${returnYards}. Чистая смена поля: ${net}.`,
+    pressureOccurred: false,
+    grossPuntYards: gross,
+    puntReturnYards: returnYards,
   };
 }
 
@@ -617,7 +605,10 @@ function simulateSnap(
   const defenseRatings = ratingsForSide(save, defenseSide);
   const offenseCall = match.heroUnit === "offense" ? episode.playCall : episode.opponentCall;
   const defenseCall = match.heroUnit === "defense" ? episode.playCall : episode.opponentCall;
-  const heroInfluenceBase = (assignmentScore - 60) * (episode.heroInvolvement === "primary" ? .24 : episode.heroInvolvement === "secondary" ? .13 : .07);
+  const involvementWeight = episode.heroInvolvement === "primary" ? 1 : episode.heroInvolvement === "secondary" ? .62 : .34;
+  const executionFactor = Math.max(-.65, Math.min(1, (assignmentScore - 52) / 38));
+  const optionImpact = selected.upside * involvementWeight * executionFactor * .16;
+  const heroInfluenceBase = (assignmentScore - 60) * (episode.heroInvolvement === "primary" ? .24 : episode.heroInvolvement === "secondary" ? .13 : .07) + optionImpact;
   const heroInfluence = match.heroUnit === "offense" ? heroInfluenceBase : -heroInfluenceBase;
   const fatiguePenalty = match.heroFatigue * .05;
   const offenseAssignments = episode.assignments.filter((assignment) => assignment.unit === "offense");
@@ -639,7 +630,7 @@ function simulateSnap(
   let ballCarrierSlot = offenseCall.playType === "run" ? offenseCall.primarySlot ?? "RB" : undefined;
   if (offenseCall.concept.includes("Read") && random.chance(.21)) ballCarrierSlot = "QB";
 
-  if (random.chance(.045)) {
+  if (random.chance(.028 + selected.mistakeRisk * .00055)) {
     const offensePenalty = random.chance(.62);
     const yards = offensePenalty ? -5 : Math.min(10, episode.distance);
     return {
@@ -663,6 +654,8 @@ function simulateSnap(
     else if (teamEdge <= 8) yards = random.integer(2, 6);
     else if (teamEdge <= 20) yards = random.integer(5, 12);
     else yards = random.integer(10, 27);
+    if (assignmentScore >= 68 && random.chance(Math.min(.38, selected.upside * .0038))) yards += random.integer(4, Math.max(5, Math.round(selected.upside * .22)));
+    if (assignmentScore < 48 && selected.risk === "aggressive") yards -= random.integer(1, 5);
     const fumbleChance = Math.max(.008, .022 + Math.max(0, -teamEdge) * .0015 + selected.mistakeRisk * .0007);
     if (random.chance(fumbleChance)) {
       return { snapResult: "turnover", yards, points: 0, turnover: true, firstDown: false, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: "Мяч выбит в контакте. Защита забирает владение." };
@@ -687,19 +680,20 @@ function simulateSnap(
       targetSlot,
       teamExecutionScore,
       description: pickSix ? "Защитник читает бросок и возвращает перехват в тачдаун." : "Защита перехватывает передачу и меняет владение.",
+      pressureOccurred: pressured,
     };
   }
 
   const sackChance = pressured ? Math.max(.08, Math.min(.48, .22 - teamEdge * .008)) : Math.max(.01, .06 - teamEdge * .003);
   if (random.chance(sackChance)) {
     const yards = -random.integer(4, 10);
-    return { snapResult: "sack", yards, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: `Карман закрывается. Потеря ${Math.abs(yards)} ярдов.` };
+    return { snapResult: "sack", yards, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: `Карман закрывается. Потеря ${Math.abs(yards)} ярдов.`, pressureOccurred: true };
   }
 
   const depthPenalty = offenseCall.aggression >= 75 ? .12 : offenseCall.aggression >= 60 ? .06 : 0;
   const completionChance = Math.max(.24, Math.min(.86, .59 + teamEdge * .011 - depthPenalty + (offenseCall.playType === "screen" ? .16 : 0) - (pressured ? .14 : 0)));
   if (!random.chance(completionChance)) {
-    return { snapResult: "incomplete", yards: 0, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: pressured ? "Давление ломает тайминг, пас не завершён." : "Окно закрывается до прибытия мяча." };
+    return { snapResult: "incomplete", yards: 0, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: pressured ? "Давление ломает тайминг, пас не завершён." : "Окно закрывается до прибытия мяча.", pressureOccurred: pressured };
   }
 
   const base = offenseCall.playType === "screen"
@@ -709,14 +703,16 @@ function simulateSnap(
       : offenseCall.aggression >= 58
         ? random.integer(7, 18)
         : random.integer(3, 11);
-  const yards = Math.max(-2, base + Math.round(teamEdge * .18) + random.integer(-3, 4));
+  let yards = Math.max(-2, base + Math.round(teamEdge * .18) + random.integer(-3, 4));
+  if (assignmentScore >= 68 && random.chance(Math.min(.42, selected.upside * .0042))) yards += random.integer(4, Math.max(6, Math.round(selected.upside * .24)));
+  if (assignmentScore < 48 && selected.risk === "aggressive") yards = Math.max(-2, yards - random.integer(2, 7));
   if (episode.fieldPosition + yards >= 100) {
-    return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, targetSlot, teamExecutionScore, description: "Передача завершается в зачётной зоне." };
+    return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, targetSlot, teamExecutionScore, description: "Передача завершается в зачётной зоне.", pressureOccurred: pressured };
   }
-  return { snapResult: "completion", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, targetSlot, teamExecutionScore, description: `Пас завершён на ${yards} ярдов.` };
+  return { snapResult: "completion", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, targetSlot, teamExecutionScore, description: `Пас завершён на ${yards} ярдов.`, pressureOccurred: pressured };
 }
 
-function makeAdvancedDelta(hero: MatchPlayerAssignment, grade: MatchOutcomeGrade, involved: boolean): MatchAdvancedStatLine {
+function makeAdvancedDelta(hero: MatchPlayerAssignment, grade: MatchOutcomeGrade, involved: boolean, pressureOccurred: boolean): MatchAdvancedStatLine {
   const won = grade === "A" || grade === "B";
   const doubleTeam = (hero.position === "OG" || hero.position === "C" || hero.position === "DT") && (hero.kind === "run-block" || hero.kind === "rush");
   return {
@@ -726,7 +722,7 @@ function makeAdvancedDelta(hero: MatchPlayerAssignment, grade: MatchOutcomeGrade
     routeWins: hero.kind === "route" && won ? 1 : 0,
     separationWins: hero.kind === "route" && grade === "A" ? 1 : 0,
     blocksWon: (hero.kind === "run-block" || hero.kind === "pass-protection" || hero.kind === "kick-protection") && won ? 1 : 0,
-    pressures: hero.kind === "rush" && grade === "A" ? 1 : 0,
+    pressures: hero.kind === "rush" && pressureOccurred && grade === "A" ? 1 : 0,
     coverageWins: (hero.kind === "zone-coverage" || hero.kind === "man-coverage") && won ? 1 : 0,
     missedTackles: matchDefender(hero) && involved && grade === "D" ? 1 : 0,
     passProtectionWins: hero.kind === "pass-protection" && won ? 1 : 0,
@@ -758,13 +754,13 @@ function makeStatDelta(
     involved = true;
     stats.fieldGoalsAttempted = 1;
     stats.fieldGoalsMade = simulation.snapResult === "field-goal" ? 1 : 0;
-    stats.longestFieldGoal = stats.fieldGoalsMade ? episode.distance : 0;
+    stats.longestFieldGoal = stats.fieldGoalsMade ? simulation.kickDistance ?? episode.distance : 0;
   } else if (save.football.position === "P") {
     involved = true;
     stats.punts = 1;
     stats.puntYards = simulation.yards;
     stats.puntsInside20 = episode.fieldPosition + simulation.yards >= 80 ? 1 : 0;
-    stats.returnYardsAllowed = Math.max(0, 45 - simulation.yards);
+    stats.returnYardsAllowed = simulation.puntReturnYards ?? 0;
   } else if (save.football.position === "QB") {
     if (simulation.ballCarrierSlot === hero.slot) {
       involved = true; stats.rushingAttempts = 1; stats.rushingYards = simulation.yards;
@@ -785,13 +781,13 @@ function makeStatDelta(
     if (hero.kind === "run-block" || hero.kind === "pass-protection") {
       involved = true;
       stats.pancakes = grade === "A" && random.chance(.28) ? 1 : 0;
-      stats.pressuresAllowed = hero.kind === "pass-protection" && grade === "D" ? 1 : 0;
+      stats.pressuresAllowed = hero.kind === "pass-protection" && simulation.pressureOccurred && (grade === "C" || grade === "D") ? 1 : 0;
     }
   } else if (save.football.position === "OT" || save.football.position === "OG" || save.football.position === "C") {
     involved = true;
     const passSnap = hero.kind === "pass-protection";
     stats.sacksAllowed = passSnap && simulation.snapResult === "sack" && (grade === "C" || grade === "D") ? 1 : 0;
-    stats.pressuresAllowed = passSnap && (simulation.snapResult === "sack" || grade === "D") ? 1 : 0;
+    stats.pressuresAllowed = passSnap && simulation.pressureOccurred && (grade === "C" || grade === "D") ? 1 : 0;
     stats.pancakes = hero.kind === "run-block" && grade === "A" && random.chance(.35) ? 1 : 0;
   } else if (save.football.position === "EDGE" || save.football.position === "DT" || save.football.position === "LB") {
     const runContact = simulation.ballCarrierSlot !== undefined && (hero.kind === "run-fit" || hero.kind === "rush") && random.chance(grade === "A" ? .72 : grade === "B" ? .48 : .23);
@@ -801,11 +797,11 @@ function makeStatDelta(
     stats.tackles = runContact || pressureContact ? 1 : targetContact && simulation.snapResult === "completion" ? 1 : 0;
     stats.tacklesForLoss = stats.tackles > 0 && simulation.yards < 0 ? 1 : 0;
     stats.sacks = pressureContact ? 1 : 0;
-    stats.hurries = hero.kind === "rush" && stats.sacks === 0 && (grade === "A" || grade === "B") ? 1 : 0;
+    stats.hurries = hero.kind === "rush" && simulation.pressureOccurred && stats.sacks === 0 && (grade === "A" || grade === "B") ? 1 : 0;
     stats.runStops = runContact && simulation.yards <= 2 ? 1 : 0;
     stats.passBreakups = targetContact && simulation.snapResult === "incomplete" && (grade === "A" || grade === "B") ? 1 : 0;
     stats.interceptions = targetContact && simulation.turnover && grade === "A" ? 1 : 0;
-    stats.coverageSnaps = hero.kind === "zone-coverage" || hero.kind === "man-coverage" ? 1 : 0;
+    stats.coverageSnaps = simulation.targetSlot !== undefined && (hero.kind === "zone-coverage" || hero.kind === "man-coverage") ? 1 : 0;
   } else {
     const targetContact = simulation.targetSlot !== undefined && hero.matchupSlot === simulation.targetSlot;
     const runContact = simulation.ballCarrierSlot !== undefined && random.chance(grade === "A" ? .32 : grade === "B" ? .18 : .08);
@@ -813,7 +809,7 @@ function makeStatDelta(
     stats.tackles = (targetContact && simulation.snapResult === "completion") || runContact ? 1 : 0;
     stats.passBreakups = targetContact && simulation.snapResult === "incomplete" && (grade === "A" || grade === "B") ? 1 : 0;
     stats.interceptions = targetContact && simulation.turnover && grade === "A" ? 1 : 0;
-    stats.coverageSnaps = 1;
+    stats.coverageSnaps = simulation.targetSlot !== undefined ? 1 : 0;
     stats.runStops = runContact && simulation.yards <= 2 ? 1 : 0;
   }
 
@@ -825,7 +821,7 @@ function makeStatDelta(
     if (directOffensiveScore || directDefensiveScore) stats.touchdowns = 1;
   }
 
-  return { stats, advanced: makeAdvancedDelta(hero, grade, involved), involved };
+  return { stats, advanced: makeAdvancedDelta(hero, grade, involved, Boolean(simulation.pressureOccurred)), involved };
 }
 
 function advanceDrive(episode: MatchEpisode, simulation: SnapSimulation): DriveAdvance {
@@ -1112,7 +1108,7 @@ function startControlledDrive(match: FootballMatchState, gameClockSeconds: numbe
   };
 }
 
-export function startMatch(save: CareerSave): CareerSave {
+function startMatchCore(save: CareerSave, participationMode: MatchParticipationMode, analysisMode: boolean): CareerSave {
   const match = save.football.match;
   if (match.status !== "upcoming") return save;
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:kickoff`);
@@ -1120,6 +1116,8 @@ export function startMatch(save: CareerSave): CareerSave {
   let started: FootballMatchState = {
     ...match,
     status: "in-progress",
+    participationMode,
+    analysisMode,
     heroScore: 0,
     opponentScore: 0,
     quarter: 1,
@@ -1148,6 +1146,8 @@ export function startMatch(save: CareerSave): CareerSave {
     advancedStats: createEmptyAdvancedMatchStats(),
     finalResult: undefined,
     currentEpisode: undefined,
+    lastResolvedEpisode: undefined,
+    lastResolvedResult: undefined,
   };
 
   if (match.openingKickoffReceiver !== controlledSide) {
@@ -1180,7 +1180,7 @@ export function startMatch(save: CareerSave): CareerSave {
   };
 }
 
-export function resolveMatchDecision(save: CareerSave, optionId: string): CareerSave {
+function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave {
   const match = save.football.match;
   const episode = match.currentEpisode;
   if (match.status !== "in-progress" || !episode) throw new Error("Match has no active episode");
@@ -1188,9 +1188,7 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
   if (!selected) throw new Error("Unknown match decision");
 
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:${episode.id}:${optionId}`);
-  const fatiguePenalty = match.heroFatigue * .2 + save.character.condition.fatigue * .06;
-  const painPenalty = save.football.training.body.pain * .09 + (save.football.training.body.medicalStatus === "limited" ? 6 : 0);
-  const assignmentScore = clamp(heroSkillValue(save, selected) + random.integer(-16, 16) - selected.difficulty * .34 - fatiguePenalty - painPenalty + 24);
+  const assignmentScore = clamp(decisionScoreCenter(save, match, selected) + random.integer(-16, 16));
   const grade = gradeFromScore(assignmentScore);
   const simulation = simulateSnap(save, match, episode, assignmentScore, selected, random);
   const statResolution = makeStatDelta(save, episode, simulation, grade, random);
@@ -1223,6 +1221,12 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
     involved: statResolution.involved,
     firstDown: advance.firstDown,
     driveEnded: advance.driveEnded,
+    startFieldPosition: episode.fieldPosition,
+    endFieldPosition: advance.nextFieldPosition,
+    pressureOccurred: Boolean(simulation.pressureOccurred),
+    grossPuntYards: simulation.grossPuntYards,
+    puntReturnYards: simulation.puntReturnYards,
+    kickDistance: simulation.kickDistance,
     targetSlot: simulation.targetSlot,
     ballCarrierSlot: simulation.ballCarrierSlot,
     statDelta: statResolution.stats,
@@ -1313,6 +1317,8 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
     drivePlays,
     driveYards,
     completedEpisodes: [...match.completedEpisodes, { ...outcome, driveEnded }],
+    lastResolvedEpisode: episode,
+    lastResolvedResult: { ...outcome, driveEnded },
     stats: addStats(match.stats, statResolution.stats),
     advancedStats: addAdvancedStats(match.advancedStats, statResolution.advanced),
     currentEpisode: undefined,
@@ -1445,3 +1451,93 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
 
   return { ...save, character: nextCharacter, football: nextFootball, history };
 }
+
+function automaticDecisionId(save: CareerSave): string {
+  const match = save.football.match;
+  const episode = match.currentEpisode;
+  if (!episode) throw new Error("Match has no active episode");
+  const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:${episode.id}:auto-choice`);
+  return [...episode.options]
+    .map((optionValue) => {
+      const forecast = calculateDecisionForecast(save, match, episode, optionValue);
+      const personalityRisk = save.character.personality.riskTolerance;
+      const riskFit = optionValue.risk === "aggressive"
+        ? (personalityRisk - 50) * .08
+        : optionValue.risk === "safe"
+          ? (50 - personalityRisk) * .05
+          : 2;
+      const value = forecast.executionChance * .48
+        + forecast.playImpact * .28
+        + forecast.bigPlayChance * .12
+        - forecast.mistakeChance * .36
+        + riskFit
+        + random.integer(-3, 3);
+      return { id: optionValue.id, value };
+    })
+    .sort((left, right) => right.value - left.value)[0]!.id;
+}
+
+function isKeyMoment(match: FootballMatchState, episode: MatchEpisode): boolean {
+  if (episode.unit === "special") return true;
+  if (episode.down >= 3) return true;
+  if (episode.fieldPosition >= 85 || episode.fieldPosition <= 5) return true;
+  if (episode.quarter === 4 && episode.clockSeconds <= 300 && Math.abs(match.heroScore - match.opponentScore) <= 10) return true;
+
+  const highRiskCall = episode.down >= 2 && Math.max(episode.playCall.aggression, episode.opponentCall.aggression) >= 90;
+  const longYardage = episode.down >= 2 && episode.distance >= 8;
+  const blitzRead = episode.playCall.playType === "blitz" || episode.opponentCall.playType === "blitz";
+  const directPressureMoment = episode.heroInvolvement === "primary" && blitzRead && episode.down >= 2;
+  const decisivePrimaryRole = episode.heroInvolvement === "primary" && (highRiskCall || longYardage);
+
+  return directPressureMoment || decisivePrimaryRole;
+}
+
+function advanceAutomatic(save: CareerSave, stopAtKeyMoment: boolean): CareerSave {
+  let current = save;
+  let safety = 0;
+  while (current.football.match.status === "in-progress" && current.football.match.currentEpisode && safety < 180) {
+    if (stopAtKeyMoment && isKeyMoment(current.football.match, current.football.match.currentEpisode)) break;
+    current = resolveOneMatchDecision(current, automaticDecisionId(current));
+    safety += 1;
+  }
+  return current;
+}
+
+export function startMatch(
+  save: CareerSave,
+  participationMode: MatchParticipationMode = "key-moments",
+  analysisMode = false,
+): CareerSave {
+  let started = startMatchCore(save, participationMode, analysisMode);
+  if (participationMode === "auto") started = advanceAutomatic(started, false);
+  if (participationMode === "key-moments") {
+    started = advanceAutomatic(started, true);
+    if (started.football.match.status === "in-progress") {
+      started = {
+        ...started,
+        football: {
+          ...started.football,
+          match: { ...started.football.match, lastResolvedEpisode: undefined, lastResolvedResult: undefined },
+        },
+      };
+    }
+  }
+  return started;
+}
+
+export function resolveMatchDecision(save: CareerSave, optionId: string): CareerSave {
+  const resolved = resolveOneMatchDecision(save, optionId);
+  const playbackEpisode = resolved.football.match.lastResolvedEpisode;
+  const playbackResult = resolved.football.match.lastResolvedResult;
+  if (resolved.football.match.status !== "in-progress" || resolved.football.match.participationMode === "every-snap") return resolved;
+  const advanced = advanceAutomatic(resolved, resolved.football.match.participationMode === "key-moments");
+  if (!playbackEpisode || !playbackResult) return advanced;
+  return {
+    ...advanced,
+    football: {
+      ...advanced.football,
+      match: { ...advanced.football.match, lastResolvedEpisode: playbackEpisode, lastResolvedResult: playbackResult },
+    },
+  };
+}
+

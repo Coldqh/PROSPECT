@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 26;
+export const CURRENT_SCHEMA_VERSION = 27;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -387,6 +387,12 @@ const matchEpisodeResultSchema = z.object({
   involved: z.boolean().default(true),
   firstDown: z.boolean().default(false),
   driveEnded: z.boolean().default(false),
+  startFieldPosition: z.number().int().min(0).max(100).default(25),
+  endFieldPosition: z.number().int().min(0).max(100).default(25),
+  pressureOccurred: z.boolean().default(false),
+  grossPuntYards: z.number().int().nonnegative().optional(),
+  puntReturnYards: z.number().int().nonnegative().optional(),
+  kickDistance: z.number().int().nonnegative().optional(),
   targetSlot: z.string().min(1).optional(),
   ballCarrierSlot: z.string().min(1).optional(),
   statDelta: matchStatLineSchema,
@@ -429,6 +435,8 @@ const footballMatchSchema = z.object({
   playClockSeconds: z.number().int().min(0).max(40).default(25),
   possession: z.enum(["hero", "opponent"]).default("hero"),
   openingKickoffReceiver: z.enum(["hero", "opponent"]).default("hero"),
+  participationMode: z.enum(["auto", "key-moments", "every-snap"]).default("key-moments"),
+  analysisMode: z.boolean().default(false),
   heroFatigue: z.number().min(0).max(100),
   coachGrade: z.number().min(0).max(100),
   episodeIndex: z.number().int().nonnegative(),
@@ -446,6 +454,8 @@ const footballMatchSchema = z.object({
   timeoutsHero: z.number().int().min(0).max(3).default(3),
   timeoutsOpponent: z.number().int().min(0).max(3).default(3),
   currentEpisode: matchEpisodeSchema.optional(),
+  lastResolvedEpisode: matchEpisodeSchema.optional(),
+  lastResolvedResult: matchEpisodeResultSchema.optional(),
   completedEpisodes: z.array(matchEpisodeResultSchema),
   drives: z.array(matchDriveSummarySchema).default([]),
   stats: matchStatLineSchema,

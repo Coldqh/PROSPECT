@@ -5,10 +5,12 @@ import {
   updateWeeklyPlan as applyWeeklyPlan,
 } from "../../sports/football/simulation/advanceFootballDay";
 import { createSeed } from "../../core/random/createSeed";
+import { toGameDateKey } from "../../core/calendar/types";
 import { createInitialLifeState } from "../../core/life/createInitialLifeState";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../core/life/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import { resolveMatchDecision, startMatch } from "../../sports/football/matches/simulateMatch";
+import type { MatchParticipationMode } from "../../sports/football/matches/types";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { resolveRelationshipEvent } from "../../sports/football/relationships/relationshipEvents";
@@ -185,16 +187,16 @@ export class CareerRepository {
   }
 
 
-  async startMatch(careerId: string): Promise<CareerSave> {
+  async startMatch(careerId: string, mode: MatchParticipationMode, analysisMode: boolean): Promise<CareerSave> {
     const current = await this.load(careerId);
     if (current.meta.phase === "college-season") {
       if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
-      return this.save(startMatch(current));
+      return this.save(startMatch(current, mode, analysisMode));
     }
     if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
-    if (current.life.dayIndex !== 5) throw new Error("Match is only available on Saturday");
-    return this.save(startMatch(current));
+    if (toGameDateKey(current.meta.currentDate) !== toGameDateKey(current.football.match.scheduledDate)) throw new Error("Match is not scheduled for today");
+    return this.save(startMatch(current, mode, analysisMode));
   }
 
   async resolveMatchDecision(careerId: string, optionId: string): Promise<CareerSave> {

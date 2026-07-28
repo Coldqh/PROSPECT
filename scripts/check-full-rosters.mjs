@@ -24,7 +24,7 @@ const requiredTokens = [
   ["positions", "POSITION_ROOM_TARGETS"],
   ["positions", "POSITION_STARTER_TARGETS"],
   ["ecosystemTypes", "export const ECOSYSTEM_MODULE_VERSION = 11"],
-  ["schema", "export const CURRENT_SCHEMA_VERSION = 26"],
+  ["schema", "export const CURRENT_SCHEMA_VERSION = 27"],
   ["migrations", "migrateVersionTwentyFour"],
   ["upgrade", "upgradeFootballEcosystemV10"],
   ["upgrade", "normalizeFullRosterWorld"],
