@@ -150,7 +150,10 @@ export function callPlay(
 }
 
 function point(x: number, y: number): MatchPoint {
-  return { x, y };
+  return {
+    x: Math.max(0, Math.min(100, x)),
+    y: Math.max(0, Math.min(100, y)),
+  };
 }
 
 function offenseFormation(formation: string): FormationPlayer[] {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../../core/random/SeededRandom";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
 import { createCompetitionState } from "./competition";
 import { createPlayerEligibility, createTeamCompliance, createWorldConstitution } from "./constitution";
 import { createProgramResources } from "./resources";
@@ -154,7 +155,7 @@ describe("annual talent pipeline", () => {
     );
     expect(run()).toEqual(run());
     const result = run();
-    expect(result.players.filter((player) => player.level === "high-school" && player.classYear === "Freshman")).toHaveLength(5);
+    expect(result.players.filter((player) => player.level === "high-school" && player.classYear === "Freshman")).toHaveLength(FOOTBALL_ROSTER_POSITIONS.length);
     expect(result.pipeline.independentProspects.some((prospect) => prospect.route === "juco")).toBe(true);
     expect(result.pipeline.classHistory.some((record) => record.seasonYear === 2027)).toBe(true);
   });

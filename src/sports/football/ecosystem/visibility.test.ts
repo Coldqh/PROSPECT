@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFootballCareerState } from "../career/createFootballCareer";
-import type { FootballCareerSetup } from "../career/types";
+import { CAREER_FOOTBALL_POSITIONS, type FootballCareerSetup } from "../career/types";
 import { createFootballEcosystem } from "./createEcosystem";
 import { getPositionPressure, getTeamEcosystemSnapshot } from "./visibility";
 
@@ -17,7 +17,7 @@ describe("ecosystem visibility selectors", () => {
     expect(college).toBeDefined();
     const snapshot = getTeamEcosystemSnapshot(world, college!.id);
     expect(snapshot.openings.length).toBeGreaterThan(0);
-    expect(getPositionPressure(world)).toHaveLength(5);
+    expect(getPositionPressure(world)).toHaveLength(CAREER_FOOTBALL_POSITIONS.length);
     expect(getPositionPressure(world).reduce((sum, item) => sum + item.targetAdds, 0)).toBeGreaterThan(0);
   });
 });

@@ -159,6 +159,26 @@ function createTeamPlayers(team: EcosystemTeam, random: SeededRandom, seasonYear
   return players;
 }
 
+function normalizePositionRoomDepth(players: EcosystemPlayer[]): EcosystemPlayer[] {
+  const normalized = new Map<string, EcosystemPlayer>();
+  for (const position of CORE_POSITIONS) {
+    const room = players
+      .filter((player) => player.position === position)
+      .sort((left, right) => left.depthRank - right.depthRank || Number(right.isHero) - Number(left.isHero) || right.overall - left.overall || left.id.localeCompare(right.id));
+    for (const [index, player] of room.entries()) {
+      const depthRank = index + 1;
+      const starterCount = POSITION_STARTER_TARGETS[position];
+      normalized.set(player.id, {
+        ...player,
+        depthRank,
+        status: player.health < 62 ? "injured" : depthRank <= starterCount ? "starter" : depthRank <= starterCount + 2 ? "rotation" : "backup",
+        usagePlan: depthRank <= starterCount ? "starter" : depthRank <= starterCount + 2 ? "rotation" : player.usagePlan === "redshirt" ? "redshirt" : "developmental",
+      });
+    }
+  }
+  return players.map((player) => normalized.get(player.id) ?? player);
+}
+
 function createHeroTeamPlayers(
   team: EcosystemTeam,
   football: FootballCareerState,
@@ -229,7 +249,7 @@ function createHeroTeamPlayers(
     positionHistory: [],
     tactical: createPlayerTacticalProfile({ seed: `${team.seed}:hero`, position: football.position, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), classYear: "Senior" }, team.tactical, random.fork("tactical:hero"), careerArchetypeRole(football.position, football.archetypeId)),
   });
-  return players;
+  return normalizePositionRoomDepth(players);
 }
 
 function createHighSchoolTeams(football: FootballCareerState): EcosystemTeam[] {

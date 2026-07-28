@@ -169,13 +169,19 @@ function choosePositionChanges(
   if (team.level !== "college") return [];
   const targets = POSITIONS
     .filter((position) => projections[position].needNextYear >= 62)
-    .sort((left, right) => projections[right].needNextYear - projections[left].needNextYear);
+    .sort((left, right) =>
+      projections[right].needNextYear - projections[left].needNextYear
+      || projections[left].currentPlayers - projections[right].currentPlayers
+      || projections[right].needNow - projections[left].needNow
+      || left.localeCompare(right));
   const plans: EcosystemPositionChangePlan[] = [];
   for (const target of targets) {
     const candidates = players
       .filter((player) => player.teamId === team.id
         && !player.isHero
-        && !excludedPlayerIds.has(player.id)
+        && (!excludedPlayerIds.has(player.id)
+          || projections[target].currentPlayers === 0
+          || projections[target].needNextYear >= 90)
         && player.depthRank >= 3
         && player.classYear !== "Senior"
         && POSITION_CHANGE_OPTIONS[player.position].includes(target)

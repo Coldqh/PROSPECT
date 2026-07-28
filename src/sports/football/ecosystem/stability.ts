@@ -354,7 +354,7 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
 
   const bounds: Array<[number, number, string]> = [
     [world.stories.length, 90, "stories"],
-    [world.transactions.length, 220, "transactions"],
+    [world.transactions.length, 900, "transactions"],
     [world.teamHistory.length, 240, "teamHistory"],
     [world.competition.rankingHistory.length, 50, "competition.rankingHistory"],
     [world.competition.awards.length, 160, "competition.awards"],

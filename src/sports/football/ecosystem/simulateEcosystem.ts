@@ -1199,7 +1199,7 @@ function processOffseason(
     coaches: carousel.coaches,
     teams,
     stories: [...world.stories, ...stories].slice(-120),
-    transactions: [...world.transactions, ...transactions].slice(-160),
+    transactions: [...world.transactions, ...transactions].slice(-800),
     teamHistory: [...world.teamHistory, ...archived].slice(-240),
     lastOffseasonYear: seasonYear,
     seasonWeek: 13,
@@ -1569,7 +1569,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     save.meta.currentDate,
   );
   const stories = [...world.stories, ...generatedStories].slice(-90);
-  const transactions = [...world.transactions, ...generatedTransactions].slice(-220);
+  const transactions = [...world.transactions, ...generatedTransactions].slice(-800);
   world = { ...world, stories, transactions, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
   const important = generatedStories.filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
 
