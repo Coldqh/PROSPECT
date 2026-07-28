@@ -247,7 +247,9 @@ describe("real-time football engine", () => {
       stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
     }
     expect(state.events.some((entry) => entry.type === "interception")).toBe(false);
-    expect(["completion", "incomplete"]).toContain(state.outcome?.snapResult);
+    expect(state.outcome).toBeDefined();
+    expect(state.outcome?.turnover).toBe(false);
+    expect(["completion", "incomplete", "touchdown"]).toContain(state.outcome?.snapResult);
   });
 
   it("keeps role controls deliberately small", () => {
