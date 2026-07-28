@@ -581,11 +581,11 @@ export function buildSpecialTeamsAssignments(
     { slot: "WILL", position: "LB", label: "W", start: point(34, 33) }, { slot: "MIKE", position: "LB", label: "M", start: point(50, 31) },
     { slot: "SAM", position: "LB", label: "S", start: point(66, 33) }, { slot: "FS", position: "S", label: "S", start: point(50, 20) },
   ];
-  const kickAssignments = kicking.map((player) => {
+  const kickAssignments: MatchPlayerAssignment[] = kicking.map((player) => {
     const isHero = player.position === position && player.slot === position;
     const kind: MatchPlayerAssignment["kind"] = isHero ? (position === "K" ? "kick" : "punt") : player.slot === "LS" ? "long-snap" : position === "P" && player.slot.includes("GUN") ? "return-coverage" : "kick-protection";
     return { id: `${heroSide}-special-${player.slot}`, side: heroSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero, kind, task: isHero ? (position === "K" ? "Провести удар между стойками" : "Поставить пант в вызванную зону") : kind === "long-snap" ? "Дать точный длинный снэп" : kind === "return-coverage" ? "Закрыть return lane" : "Защитить точку удара", start: player.start, end: isHero ? point(50, 22) : point(player.start.x, player.start.y - 10), delayMs: random.integer(20, 180) };
   });
-  const returnAssignments = returning.map((player) => ({ id: `${opponentSide}-return-${player.slot}`, side: opponentSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero: false, kind: player.slot === "R" ? "return" as const : "return-coverage" as const, task: player.slot === "R" ? "Принять мяч и выбрать return lane" : position === "K" ? "Атаковать точку удара" : "Закрыть coverage lane", start: player.start, end: player.slot === "R" ? point(50, 35) : point(player.start.x, player.start.y + 12), delayMs: random.integer(20, 180) }));
+  const returnAssignments: MatchPlayerAssignment[] = returning.map((player) => ({ id: `${opponentSide}-return-${player.slot}`, side: opponentSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero: false, kind: player.slot === "R" ? "return" as const : "return-coverage" as const, task: player.slot === "R" ? "Принять мяч и выбрать return lane" : position === "K" ? "Атаковать точку удара" : "Закрыть coverage lane", start: player.start, end: player.slot === "R" ? point(50, 35) : point(player.start.x, player.start.y + 12), delayMs: random.integer(20, 180) }));
   return [...returnAssignments, ...kickAssignments];
 }

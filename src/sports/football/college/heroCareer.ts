@@ -339,16 +339,7 @@ function gameLogFor(
     role: career.role,
     ...(interactive ? {
       spotlight: interactive.spotlight,
-      stats: {
-        passingYards: matchStats.passingYards,
-        rushingYards: matchStats.rushingYards,
-        receivingYards: matchStats.receivingYards,
-        touchdowns: matchStats.touchdowns,
-        turnovers: matchStats.turnovers,
-        tackles: matchStats.tackles,
-        sacks: matchStats.sacks,
-        interceptions: matchStats.interceptions,
-      },
+      stats: { ...matchStats },
     } : {}),
   };
 }

@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
+import type { MatchStatLine } from "../matches/types";
 import type {
   FootballProfessionalState,
   ProfessionalAgent,
@@ -58,20 +59,22 @@ function projectedRange(stock: number): string {
   return stock >= 48 ? "Граница драфта" : "Приглашение свободного агента";
 }
 
+function gameProduction(stats: Partial<MatchStatLine>): number {
+  return (stats.touchdowns ?? 0) * 7 + (stats.passingYards ?? 0) * 0.025 + (stats.rushingYards ?? 0) * 0.055
+    + (stats.receivingYards ?? 0) * 0.055 + (stats.tackles ?? 0) * 0.75 + (stats.sacks ?? 0) * 3.2
+    + (stats.interceptions ?? 0) * 4.2 + (stats.pancakes ?? 0) * 1.4 - (stats.sacksAllowed ?? 0) * 2.8
+    - (stats.pressuresAllowed ?? 0) * 1.1 + (stats.hurries ?? 0) * 1.6 + (stats.runStops ?? 0) * 1.5
+    + (stats.passBreakups ?? 0) * 1.2 + (stats.fieldGoalsMade ?? 0) * 3.2
+    + (stats.puntsInside20 ?? 0) * 1.6 + (stats.puntYards ?? 0) * 0.025 - (stats.turnovers ?? 0) * 4;
+}
+
 function productionScore(save: CareerSave): number {
   const career = save.football.college.heroCareer;
   if (!career) return 35;
   const games = Math.max(1, career.careerGames + career.gamesPlayed);
   const starts = career.careerStarts + career.starts;
   const snaps = career.careerSnaps + career.seasonSnaps;
-  const recentStats = career.gameLog.reduce((sum, game) => sum + (game.stats
-    ? game.stats.touchdowns * 7 + game.stats.passingYards * 0.025 + game.stats.rushingYards * 0.055
-      + game.stats.receivingYards * 0.055 + game.stats.tackles * 0.75 + game.stats.sacks * 3.2
-      + game.stats.interceptions * 4.2 + game.stats.pancakes * 1.4 - game.stats.sacksAllowed * 2.8
-      - game.stats.pressuresAllowed * 1.1 + game.stats.hurries * 1.6 + game.stats.runStops * 1.5
-      + game.stats.passBreakups * 1.2 + game.stats.fieldGoalsMade * 3.2
-      + game.stats.puntsInside20 * 1.6 + game.stats.puntYards * 0.025 - game.stats.turnovers * 4
-    : 0), 0);
+  const recentStats = career.gameLog.reduce((sum, game) => sum + (game.stats ? gameProduction(game.stats) : 0), 0);
   const awardBoost = career.seasonHistory.reduce((sum, season) => sum + season.awards.length * 2.2, 0);
   return clamp(36 + Math.min(23, games * 1.1) + Math.min(14, starts * 0.75) + Math.min(11, snaps / 130)
     + Math.min(12, recentStats / Math.max(2, games)) + awardBoost);

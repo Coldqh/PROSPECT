@@ -1,6 +1,7 @@
 import type { CollegeEntryRoute } from "../../sports/football/college/types";
 import type { CareerSave } from "../../storage/saves/schema";
 import { mindsetLabels } from "../../sports/football/career/catalog";
+import type { MatchStatLine } from "../../sports/football/matches/types";
 import { playerStatCards } from "./SeasonDashboard";
 import { DecisionDayDashboard } from "./DecisionDayDashboard";
 import { Icon } from "../ui/Icon";
@@ -47,16 +48,18 @@ function classLabel(save: CareerSave): string {
 function collegeStats(save: CareerSave): Array<{ label: string; value: string; detail: string }> {
   const career = save.football.college.heroCareer;
   if (!career) return playerStatCards(save);
-  const totals = career.gameLog.reduce((acc, game) => {
+  const totals = career.gameLog.reduce<{ snaps: number; starts: number; stats: MatchStatLine }>((acc, game) => {
     const stats = game.stats;
     acc.snaps += game.snaps;
     acc.starts += Number(game.started);
     if (stats) {
-      const target = acc.stats as Record<keyof typeof stats, number>;
-      for (const key of Object.keys(stats) as Array<keyof typeof stats>) {
+      const source = stats as Partial<Record<keyof MatchStatLine, number>>;
+      const target = acc.stats as Record<keyof MatchStatLine, number>;
+      for (const key of Object.keys(source) as Array<keyof MatchStatLine>) {
+        const value = source[key] ?? 0;
         target[key] = key === "longestFieldGoal"
-          ? Math.max(target[key], stats[key])
-          : target[key] + stats[key];
+          ? Math.max(target[key], value)
+          : target[key] + value;
       }
     }
     return acc;

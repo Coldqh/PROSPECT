@@ -155,7 +155,7 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
   const [analysisMode, setAnalysisMode] = useState(true);
   const [phase, setPhase] = useState<MatchPlaybackPhase>("pre-snap");
   const [playingResultId, setPlayingResultId] = useState<string>();
-  const seenResult = useRef<string>();
+  const seenResult = useRef<string | undefined>(undefined);
   const match = save.football.match;
   const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
   const heroTeamName = collegeCareer

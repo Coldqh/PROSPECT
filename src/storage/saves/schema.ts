@@ -231,6 +231,16 @@ const matchStatLineSchema = z.object({
   returnYardsAllowed: z.number().int().nonnegative().default(0),
 });
 
+const collegeHeroGameStatLineSchema = matchStatLineSchema.extend({
+  passingAttempts: z.number().int().nonnegative().default(0),
+  completions: z.number().int().nonnegative().default(0),
+  rushingAttempts: z.number().int().nonnegative().default(0),
+  targets: z.number().int().nonnegative().default(0),
+  receptions: z.number().int().nonnegative().default(0),
+  tacklesForLoss: z.number().int().nonnegative().default(0),
+  passBreakups: z.number().int().nonnegative().default(0),
+});
+
 const matchAdvancedStatLineSchema = z.object({
   snaps: z.number().int().nonnegative(),
   assignmentWins: z.number().int().nonnegative(),
@@ -648,16 +658,7 @@ const collegeHeroCareerSchema = z.object({
     grade: z.enum(["A", "B", "C", "D"]),
     role: collegeHeroRoleSchema,
     spotlight: z.string().min(1).optional(),
-    stats: z.object({
-      passingYards: z.number().int(),
-      rushingYards: z.number().int(),
-      receivingYards: z.number().int(),
-      touchdowns: z.number().int().nonnegative(),
-      turnovers: z.number().int().nonnegative(),
-      tackles: z.number().int().nonnegative(),
-      sacks: z.number().int().nonnegative(),
-      interceptions: z.number().int().nonnegative(),
-    }).optional(),
+    stats: collegeHeroGameStatLineSchema.optional(),
   })),
   weekLog: z.array(z.object({
     id: z.string().min(1),
