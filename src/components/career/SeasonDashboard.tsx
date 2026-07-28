@@ -34,41 +34,65 @@ function streakLabel(value: number): string {
 export function playerStatCards(save: CareerSave): Array<{ label: string; value: string; detail: string }> {
   const stats = save.football.season.heroTotals;
   switch (save.football.position) {
-    case "QB":
-      return [
-        { label: "Пасовые ярды", value: String(stats.passingYards), detail: `${stats.completions}/${stats.passingAttempts}` },
-        { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
-        { label: "Потери", value: String(stats.turnovers), detail: "turnovers" },
-        { label: "Вынос", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
-      ];
-    case "RB":
-      return [
-        { label: "Выносные ярды", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
-        { label: "Приёмные ярды", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
-        { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
-        { label: "Потери", value: String(stats.turnovers), detail: "turnovers" },
-      ];
+    case "QB": return [
+      { label: "Пасовые ярды", value: String(stats.passingYards), detail: `${stats.completions}/${stats.passingAttempts}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
+      { label: "Потери", value: String(stats.turnovers), detail: "turnovers" },
+      { label: "Вынос", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
+    ];
+    case "RB": return [
+      { label: "Выносные ярды", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
+      { label: "Приёмные ярды", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
+      { label: "Потери", value: String(stats.turnovers), detail: "turnovers" },
+    ];
     case "WR":
-      return [
-        { label: "Приёмные ярды", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
-        { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
-        { label: "Цели", value: String(stats.targets), detail: "targets" },
-        { label: "Вынос", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
-      ];
-    case "LB":
-      return [
-        { label: "Захваты", value: String(stats.tackles), detail: "total" },
-        { label: "TFL", value: String(stats.tacklesForLoss), detail: "за линией" },
-        { label: "Sacks", value: String(stats.sacks), detail: "за сезон" },
-        { label: "INT/PBU", value: `${stats.interceptions}/${stats.passBreakups}`, detail: "coverage" },
-      ];
+    case "TE": return [
+      { label: "Приёмные ярды", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "за сезон" },
+      { label: "Блоки", value: String(stats.pancakes), detail: "pancakes" },
+      { label: "Цели", value: String(stats.targets), detail: "targets" },
+    ];
+    case "OT":
+    case "OG":
+    case "C": return [
+      { label: "Сэки пропущены", value: String(stats.sacksAllowed), detail: "pass protection" },
+      { label: "Давление", value: String(stats.pressuresAllowed), detail: "allowed" },
+      { label: "Pancakes", value: String(stats.pancakes), detail: "выигранные блоки" },
+      { label: "Ошибки", value: String(stats.sacksAllowed + stats.pressuresAllowed), detail: "давление + сэки" },
+    ];
+    case "EDGE":
+    case "DT": return [
+      { label: "Сэки", value: String(stats.sacks), detail: "за сезон" },
+      { label: "Hurries", value: String(stats.hurries), detail: "давление" },
+      { label: "TFL", value: String(stats.tacklesForLoss), detail: "за линией" },
+      { label: "Run stops", value: String(stats.runStops), detail: "против выноса" },
+    ];
+    case "LB": return [
+      { label: "Захваты", value: String(stats.tackles), detail: "total" },
+      { label: "TFL", value: String(stats.tacklesForLoss), detail: "за линией" },
+      { label: "Sacks", value: String(stats.sacks), detail: "за сезон" },
+      { label: "INT/PBU", value: `${stats.interceptions}/${stats.passBreakups}`, detail: "coverage" },
+    ];
     case "CB":
-      return [
-        { label: "PBU", value: String(stats.passBreakups), detail: "разбитые передачи" },
-        { label: "INT", value: String(stats.interceptions), detail: "перехваты" },
-        { label: "Захваты", value: String(stats.tackles), detail: "total" },
-        { label: "TFL", value: String(stats.tacklesForLoss), detail: "за линией" },
-      ];
+    case "S": return [
+      { label: "PBU", value: String(stats.passBreakups), detail: "разбитые передачи" },
+      { label: "INT", value: String(stats.interceptions), detail: "перехваты" },
+      { label: "Захваты", value: String(stats.tackles), detail: "total" },
+      { label: "Coverage", value: String(stats.coverageSnaps), detail: "снэпы" },
+    ];
+    case "K": return [
+      { label: "Филд-голы", value: `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}`, detail: "реализовано" },
+      { label: "Дальний", value: String(stats.longestFieldGoal), detail: "ярдов" },
+      { label: "Очки", value: String(stats.fieldGoalsMade * 3), detail: "за сезон" },
+      { label: "Точность", value: stats.fieldGoalsAttempted ? `${Math.round(stats.fieldGoalsMade / stats.fieldGoalsAttempted * 100)}%` : "—", detail: "FG%" },
+    ];
+    case "P": return [
+      { label: "Панты", value: String(stats.punts), detail: "за сезон" },
+      { label: "Net yards", value: String(stats.puntYards), detail: "суммарно" },
+      { label: "Inside 20", value: String(stats.puntsInside20), detail: "поставлены" },
+      { label: "Возврат", value: String(stats.returnYardsAllowed), detail: "ярдов отдано" },
+    ];
   }
 }
 

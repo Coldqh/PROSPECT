@@ -1,12 +1,12 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 
-export type MatchUnit = "offense" | "defense";
+export type MatchUnit = "offense" | "defense" | "special";
 export type MatchTeamSide = "hero" | "opponent";
 export type MatchStatus = "upcoming" | "in-progress" | "complete";
 export type DecisionRisk = "safe" | "balanced" | "aggressive";
 export type MatchOutcomeGrade = "A" | "B" | "C" | "D";
-export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage";
+export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage" | "field-goal" | "punt";
 export type MatchHeroInvolvement = "primary" | "secondary" | "assignment-only";
 export type MatchSnapResult =
   | "run"
@@ -44,7 +44,13 @@ export type MatchAssignmentKind =
   | "zone-coverage"
   | "man-coverage"
   | "spy"
-  | "contain";
+  | "contain"
+  | "kick"
+  | "punt"
+  | "long-snap"
+  | "kick-protection"
+  | "return"
+  | "return-coverage";
 
 export interface MatchDecisionOption {
   id: string;
@@ -141,6 +147,19 @@ export interface MatchStatLine {
   sacks: number;
   passBreakups: number;
   interceptions: number;
+  sacksAllowed: number;
+  pressuresAllowed: number;
+  pancakes: number;
+  hurries: number;
+  runStops: number;
+  coverageSnaps: number;
+  fieldGoalsAttempted: number;
+  fieldGoalsMade: number;
+  longestFieldGoal: number;
+  punts: number;
+  puntYards: number;
+  puntsInside20: number;
+  returnYardsAllowed: number;
 }
 
 export interface MatchAdvancedStatLine {
@@ -153,6 +172,11 @@ export interface MatchAdvancedStatLine {
   pressures: number;
   coverageWins: number;
   missedTackles: number;
+  passProtectionWins: number;
+  runBlockWins: number;
+  doubleTeamWins: number;
+  kickQuality: number;
+  puntQuality: number;
 }
 
 export interface MatchEpisodeResult {

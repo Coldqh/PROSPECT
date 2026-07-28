@@ -1,6 +1,6 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
-import type { FootballPosition } from "../career/types";
+import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import type {
   FootballProfessionalState,
   ProfessionalAgent,
@@ -19,7 +19,7 @@ import type {
 const FIRST_NAMES = ["Andre", "Caleb", "Micah", "Jordan", "Terrence", "Isaiah", "Roman", "Jalen", "Noah", "Damon", "Xavier", "Elijah"] as const;
 const LAST_NAMES = ["Mercer", "Banks", "Holloway", "Bennett", "Cross", "Booker", "Hampton", "Maddox", "Jefferson", "Sutton", "Vaughn", "Mills"] as const;
 const COLLEGES = ["Redwood State", "Lake Erie", "Central Plains", "Atlantic Tech", "Gulf Coast", "Capital University", "Mountain State", "Pacific Union"] as const;
-const POSITIONS: FootballPosition[] = ["QB", "RB", "WR", "LB", "CB"];
+const POSITIONS: readonly FootballPosition[] = CAREER_FOOTBALL_POSITIONS;
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -67,7 +67,10 @@ function productionScore(save: CareerSave): number {
   const recentStats = career.gameLog.reduce((sum, game) => sum + (game.stats
     ? game.stats.touchdowns * 7 + game.stats.passingYards * 0.025 + game.stats.rushingYards * 0.055
       + game.stats.receivingYards * 0.055 + game.stats.tackles * 0.75 + game.stats.sacks * 3.2
-      + game.stats.interceptions * 4.2 - game.stats.turnovers * 4
+      + game.stats.interceptions * 4.2 + game.stats.pancakes * 1.4 - game.stats.sacksAllowed * 2.8
+      - game.stats.pressuresAllowed * 1.1 + game.stats.hurries * 1.6 + game.stats.runStops * 1.5
+      + game.stats.passBreakups * 1.2 + game.stats.fieldGoalsMade * 3.2
+      + game.stats.puntsInside20 * 1.6 + game.stats.puntYards * 0.025 - game.stats.turnovers * 4
     : 0), 0);
   const awardBoost = career.seasonHistory.reduce((sum, season) => sum + season.awards.length * 2.2, 0);
   return clamp(36 + Math.min(23, games * 1.1) + Math.min(14, starts * 0.75) + Math.min(11, snaps / 130)
@@ -96,7 +99,7 @@ function heroDraftStock(save: CareerSave): number {
 }
 
 function refreshProfessionalTeams(teams: ProfessionalTeam[], draftYear: number, seed: string): ProfessionalTeam[] {
-  const positions: FootballPosition[] = ["QB", "RB", "WR", "LB", "CB"];
+  const positions: readonly FootballPosition[] = CAREER_FOOTBALL_POSITIONS;
   return teams.map((team) => {
     const random = new SeededRandom(seed).fork(`pro-season:${draftYear}:${team.id}`);
     const rosterStrength = clamp(team.rosterStrength + random.integer(-6, 6));
@@ -255,7 +258,9 @@ function evaluationResult(save: CareerSave, focus: ProfessionalEvaluationFocus):
   const fortyYard = round(5.18 - speedIndex * 0.0086, 2);
   const shuttle = round(4.92 - clamp(physical.agility * 0.66 + physical.speed * 0.22 + focusAthletic + random.integer(-4, 4)) * 0.0078, 2);
   const vertical = round(20 + clamp(physical.explosiveness * 0.7 + physical.strength * 0.16 + focusAthletic + random.integer(-5, 5)) * 0.23, 1);
-  const benchReps = Math.max(4, Math.round(physical.strength * 0.27 + (save.football.position === "LB" || save.football.position === "RB" ? 4 : 0) + random.integer(-3, 3)));
+  const strengthPositions: readonly FootballPosition[] = ["RB", "TE", "OT", "OG", "C", "EDGE", "DT", "LB"];
+  const specialistPenalty = save.football.position === "K" || save.football.position === "P" ? -5 : 0;
+  const benchReps = Math.max(2, Math.round(physical.strength * 0.27 + (strengthPositions.includes(save.football.position) ? 4 : 0) + specialistPenalty + random.integer(-3, 3)));
   const positionDrill = clamp(ratings.technique * 0.46 + ratings.footballIq * 0.25 + ratings.competitiveness * 0.12 + focusTechnical + random.integer(3, 13));
   const medical = clamp(save.character.condition.health * 0.78 + save.character.physical.stamina * 0.14 + random.integer(-4, 6));
   const interview = clamp(save.character.personality.composure * 0.3 + save.character.personality.coachability * 0.27 + ratings.footballIq * 0.24 + agent.mediaReach * 0.06 + focusInterview + random.integer(-4, 5));

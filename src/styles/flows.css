@@ -433,7 +433,7 @@
 .creator-stat-line strong { font-size: var(--type-body-size); font-weight: 650; }
 .position-select {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin-bottom: 14px;
   gap: 4px;
 }
@@ -576,7 +576,7 @@
 .origin-skill-grid,
 .archetype-skill-grid,
 .mindset-skill-grid { grid-template-columns: 1fr; }
-  .position-select { grid-template-columns: repeat(5, minmax(52px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
+  .position-select { grid-template-columns: repeat(4, minmax(64px, 1fr)); overflow-x: visible; padding-bottom: 4px; }
   .position-select button small,
 .save-row__season small { display: none; }
   .creator-review__player { min-height: 130px; padding: 16px; gap: 14px; }

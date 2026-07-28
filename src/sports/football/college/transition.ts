@@ -259,7 +259,8 @@ export function reportToCollege(save: CareerSave): CareerSave {
   const trainingScore = clamp(discipline * 0.42 + save.football.staff.positionCoach.development * 0.22 + save.character.condition.health * 0.18 + random.integer(-10, 11));
   const grade = offseasonGrade(trainingScore);
   const overallDelta = round(Math.max(0.3, (trainingScore - 42) * 0.035), 1);
-  const weightDelta = random.integer(-2, 7) + (save.football.position === "LB" || save.football.position === "RB" ? 2 : 0);
+  const weightGainPositions = ["RB", "TE", "OT", "OG", "C", "EDGE", "DT", "LB"] as const;
+  const weightDelta = random.integer(-2, 7) + (weightGainPositions.includes(save.football.position as typeof weightGainPositions[number]) ? 2 : 0);
   const gpaDelta = round((save.character.personality.discipline - 55) * 0.002 + random.integer(-4, 6) / 100, 2);
   const healthDelta = round(healthBase + random.integer(-3, 4), 1);
   const confidenceDelta = round((grade === "A" ? 5 : grade === "B" ? 2 : grade === "D" ? -3 : 0) + random.integer(-1, 2), 1);

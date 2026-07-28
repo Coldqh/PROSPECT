@@ -1,5 +1,5 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
-import type { FootballPosition } from "../career/types";
+import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import type { FootballProfessionalState, ProfessionalAgent, ProfessionalTeam } from "./types";
 
 const TEAM_IDENTITIES = [
@@ -34,7 +34,7 @@ function clamp(value: number, min = 0, max = 100): number {
 
 function createTeams(worldSeed: string): ProfessionalTeam[] {
   const random = new SeededRandom(worldSeed).fork("professional-teams");
-  const positions: FootballPosition[] = ["QB", "RB", "WR", "LB", "CB"];
+  const positions: readonly FootballPosition[] = CAREER_FOOTBALL_POSITIONS;
   return TEAM_IDENTITIES.map(([city, name, shortName], index) => {
     const teamRandom = random.fork(shortName);
     const rating = teamRandom.integer(66, 89);

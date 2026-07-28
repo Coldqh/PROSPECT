@@ -182,6 +182,16 @@ interface LegacyFullRosterSave {
   history: HistoryEntry[];
 }
 
+interface LegacyFivePositionCareerSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 25 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: FootballCareerState;
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
+  history: HistoryEntry[];
+}
+
 interface LegacyProfessionalSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 23 };
   character: CareerSave["character"];
@@ -437,6 +447,23 @@ function upgradeRecruitingVersionOne(state: LegacyRecruitingV1State): FootballRe
   };
 }
 
+
+function migrateVersionTwentyFive(input: LegacyFivePositionCareerSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v26`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Карьера всех позиций подключена",
+        description: "Сохранение получило единый каталог из четырнадцати позиций и расширенную матчевую статистику.",
+      },
+    ],
+  });
+}
 
 function migrateVersionTwentyFour(input: LegacyFullRosterSave): CareerSave {
   return careerSaveSchema.parse({
@@ -1086,6 +1113,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 25) return migratedResult(migrateVersionTwentyFive(input as LegacyFivePositionCareerSave), 25);
   if (schemaVersion === 24) return migratedResult(migrateVersionTwentyFour(input as LegacyFullRosterSave), 24);
   if (schemaVersion === 23) return migratedResult(migrateVersionTwentyThree(input as LegacyProfessionalSave), 23);
   if (schemaVersion === 22) return migratedResult(migrateVersionTwentyTwo(input as LegacyHeroGameplaySave), 22);

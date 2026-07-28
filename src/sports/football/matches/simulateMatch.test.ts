@@ -3,7 +3,7 @@ import { createInitialLifeState } from "../../../core/life/createInitialLifeStat
 import { createFootballCareerState } from "../career/createFootballCareer";
 import { createFootballRelationships } from "../relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
-import type { FootballCareerSetup, FootballPosition } from "../career/types";
+import { CAREER_FOOTBALL_POSITIONS, type FootballCareerSetup, type FootballPosition } from "../career/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
 import { resolveMatchDecision, startMatch } from "./simulateMatch";
 
@@ -11,8 +11,17 @@ const setupByPosition: Record<FootballPosition, { archetypeId: string; jerseyNum
   QB: { archetypeId: "field-general", jerseyNumber: 12 },
   RB: { archetypeId: "slasher", jerseyNumber: 22 },
   WR: { archetypeId: "route-technician", jerseyNumber: 1 },
+  TE: { archetypeId: "move-tight-end", jerseyNumber: 87 },
+  OT: { archetypeId: "blindside-anchor", jerseyNumber: 72 },
+  OG: { archetypeId: "pull-guard", jerseyNumber: 66 },
+  C: { archetypeId: "line-caller", jerseyNumber: 55 },
+  EDGE: { archetypeId: "speed-rusher", jerseyNumber: 9 },
+  DT: { archetypeId: "three-technique", jerseyNumber: 95 },
   LB: { archetypeId: "run-stopper", jerseyNumber: 7 },
   CB: { archetypeId: "press-corner", jerseyNumber: 2 },
+  S: { archetypeId: "center-fielder", jerseyNumber: 3 },
+  K: { archetypeId: "accuracy-kicker", jerseyNumber: 8 },
+  P: { archetypeId: "directional-punter", jerseyNumber: 6 },
 };
 
 function makeSave(position: FootballPosition = "WR"): CareerSave {
@@ -61,8 +70,14 @@ function expectPlayableSnap(save: CareerSave): void {
   const episode = save.football.match.currentEpisode;
   if (!episode) throw new Error("No active snap");
   expect(episode.assignments).toHaveLength(22);
-  expect(episode.assignments.filter((assignment) => assignment.unit === "offense")).toHaveLength(11);
-  expect(episode.assignments.filter((assignment) => assignment.unit === "defense")).toHaveLength(11);
+  if (episode.unit === "special") {
+    expect(episode.assignments.filter((assignment) => assignment.side === "hero")).toHaveLength(11);
+    expect(episode.assignments.filter((assignment) => assignment.side === "opponent")).toHaveLength(11);
+    expect(episode.assignments.every((assignment) => assignment.unit === "special")).toBe(true);
+  } else {
+    expect(episode.assignments.filter((assignment) => assignment.unit === "offense")).toHaveLength(11);
+    expect(episode.assignments.filter((assignment) => assignment.unit === "defense")).toHaveLength(11);
+  }
   expect(episode.assignments.filter((assignment) => assignment.isHero)).toHaveLength(1);
   expect(episode.assignments.every((assignment) => Boolean(assignment.playerId && assignment.playerName))).toBe(true);
   expect(episode.assignments.every((assignment) => typeof assignment.overall === "number" && typeof assignment.health === "number")).toBe(true);
@@ -88,9 +103,14 @@ function finish(save: CareerSave): CareerSave {
 
 describe("football match simulation", () => {
   it("creates a staff-called 22-player snap for every playable position", () => {
-    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
+    for (const position of CAREER_FOOTBALL_POSITIONS) {
       const started = startMatch(makeSave(position));
-      expect(started.football.match.heroUnit).toBe(position === "LB" || position === "CB" ? "defense" : "offense");
+      const expectedUnit = position === "K" || position === "P"
+        ? "special"
+        : ["EDGE", "DT", "LB", "CB", "S"].includes(position)
+          ? "defense"
+          : "offense";
+      expect(started.football.match.heroUnit).toBe(expectedUnit);
       expect(started.football.match.currentEpisode?.position).toBe(position);
       expectPlayableSnap(started);
     }
@@ -180,8 +200,8 @@ describe("football match simulation", () => {
     }
   });
 
-  it("completes and serializes a match for all five positions", () => {
-    for (const position of ["QB", "RB", "WR", "LB", "CB"] as const) {
+  it("completes and serializes a match for all fourteen positions", () => {
+    for (const position of CAREER_FOOTBALL_POSITIONS) {
       const completed = finish(makeSave(position));
       const match = completed.football.match;
       expect(match.status).toBe("complete");

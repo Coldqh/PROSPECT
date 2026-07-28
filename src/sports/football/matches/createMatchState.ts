@@ -12,7 +12,8 @@ function addDays(date: GameDate, days: number): GameDate {
 }
 
 export function matchUnitForPosition(position: FootballPosition): MatchUnit {
-  return position === "LB" || position === "CB" ? "defense" : "offense";
+  if (position === "K" || position === "P") return "special";
+  return ["EDGE", "DT", "LB", "CB", "S"].includes(position) ? "defense" : "offense";
 }
 
 export function createEmptyMatchStats(): MatchStatLine {
@@ -32,6 +33,19 @@ export function createEmptyMatchStats(): MatchStatLine {
     sacks: 0,
     passBreakups: 0,
     interceptions: 0,
+    sacksAllowed: 0,
+    pressuresAllowed: 0,
+    pancakes: 0,
+    hurries: 0,
+    runStops: 0,
+    coverageSnaps: 0,
+    fieldGoalsAttempted: 0,
+    fieldGoalsMade: 0,
+    longestFieldGoal: 0,
+    punts: 0,
+    puntYards: 0,
+    puntsInside20: 0,
+    returnYardsAllowed: 0,
   };
 }
 
@@ -47,11 +61,16 @@ export function createEmptyAdvancedMatchStats(): MatchAdvancedStatLine {
     pressures: 0,
     coverageWins: 0,
     missedTackles: 0,
+    passProtectionWins: 0,
+    runBlockWins: 0,
+    doubleTeamWins: 0,
+    kickQuality: 0,
+    puntQuality: 0,
   };
 }
 
 function controlledPossession(unit: MatchUnit): MatchTeamSide {
-  return unit === "offense" ? "hero" : "opponent";
+  return unit === "defense" ? "opponent" : "hero";
 }
 
 export function createInitialMatchState(
@@ -95,7 +114,7 @@ export function createInitialMatchState(
     heroFatigue: random.integer(4, 10),
     coachGrade: 55,
     episodeIndex: 0,
-    totalEpisodes: 24,
+    totalEpisodes: position === "K" || position === "P" ? 7 : 24,
     driveDown: 1,
     driveDistance: 10,
     driveFieldPosition: openingFieldPosition,
@@ -138,13 +157,15 @@ export function createCollegeMatchState(
   const random = new SeededRandom(`${save.meta.worldSeed}:college-match:${game.id}`);
   const role = career?.role ?? "developmental";
   const openingFieldPosition = random.integer(18, 34);
-  const totalEpisodes = role === "starter"
-    ? 30
-    : role === "rotation"
-      ? 22
-      : role === "special-teams"
-        ? 14
-        : 10;
+  const totalEpisodes = save.football.position === "K" || save.football.position === "P"
+    ? role === "starter" ? 8 : role === "rotation" || role === "special-teams" ? 6 : 4
+    : role === "starter"
+      ? 30
+      : role === "rotation"
+        ? 22
+        : role === "special-teams"
+          ? 14
+          : 10;
 
   return {
     moduleVersion: 1,

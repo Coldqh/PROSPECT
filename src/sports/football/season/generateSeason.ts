@@ -1,6 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { SchoolIdentity } from "../career/types";
+import { createEmptyMatchStats } from "../matches/createMatchState";
 import type { MatchStatLine } from "../matches/types";
 import type {
   FootballSeasonState,
@@ -21,23 +22,7 @@ const FIRST_NAMES = ["Andre", "Miles", "Jalen", "Chris", "Noah", "Trey", "Isaiah
 const LAST_NAMES = ["Coleman", "Bennett", "Price", "Grant", "Wells", "Foster", "Simmons", "Ward", "Parker", "Hughes"] as const;
 
 export function emptyMatchStats(): MatchStatLine {
-  return {
-    passingAttempts: 0,
-    completions: 0,
-    passingYards: 0,
-    rushingAttempts: 0,
-    rushingYards: 0,
-    targets: 0,
-    receptions: 0,
-    receivingYards: 0,
-    touchdowns: 0,
-    turnovers: 0,
-    tackles: 0,
-    tacklesForLoss: 0,
-    sacks: 0,
-    passBreakups: 0,
-    interceptions: 0,
-  };
+  return createEmptyMatchStats();
 }
 
 function addDays(date: GameDate, days: number): GameDate {

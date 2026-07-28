@@ -4,23 +4,14 @@ import type { FootballMatchState, MatchStatLine } from "../matches/types";
 import type { FootballSeasonState, SeasonAward, SeasonStanding } from "./types";
 
 function addStats(left: MatchStatLine, right: MatchStatLine): MatchStatLine {
-  return {
-    passingAttempts: left.passingAttempts + right.passingAttempts,
-    completions: left.completions + right.completions,
-    passingYards: left.passingYards + right.passingYards,
-    rushingAttempts: left.rushingAttempts + right.rushingAttempts,
-    rushingYards: left.rushingYards + right.rushingYards,
-    targets: left.targets + right.targets,
-    receptions: left.receptions + right.receptions,
-    receivingYards: left.receivingYards + right.receivingYards,
-    touchdowns: left.touchdowns + right.touchdowns,
-    turnovers: left.turnovers + right.turnovers,
-    tackles: left.tackles + right.tackles,
-    tacklesForLoss: left.tacklesForLoss + right.tacklesForLoss,
-    sacks: left.sacks + right.sacks,
-    passBreakups: left.passBreakups + right.passBreakups,
-    interceptions: left.interceptions + right.interceptions,
-  };
+  const result = { ...left };
+  const target = result as Record<keyof MatchStatLine, number>;
+  for (const key of Object.keys(result) as Array<keyof MatchStatLine>) {
+    target[key] = key === "longestFieldGoal"
+      ? Math.max(left[key], right[key])
+      : left[key] + right[key];
+  }
+  return result;
 }
 
 function simulateBackgroundStandings(

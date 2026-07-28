@@ -47,8 +47,17 @@ function issuePool(position: FootballCareerState["position"]): readonly Omit<Act
     QB: [{ diagnosis: "Раздражение броскового плеча", area: "upper-body", severity: "moderate" }],
     RB: [{ diagnosis: "Ушиб колена после контакта", area: "lower-body", severity: "moderate" }],
     WR: [{ diagnosis: "Растяжение задней поверхности бедра", area: "lower-body", severity: "moderate" }],
+    TE: [{ diagnosis: "Ушиб рёбер после блока", area: "upper-body", severity: "moderate" }],
+    OT: [{ diagnosis: "Растяжение медиальной связки колена", area: "lower-body", severity: "moderate" }],
+    OG: [{ diagnosis: "Перегрузка поясницы", area: "back-core", severity: "moderate" }],
+    C: [{ diagnosis: "Растяжение кисти снэпующей руки", area: "upper-body", severity: "moderate" }],
+    EDGE: [{ diagnosis: "Растяжение плеча после pass rush", area: "upper-body", severity: "moderate" }],
+    DT: [{ diagnosis: "Ушиб голеностопа в pile", area: "lower-body", severity: "moderate" }],
     LB: [{ diagnosis: "Растяжение плечевого пояса", area: "upper-body", severity: "moderate" }],
     CB: [{ diagnosis: "Растяжение паховой мышцы", area: "lower-body", severity: "moderate" }],
+    S: [{ diagnosis: "Ушиб плеча после открытого захвата", area: "upper-body", severity: "moderate" }],
+    K: [{ diagnosis: "Перегрузка приводящей мышцы", area: "lower-body", severity: "moderate" }],
+    P: [{ diagnosis: "Перегрузка сгибателя бедра", area: "lower-body", severity: "moderate" }],
   }[position] as readonly Omit<ActiveHealthIssue, "id" | "daysRemaining" | "recurrenceRisk" | "startedOn">[];
   return [...common, ...positional];
 }

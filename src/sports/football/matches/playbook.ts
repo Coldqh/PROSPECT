@@ -424,12 +424,39 @@ function defenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
   };
 }
 
+function ensureHeroPosition(players: FormationPlayer[], position: FootballPosition): FormationPlayer[] {
+  if (players.some((player) => player.position === position)) return players;
+  const fallbackSlots: Partial<Record<FootballPosition, readonly string[]>> = {
+    TE: ["Y", "U", "H"],
+    WR: ["X", "Z", "H", "Y"],
+    RB: ["RB", "F", "FB"],
+    OT: ["LT", "RT"],
+    OG: ["LG", "RG"],
+    C: ["C"],
+    EDGE: ["LE", "RE", "JACK"],
+    DT: ["DT1", "DT2", "NT"],
+    LB: ["MIKE", "WILL", "SAM", "JACK"],
+    CB: ["LCB", "RCB", "NB", "SCB"],
+    S: ["FS", "SS"],
+  };
+  const slots = fallbackSlots[position] ?? [];
+  const index = players.findIndex((player) => slots.includes(player.slot));
+  if (index < 0) return players;
+  return players.map((player, playerIndex) => playerIndex === index
+    ? { ...player, position, label: position }
+    : player);
+}
+
 function heroSlotForPosition(position: FootballPosition, players: FormationPlayer[]): string {
-  if (position === "QB") return "QB";
-  if (position === "RB") return players.some((player) => player.slot === "RB") ? "RB" : players.find((player) => player.position === "RB")?.slot ?? "RB";
-  if (position === "WR") return players.find((player) => player.position === "WR")?.slot ?? "X";
-  if (position === "LB") return players.some((player) => player.slot === "MIKE") ? "MIKE" : players.find((player) => player.position === "LB")?.slot ?? "MIKE";
-  return players.some((player) => player.slot === "LCB") ? "LCB" : players.find((player) => player.position === "CB")?.slot ?? "LCB";
+  const preferred: Partial<Record<FootballPosition, readonly string[]>> = {
+    QB: ["QB"], RB: ["RB", "FB", "F"], WR: ["X", "Z", "H", "Y"], TE: ["Y", "U", "W"],
+    OT: ["LT", "RT"], OG: ["LG", "RG"], C: ["C"], EDGE: ["LE", "RE", "JACK"],
+    DT: ["DT1", "DT2", "NT"], LB: ["MIKE", "WILL", "SAM"], CB: ["LCB", "RCB", "NB", "SCB"], S: ["FS", "SS"],
+  };
+  for (const slot of preferred[position] ?? []) {
+    if (players.some((player) => player.slot === slot && player.position === position)) return slot;
+  }
+  return players.find((player) => player.position === position)?.slot ?? position;
 }
 
 export function buildSnapAssignments(
@@ -442,8 +469,12 @@ export function buildSnapAssignments(
 ): MatchPlayerAssignment[] {
   const random = new SeededRandom(seed);
   const defenseSide: MatchTeamSide = offenseSide === "hero" ? "opponent" : "hero";
-  const offensePlayers = offenseFormation(offenseCall.formation);
-  const defensePlayers = defenseFormation(defenseCall.formation);
+  const offensePlayers = heroUnit === "offense"
+    ? ensureHeroPosition(offenseFormation(offenseCall.formation), heroPosition)
+    : offenseFormation(offenseCall.formation);
+  const defensePlayers = heroUnit === "defense"
+    ? ensureHeroPosition(defenseFormation(defenseCall.formation), heroPosition)
+    : defenseFormation(defenseCall.formation);
   const heroPool = heroUnit === "offense" ? offensePlayers : defensePlayers;
   const heroSlot = heroSlotForPosition(heroPosition, heroPool);
   const offense = offensePlayers.map((player) => offenseAssignment(
@@ -501,10 +532,57 @@ export function heroAssignment(position: FootballPosition, play: MatchPlayCall, 
     if (play.playType === "run" || play.primarySlot === "RB") return { involvement: "primary", role: play.playType === "run" ? `Атаковать ${play.runLane ?? "назначенный гэп"}` : "Выйти за блоками" };
     return random.chance(.35) ? { involvement: "secondary", role: "Проверить blitz и выйти в checkdown" } : { involvement: "assignment-only", role: "Pass protection" };
   }
-  if (position === "WR") {
-    if (play.playType === "run") return { involvement: "assignment-only", role: "Закрыть периметр" };
-    return play.progression[0] === "X" ? { involvement: "primary", role: "Первое чтение progression" } : play.progression.includes("X") ? { involvement: "secondary", role: "Второе или третье чтение" } : { involvement: "assignment-only", role: "Clear-out и работа без мяча" };
+  if (position === "WR" || position === "TE") {
+    if (play.playType === "run") return { involvement: "assignment-only", role: position === "TE" ? "Закрыть край формации" : "Закрыть периметр" };
+    return { involvement: play.primarySlot === "Y" && position === "TE" || play.primarySlot === "X" && position === "WR" ? "primary" : "secondary", role: "Выполнить маршрут и сохранить тайминг" };
   }
+  if (position === "OT" || position === "OG" || position === "C") return { involvement: "assignment-only", role: play.playType === "run" ? "Выиграть точку атаки" : "Сохранить карман" };
+  if (position === "EDGE" || position === "DT") return { involvement: "primary", role: play.playType === "blitz" ? "Атаковать карман" : "Контролировать гэп и rush lane" };
   if (position === "LB") return play.playType === "blitz" ? { involvement: "primary", role: "Выполнить pressure assignment" } : { involvement: "secondary", role: "Закрыть run fit или hook zone" };
-  return { involvement: "secondary", role: "Сохранить leverage в coverage" };
+  if (position === "CB" || position === "S") return { involvement: "secondary", role: "Сохранить leverage и не отдать взрывной розыгрыш" };
+  if (position === "K") return { involvement: "primary", role: "Выполнить удар по вызову штаба" };
+  return { involvement: "primary", role: "Поставить пант в назначенную зону" };
+}
+
+export function buildSpecialTeamsAssignments(
+  position: "K" | "P",
+  heroSide: MatchTeamSide,
+  seed: string,
+): MatchPlayerAssignment[] {
+  const random = new SeededRandom(seed);
+  const opponentSide = heroSide === "hero" ? "opponent" : "hero";
+  const kicking: FormationPlayer[] = position === "K"
+    ? [
+        { slot: "K", position: "K", label: "K", start: point(50, 82) },
+        { slot: "H", position: "P", label: "H", start: point(50, 72) },
+        { slot: "LS", position: "C", label: "LS", start: point(50, 58) },
+        { slot: "LT", position: "OT", label: "T", start: point(32, 57) }, { slot: "LG", position: "OG", label: "G", start: point(41, 57) },
+        { slot: "RG", position: "OG", label: "G", start: point(59, 57) }, { slot: "RT", position: "OT", label: "T", start: point(68, 57) },
+        { slot: "LW", position: "TE", label: "W", start: point(23, 58) }, { slot: "RW", position: "TE", label: "W", start: point(77, 58) },
+        { slot: "LUP", position: "RB", label: "U", start: point(14, 61) }, { slot: "RUP", position: "RB", label: "U", start: point(86, 61) },
+      ]
+    : [
+        { slot: "P", position: "P", label: "P", start: point(50, 86) },
+        { slot: "LS", position: "C", label: "LS", start: point(50, 58) },
+        { slot: "LT", position: "OT", label: "T", start: point(31, 59) }, { slot: "LG", position: "OG", label: "G", start: point(40, 59) },
+        { slot: "RG", position: "OG", label: "G", start: point(60, 59) }, { slot: "RT", position: "OT", label: "T", start: point(69, 59) },
+        { slot: "LW", position: "TE", label: "W", start: point(23, 61) }, { slot: "RW", position: "TE", label: "W", start: point(77, 61) },
+        { slot: "LGUN", position: "WR", label: "G", start: point(8, 54) }, { slot: "RGUN", position: "WR", label: "G", start: point(92, 54) },
+        { slot: "PP", position: "RB", label: "PP", start: point(50, 72) },
+      ];
+  const returning: FormationPlayer[] = [
+    { slot: "R", position: "CB", label: "R", start: point(50, 8) },
+    { slot: "LJ", position: "CB", label: "J", start: point(8, 31) }, { slot: "RJ", position: "CB", label: "J", start: point(92, 31) },
+    { slot: "LE", position: "EDGE", label: "E", start: point(28, 45) }, { slot: "RE", position: "EDGE", label: "E", start: point(72, 45) },
+    { slot: "DT1", position: "DT", label: "D", start: point(42, 44) }, { slot: "DT2", position: "DT", label: "D", start: point(58, 44) },
+    { slot: "WILL", position: "LB", label: "W", start: point(34, 33) }, { slot: "MIKE", position: "LB", label: "M", start: point(50, 31) },
+    { slot: "SAM", position: "LB", label: "S", start: point(66, 33) }, { slot: "FS", position: "S", label: "S", start: point(50, 20) },
+  ];
+  const kickAssignments = kicking.map((player) => {
+    const isHero = player.position === position && player.slot === position;
+    const kind: MatchPlayerAssignment["kind"] = isHero ? (position === "K" ? "kick" : "punt") : player.slot === "LS" ? "long-snap" : position === "P" && player.slot.includes("GUN") ? "return-coverage" : "kick-protection";
+    return { id: `${heroSide}-special-${player.slot}`, side: heroSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero, kind, task: isHero ? (position === "K" ? "Провести удар между стойками" : "Поставить пант в вызванную зону") : kind === "long-snap" ? "Дать точный длинный снэп" : kind === "return-coverage" ? "Закрыть return lane" : "Защитить точку удара", start: player.start, end: isHero ? point(50, 22) : point(player.start.x, player.start.y - 10), delayMs: random.integer(20, 180) };
+  });
+  const returnAssignments = returning.map((player) => ({ id: `${opponentSide}-return-${player.slot}`, side: opponentSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero: false, kind: player.slot === "R" ? "return" as const : "return-coverage" as const, task: player.slot === "R" ? "Принять мяч и выбрать return lane" : position === "K" ? "Атаковать точку удара" : "Закрыть coverage lane", start: player.start, end: player.slot === "R" ? point(50, 35) : point(player.start.x, player.start.y + 12), delayMs: random.integer(20, 180) }));
+  return [...returnAssignments, ...kickAssignments];
 }

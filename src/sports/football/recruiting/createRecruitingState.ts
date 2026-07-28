@@ -27,8 +27,17 @@ const SCHEMES: Record<FootballPosition, readonly string[]> = {
   QB: ["West Coast timing", "Vertical spread", "RPO tempo", "Play-action pro style"],
   RB: ["Inside zone", "Wide zone", "Power gap", "Spread option"],
   WR: ["Air raid spacing", "Vertical spread", "West Coast timing", "Play-action shots"],
+  TE: ["12 personnel play-action", "West Coast option routes", "Power run", "Vertical seams"],
+  OT: ["Wide zone", "Vertical dropback", "Power gap", "RPO tempo"],
+  OG: ["Power gap", "Inside zone", "Counter package", "Multiple pro style"],
+  C: ["Multiple protections", "Wide zone", "Inside zone", "Tempo spread"],
+  EDGE: ["Multiple 3–4", "Wide-nine pressure", "4–2–5 contain", "Four-man rush"],
+  DT: ["Even front", "Multiple 3–4", "Attack front", "Bear package"],
   LB: ["Multiple 3–4", "Aggressive 4–2–5", "Read-and-react 4–3", "Pressure package"],
   CB: ["Press-man", "Match quarters", "Cover 3 zone", "Multiple nickel"],
+  S: ["Match quarters", "Single-high robber", "Multiple nickel", "Cover 3 rotation"],
+  K: ["Special teams development", "Long-range field goals", "Directional kickoffs", "Pressure operation"],
+  P: ["Field-position unit", "Directional punting", "High-hang coverage", "Rugby rollout"],
 };
 
 const RECRUITER_FIRST = ["Marcus", "Derek", "Andre", "Thomas", "Will", "Calvin", "Ray", "Julian", "Nate", "Bryce"] as const;

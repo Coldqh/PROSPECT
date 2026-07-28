@@ -52,48 +52,88 @@ function collegeStats(save: CareerSave): Array<{ label: string; value: string; d
     acc.snaps += game.snaps;
     acc.starts += Number(game.started);
     if (stats) {
-      acc.passingYards += stats.passingYards;
-      acc.rushingYards += stats.rushingYards;
-      acc.receivingYards += stats.receivingYards;
-      acc.touchdowns += stats.touchdowns;
-      acc.turnovers += stats.turnovers;
-      acc.tackles += stats.tackles;
-      acc.sacks += stats.sacks;
-      acc.interceptions += stats.interceptions;
+      const target = acc.stats as Record<keyof typeof stats, number>;
+      for (const key of Object.keys(stats) as Array<keyof typeof stats>) {
+        target[key] = key === "longestFieldGoal"
+          ? Math.max(target[key], stats[key])
+          : target[key] + stats[key];
+      }
     }
     return acc;
-  }, { snaps: 0, starts: 0, passingYards: 0, rushingYards: 0, receivingYards: 0, touchdowns: 0, turnovers: 0, tackles: 0, sacks: 0, interceptions: 0 });
+  }, {
+    snaps: 0,
+    starts: 0,
+    stats: {
+      passingAttempts: 0, completions: 0, passingYards: 0, rushingAttempts: 0, rushingYards: 0,
+      targets: 0, receptions: 0, receivingYards: 0, touchdowns: 0, turnovers: 0,
+      tackles: 0, tacklesForLoss: 0, sacks: 0, passBreakups: 0, interceptions: 0,
+      sacksAllowed: 0, pressuresAllowed: 0, pancakes: 0, hurries: 0, runStops: 0,
+      coverageSnaps: 0, fieldGoalsAttempted: 0, fieldGoalsMade: 0, longestFieldGoal: 0,
+      punts: 0, puntYards: 0, puntsInside20: 0, returnYardsAllowed: 0,
+    },
+  });
+  const stats = totals.stats;
+  const snaps = { label: "Снэпы", value: String(totals.snaps), detail: `${totals.starts} стартов` };
 
   switch (save.football.position) {
     case "QB": return [
-      { label: "Пас", value: String(totals.passingYards), detail: "ярды" },
-      { label: "TD", value: String(totals.touchdowns), detail: "сезон" },
-      { label: "Потери", value: String(totals.turnovers), detail: "сезон" },
-      { label: "Снэпы", value: String(totals.snaps), detail: `${totals.starts} стартов` },
+      { label: "Пас", value: String(stats.passingYards), detail: `${stats.completions}/${stats.passingAttempts}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "карьера" },
+      { label: "Потери", value: String(stats.turnovers), detail: "карьера" },
+      snaps,
     ];
     case "RB": return [
-      { label: "Вынос", value: String(totals.rushingYards), detail: "ярды" },
-      { label: "Приём", value: String(totals.receivingYards), detail: "ярды" },
-      { label: "TD", value: String(totals.touchdowns), detail: "сезон" },
-      { label: "Снэпы", value: String(totals.snaps), detail: `${totals.starts} стартов` },
+      { label: "Вынос", value: String(stats.rushingYards), detail: `${stats.rushingAttempts} попыток` },
+      { label: "Приём", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "карьера" },
+      snaps,
     ];
-    case "WR": return [
-      { label: "Приём", value: String(totals.receivingYards), detail: "ярды" },
-      { label: "TD", value: String(totals.touchdowns), detail: "сезон" },
-      { label: "Старты", value: String(totals.starts), detail: `${career.gamesPlayed} игр` },
-      { label: "Снэпы", value: String(totals.snaps), detail: "сезон" },
+    case "WR":
+    case "TE": return [
+      { label: "Приём", value: String(stats.receivingYards), detail: `${stats.receptions}/${stats.targets}` },
+      { label: "TD", value: String(stats.touchdowns), detail: "карьера" },
+      { label: "Pancakes", value: String(stats.pancakes), detail: "блоки" },
+      snaps,
+    ];
+    case "OT":
+    case "OG":
+    case "C": return [
+      { label: "Сэки отданы", value: String(stats.sacksAllowed), detail: "pass pro" },
+      { label: "Давление", value: String(stats.pressuresAllowed), detail: "allowed" },
+      { label: "Pancakes", value: String(stats.pancakes), detail: "карьера" },
+      snaps,
+    ];
+    case "EDGE":
+    case "DT": return [
+      { label: "Сэки", value: String(stats.sacks), detail: "карьера" },
+      { label: "Hurries", value: String(stats.hurries), detail: "давление" },
+      { label: "Run stops", value: String(stats.runStops), detail: "карьера" },
+      snaps,
     ];
     case "LB": return [
-      { label: "Захваты", value: String(totals.tackles), detail: "сезон" },
-      { label: "Сэки", value: String(totals.sacks), detail: "сезон" },
-      { label: "INT", value: String(totals.interceptions), detail: "сезон" },
-      { label: "Снэпы", value: String(totals.snaps), detail: `${totals.starts} стартов` },
+      { label: "Захваты", value: String(stats.tackles), detail: "карьера" },
+      { label: "Сэки", value: String(stats.sacks), detail: "карьера" },
+      { label: "INT", value: String(stats.interceptions), detail: "карьера" },
+      snaps,
     ];
-    case "CB": return [
-      { label: "Захваты", value: String(totals.tackles), detail: "сезон" },
-      { label: "INT", value: String(totals.interceptions), detail: "сезон" },
-      { label: "Старты", value: String(totals.starts), detail: `${career.gamesPlayed} игр` },
-      { label: "Снэпы", value: String(totals.snaps), detail: "сезон" },
+    case "CB":
+    case "S": return [
+      { label: "Захваты", value: String(stats.tackles), detail: "карьера" },
+      { label: "INT/PBU", value: `${stats.interceptions}/${stats.passBreakups}`, detail: "coverage" },
+      { label: "Coverage", value: String(stats.coverageSnaps), detail: "снэпы" },
+      snaps,
+    ];
+    case "K": return [
+      { label: "Филд-голы", value: `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}`, detail: "карьера" },
+      { label: "Дальний", value: String(stats.longestFieldGoal), detail: "ярдов" },
+      { label: "Очки", value: String(stats.fieldGoalsMade * 3), detail: "карьера" },
+      snaps,
+    ];
+    case "P": return [
+      { label: "Панты", value: String(stats.punts), detail: "карьера" },
+      { label: "Net yards", value: String(stats.puntYards), detail: "суммарно" },
+      { label: "Inside 20", value: String(stats.puntsInside20), detail: "карьера" },
+      snaps,
     ];
   }
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 25;
+export const CURRENT_SCHEMA_VERSION = 26;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -94,6 +94,7 @@ const schoolSchema = z.object({
 const playerYearSchema = z.enum(["Freshman", "Sophomore", "Junior", "Senior"]);
 const rosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OT", "OG", "C", "OL", "EDGE", "DT", "DL", "LB", "CB", "S", "K", "P"]);
 const ecosystemRosterPositionSchema = z.enum(["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S", "K", "P"]);
+const careerFootballPositionSchema = ecosystemRosterPositionSchema;
 const coachSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(3),
@@ -215,6 +216,19 @@ const matchStatLineSchema = z.object({
   sacks: z.number().int().nonnegative(),
   passBreakups: z.number().int().nonnegative(),
   interceptions: z.number().int().nonnegative(),
+  sacksAllowed: z.number().int().nonnegative().default(0),
+  pressuresAllowed: z.number().int().nonnegative().default(0),
+  pancakes: z.number().int().nonnegative().default(0),
+  hurries: z.number().int().nonnegative().default(0),
+  runStops: z.number().int().nonnegative().default(0),
+  coverageSnaps: z.number().int().nonnegative().default(0),
+  fieldGoalsAttempted: z.number().int().nonnegative().default(0),
+  fieldGoalsMade: z.number().int().nonnegative().default(0),
+  longestFieldGoal: z.number().int().nonnegative().default(0),
+  punts: z.number().int().nonnegative().default(0),
+  puntYards: z.number().int().nonnegative().default(0),
+  puntsInside20: z.number().int().nonnegative().default(0),
+  returnYardsAllowed: z.number().int().nonnegative().default(0),
 });
 
 const matchAdvancedStatLineSchema = z.object({
@@ -227,6 +241,11 @@ const matchAdvancedStatLineSchema = z.object({
   pressures: z.number().int().nonnegative(),
   coverageWins: z.number().int().nonnegative(),
   missedTackles: z.number().int().nonnegative(),
+  passProtectionWins: z.number().int().nonnegative().default(0),
+  runBlockWins: z.number().int().nonnegative().default(0),
+  doubleTeamWins: z.number().int().nonnegative().default(0),
+  kickQuality: z.number().int().nonnegative().default(0),
+  puntQuality: z.number().int().nonnegative().default(0),
 });
 
 const emptyAdvancedMatchStats = {
@@ -239,6 +258,11 @@ const emptyAdvancedMatchStats = {
   pressures: 0,
   coverageWins: 0,
   missedTackles: 0,
+  passProtectionWins: 0,
+  runBlockWins: 0,
+  doubleTeamWins: 0,
+  kickQuality: 0,
+  puntQuality: 0,
 } as const;
 
 const matchDecisionOptionSchema = z.object({
@@ -257,7 +281,7 @@ const matchPlayCallSchema = z.object({
   formation: z.string().min(2),
   personnel: z.string().min(1),
   concept: z.string().min(2),
-  playType: z.enum(["run", "pass", "play-action", "screen", "blitz", "coverage"]),
+  playType: z.enum(["run", "pass", "play-action", "screen", "blitz", "coverage", "field-goal", "punt"]),
   strength: z.enum(["left", "right", "middle"]),
   calledBy: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator"]),
   canCheck: z.boolean(),
@@ -276,12 +300,12 @@ const matchPointSchema = z.object({
 const matchPlayerAssignmentSchema = z.object({
   id: z.string().min(1),
   side: z.enum(["hero", "opponent"]),
-  unit: z.enum(["offense", "defense"]),
+  unit: z.enum(["offense", "defense", "special"]),
   slot: z.string().min(1),
   position: z.string().min(1),
   label: z.string().min(1),
   isHero: z.boolean(),
-  kind: z.enum(["handoff", "carry", "pass-read", "route", "run-block", "pass-protection", "rush", "run-fit", "zone-coverage", "man-coverage", "spy", "contain"]),
+  kind: z.enum(["handoff", "carry", "pass-read", "route", "run-block", "pass-protection", "rush", "run-fit", "zone-coverage", "man-coverage", "spy", "contain", "kick", "punt", "long-snap", "kick-protection", "return", "return-coverage"]),
   task: z.string().min(2),
   start: matchPointSchema,
   end: matchPointSchema,
@@ -321,8 +345,8 @@ const matchEpisodeSchema = z.object({
   id: z.string().min(1),
   driveId: z.string().min(1).default("legacy-drive"),
   possession: z.enum(["hero", "opponent"]).default("hero"),
-  unit: z.enum(["offense", "defense"]),
-  position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+  unit: z.enum(["offense", "defense", "special"]),
+  position: careerFootballPositionSchema,
   quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   clockSeconds: z.number().int().min(0).max(900),
   playClockSeconds: z.number().int().min(0).max(40).default(25),
@@ -396,7 +420,7 @@ const footballMatchSchema = z.object({
   opponentName: z.string().min(2),
   opponentRecord: z.string().min(1),
   opponentThreat: z.string().min(2),
-  heroUnit: z.enum(["offense", "defense"]),
+  heroUnit: z.enum(["offense", "defense", "special"]),
   heroScore: z.number().int().nonnegative(),
   opponentScore: z.number().int().nonnegative(),
   quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
@@ -711,11 +735,10 @@ const footballCollegeSchema = z.object({
 
 
 const professionalPositionNeedsSchema = z.object({
-  QB: z.number().min(0).max(100),
-  RB: z.number().min(0).max(100),
-  WR: z.number().min(0).max(100),
-  LB: z.number().min(0).max(100),
-  CB: z.number().min(0).max(100),
+  QB: z.number().min(0).max(100), RB: z.number().min(0).max(100), WR: z.number().min(0).max(100),
+  TE: z.number().min(0).max(100).default(55), OT: z.number().min(0).max(100).default(55), OG: z.number().min(0).max(100).default(55), C: z.number().min(0).max(100).default(55),
+  EDGE: z.number().min(0).max(100).default(55), DT: z.number().min(0).max(100).default(55), LB: z.number().min(0).max(100), CB: z.number().min(0).max(100),
+  S: z.number().min(0).max(100).default(55), K: z.number().min(0).max(100).default(45), P: z.number().min(0).max(100).default(45),
 });
 
 const professionalStateSchema = z.object({
@@ -755,7 +778,7 @@ const professionalStateSchema = z.object({
   prospects: z.array(z.object({
     id: z.string().min(1),
     name: z.string().min(2),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: careerFootballPositionSchema,
     collegeName: z.string().min(1),
     age: z.number().int().min(18).max(30),
     overall: z.number().min(0).max(100),
@@ -799,7 +822,7 @@ const professionalStateSchema = z.object({
     teamId: z.string().min(1),
     prospectId: z.string().min(1),
     prospectName: z.string().min(2),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: careerFootballPositionSchema,
     collegeName: z.string().min(1),
     grade: z.number().min(0).max(100),
     isHero: z.boolean(),
@@ -812,7 +835,7 @@ const professionalStateSchema = z.object({
     teamId: z.string().min(1),
     prospectId: z.string().min(1),
     prospectName: z.string().min(2),
-    position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+    position: careerFootballPositionSchema,
     collegeName: z.string().min(1),
     grade: z.number().min(0).max(100),
     isHero: z.boolean(),
@@ -865,7 +888,7 @@ const footballSchema = z.object({
   moduleVersion: z.literal(8),
   worldSeed: z.string().min(1),
   stage: z.enum(["high-school-preseason", "college-orientation", "college-season", "professional-draft", "professional-career"]),
-  position: z.enum(["QB", "RB", "WR", "LB", "CB"]),
+  position: careerFootballPositionSchema,
   archetypeId: z.string().min(1),
   archetypeName: z.string().min(1),
   jerseyNumber: z.number().int().min(0).max(99),
@@ -1785,7 +1808,7 @@ export interface CareerIndexRecord {
   currentDate: string;
   updatedAt: string;
   revision: number;
-  position: "QB" | "RB" | "WR" | "LB" | "CB";
+  position: "QB" | "RB" | "WR" | "TE" | "OT" | "OG" | "C" | "EDGE" | "DT" | "LB" | "CB" | "S" | "K" | "P";
   jerseyNumber: number;
   schoolName: string;
   seasonLabel: string;

@@ -301,13 +301,22 @@ export function createFootballCareerState(
 
 export function createLegacyFootballSetup(worldSeed: string): FootballCareerSetup {
   const random = new SeededRandom(worldSeed).fork("legacy-setup");
-  const position = random.pick(["QB", "RB", "WR", "LB", "CB"] as const);
+  const position = random.pick(CAREER_FOOTBALL_POSITIONS);
   const archetypesByPosition: Record<typeof position, readonly string[]> = {
     QB: ["field-general", "gunslinger", "dual-threat"],
     RB: ["power-back", "slasher", "receiving-back"],
     WR: ["route-technician", "vertical-threat", "contested-catch"],
+    TE: ["inline-blocker", "seam-threat", "move-tight-end"],
+    OT: ["blindside-anchor", "zone-tackle", "power-tackle"],
+    OG: ["pull-guard", "phone-booth-guard", "zone-guard"],
+    C: ["line-caller", "reach-center", "power-center"],
+    EDGE: ["speed-rusher", "power-rusher", "edge-setter"],
+    DT: ["nose-anchor", "interior-penetrator", "three-technique"],
     LB: ["run-stopper", "coverage-linebacker", "edge-hunter"],
     CB: ["press-corner", "ball-hawk", "shutdown-corner"],
+    S: ["box-safety", "center-fielder", "match-safety"],
+    K: ["accuracy-kicker", "power-kicker", "clutch-kicker"],
+    P: ["directional-punter", "hangtime-punter", "field-position-punter"],
   };
   const positionDescriptor = getPositionDescriptor(position);
   return {

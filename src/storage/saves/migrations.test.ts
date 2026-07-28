@@ -602,6 +602,65 @@ describe("migrateCareerSave", () => {
   });
 
 
+  it("migrates version twenty-five saves into all-position career statistics", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const stripStats = (stats: typeof current.football.match.stats) => {
+      const {
+        sacksAllowed: _sacksAllowed,
+        pressuresAllowed: _pressuresAllowed,
+        pancakes: _pancakes,
+        hurries: _hurries,
+        runStops: _runStops,
+        coverageSnaps: _coverageSnaps,
+        fieldGoalsAttempted: _fieldGoalsAttempted,
+        fieldGoalsMade: _fieldGoalsMade,
+        longestFieldGoal: _longestFieldGoal,
+        punts: _punts,
+        puntYards: _puntYards,
+        puntsInside20: _puntsInside20,
+        returnYardsAllowed: _returnYardsAllowed,
+        ...legacy
+      } = stats;
+      return legacy;
+    };
+    const stripAdvanced = (stats: typeof current.football.match.advancedStats) => {
+      const {
+        passProtectionWins: _passProtectionWins,
+        runBlockWins: _runBlockWins,
+        doubleTeamWins: _doubleTeamWins,
+        kickQuality: _kickQuality,
+        puntQuality: _puntQuality,
+        ...legacy
+      } = stats;
+      return legacy;
+    };
+    const versionTwentyFive = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 25 as const },
+      football: {
+        ...current.football,
+        match: {
+          ...current.football.match,
+          stats: stripStats(current.football.match.stats),
+          advancedStats: stripAdvanced(current.football.match.advancedStats),
+          completedEpisodes: current.football.match.completedEpisodes.map((episode) => ({
+            ...episode,
+            statDelta: stripStats(episode.statDelta),
+            advancedDelta: stripAdvanced(episode.advancedDelta),
+          })),
+        },
+        season: { ...current.football.season, heroTotals: stripStats(current.football.season.heroTotals) },
+      },
+    };
+    const result = migrateCareerSave(versionTwentyFive);
+    expect(result.migratedFrom).toBe(25);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.match.stats.fieldGoalsAttempted).toBe(0);
+    expect(result.save.football.match.stats.sacksAllowed).toBe(0);
+    expect(result.save.football.match.advancedStats.passProtectionWins).toBe(0);
+    expect(result.save.history.at(-1)?.title).toBe("Карьера всех позиций подключена");
+  });
+
   it("migrates version twenty-four saves into complete football rosters", () => {
     const current = migrateCareerSave(legacySave).save;
     const versionTwentyFour = {

@@ -14,7 +14,11 @@ import type {
   TeamDynamics,
 } from "../team/types";
 
-export type FootballPosition = "QB" | "RB" | "WR" | "LB" | "CB";
+export const CAREER_FOOTBALL_POSITIONS = [
+  "QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S", "K", "P",
+] as const;
+
+export type FootballPosition = (typeof CAREER_FOOTBALL_POSITIONS)[number];
 
 export interface FootballCareerSetup {
   character: CharacterCreationInput;

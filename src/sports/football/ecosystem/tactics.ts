@@ -288,8 +288,17 @@ export function careerArchetypeRole(position: FootballPosition, archetypeId: str
     QB: { "field-general": "field-general", gunslinger: "pocket-distributor", "dual-threat": "dual-threat" },
     RB: { "power-back": "power-back", slasher: "zone-runner", "receiving-back": "receiving-back" },
     WR: { "route-technician": "separator", "vertical-threat": "vertical-threat", "contested-catch": "possession-target" },
+    TE: { "inline-blocker": "inline-receiver", "seam-threat": "seam-threat", "move-tight-end": "move-tight-end" },
+    OT: { "blindside-anchor": "blindside-anchor", "zone-tackle": "zone-tackle", "power-tackle": "power-tackle" },
+    OG: { "pull-guard": "pull-guard", "phone-booth-guard": "phone-booth-guard", "zone-guard": "zone-guard" },
+    C: { "line-caller": "line-caller", "reach-center": "reach-center", "power-center": "power-center" },
+    EDGE: { "speed-rusher": "speed-rusher", "power-rusher": "power-rusher", "edge-setter": "edge-setter" },
+    DT: { "nose-anchor": "nose-anchor", "interior-penetrator": "interior-penetrator", "three-technique": "three-technique" },
     LB: { "run-stopper": "run-anchor", "coverage-linebacker": "coverage-backer", "edge-hunter": "edge-blitzer" },
     CB: { "press-corner": "press-corner", "ball-hawk": "ball-hawk", "shutdown-corner": "zone-corner" },
+    S: { "box-safety": "box-safety", "center-fielder": "center-fielder", "match-safety": "match-safety" },
+    K: { "accuracy-kicker": "accuracy-kicker", "power-kicker": "power-kicker", "clutch-kicker": "clutch-kicker" },
+    P: { "directional-punter": "directional-punter", "hangtime-punter": "hangtime-punter", "field-position-punter": "field-position-punter" },
   };
   return mappings[position][archetypeId] ?? ROLE_BY_POSITION[position][0]!;
 }

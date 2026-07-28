@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { formatGameDate } from "../../core/calendar/types";
 import { BottomSheet } from "../ui/BottomSheet";
-import type { MatchDriveOutcome, MatchEpisode } from "../../sports/football/matches/types";
+import type { MatchDriveOutcome, MatchEpisode, MatchUnit } from "../../sports/football/matches/types";
 import { Icon } from "../ui/Icon";
 
 interface MatchDashboardProps {
@@ -29,8 +29,8 @@ function clockLabel(seconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
-function unitLabel(unit: "offense" | "defense"): string {
-  return unit === "offense" ? "АТАКА" : "ЗАЩИТА";
+function unitLabel(unit: MatchUnit): string {
+  return unit === "offense" ? "АТАКА" : unit === "defense" ? "ЗАЩИТА" : "СПЕЦКОМАНДЫ";
 }
 
 function riskLabel(risk: "safe" | "balanced" | "aggressive"): string {
@@ -61,7 +61,8 @@ function FormationBoard({ episode }: { episode: MatchEpisode }) {
   const target = episode.assignments.find((assignment) => assignment.unit === "offense" && assignment.slot === episode.playCall.primarySlot)
     ?? episode.assignments.find((assignment) => assignment.unit === "offense" && assignment.slot === episode.opponentCall.primarySlot);
   const ballCarrier = episode.assignments.find((assignment) => assignment.kind === "carry");
-  const destination = ballCarrier?.end ?? target?.end ?? { x: 50, y: 28 };
+  const specialist = episode.assignments.find((assignment) => assignment.kind === "kick" || assignment.kind === "punt");
+  const destination = specialist?.end ?? ballCarrier?.end ?? target?.end ?? { x: 50, y: 28 };
   const ballStyle = {
     "--ball-left": `${destination.x}%`,
     "--ball-top": `${destination.y}%`,
@@ -81,7 +82,7 @@ function FormationBoard({ episode }: { episode: MatchEpisode }) {
           />
         ))}
       </svg>
-      <div className="formation-board__endzone formation-board__endzone--away">DEFENSE</div>
+      <div className="formation-board__endzone formation-board__endzone--away">{episode.unit === "special" ? "BLOCK / RETURN" : "DEFENSE"}</div>
       <div className="formation-board__hash formation-board__hash--left" />
       <div className="formation-board__hash formation-board__hash--right" />
       <div className="formation-board__line" />
@@ -105,19 +106,30 @@ function FormationBoard({ episode }: { episode: MatchEpisode }) {
           </span>
         );
       })}
-      <div className="formation-board__endzone formation-board__endzone--home">OFFENSE</div>
-      <span className="formation-board__snap-label">22 PLAYERS · SNAP</span>
+      <div className="formation-board__endzone formation-board__endzone--home">{episode.unit === "special" ? "SPECIAL TEAMS" : "OFFENSE"}</div>
+      <span className="formation-board__snap-label">22 PLAYERS · {episode.unit === "special" ? "KICK" : "SNAP"}</span>
     </section>
   );
 }
 
 function SnapPersonnel({ episode }: { episode: MatchEpisode }) {
+  const groups = episode.unit === "special"
+    ? (["hero", "opponent"] as const).map((side) => ({
+        id: side,
+        label: side === "hero" ? "Спецкоманда" : "Блок / возврат",
+        assignments: episode.assignments.filter((assignment) => assignment.side === side),
+      }))
+    : (["offense", "defense"] as const).map((unit) => ({
+        id: unit,
+        label: unit === "offense" ? "Атака" : "Защита",
+        assignments: episode.assignments.filter((assignment) => assignment.unit === unit),
+      }));
   return (
     <section className="snap-personnel">
-      {(["offense", "defense"] as const).map((unit) => (
-        <div key={unit}>
-          <header><strong>{unit === "offense" ? "Атака" : "Защита"}</strong><span>11 игроков</span></header>
-          {episode.assignments.filter((assignment) => assignment.unit === unit).map((assignment) => (
+      {groups.map((group) => (
+        <div key={group.id}>
+          <header><strong>{group.label}</strong><span>{group.assignments.length} игроков</span></header>
+          {group.assignments.map((assignment) => (
             <article key={assignment.id} className={assignment.isHero ? "is-hero" : ""}>
               <span>{assignment.slot}</span>
               <div><strong>{assignment.playerName ?? assignment.label}</strong><small>{assignment.position} · #{assignment.depthRank ?? "—"} · {assignment.task}</small></div>
@@ -147,43 +159,65 @@ function initials(name: string): string {
 function statLine(save: CareerSave): Array<{ label: string; value: string }> {
   const stats = save.football.match.stats;
   switch (save.football.position) {
-    case "QB":
-      return [
-        { label: "COMP/ATT", value: `${stats.completions}/${stats.passingAttempts}` },
-        { label: "PASS YDS", value: String(stats.passingYards) },
-        { label: "TD", value: String(stats.touchdowns) },
-        { label: "TO", value: String(stats.turnovers) },
-      ];
-    case "RB":
-      return [
-        { label: "CAR", value: String(stats.rushingAttempts) },
-        { label: "RUSH YDS", value: String(stats.rushingYards) },
-        { label: "TD", value: String(stats.touchdowns) },
-        { label: "TO", value: String(stats.turnovers) },
-      ];
+    case "QB": return [
+      { label: "COMP/ATT", value: `${stats.completions}/${stats.passingAttempts}` },
+      { label: "PASS YDS", value: String(stats.passingYards) },
+      { label: "TD", value: String(stats.touchdowns) },
+      { label: "TO", value: String(stats.turnovers) },
+    ];
+    case "RB": return [
+      { label: "CAR", value: String(stats.rushingAttempts) },
+      { label: "RUSH YDS", value: String(stats.rushingYards) },
+      { label: "REC YDS", value: String(stats.receivingYards) },
+      { label: "TD", value: String(stats.touchdowns) },
+    ];
     case "WR":
-      return [
-        { label: "REC/TGT", value: `${stats.receptions}/${stats.targets}` },
-        { label: "REC YDS", value: String(stats.receivingYards) },
-        { label: "TD", value: String(stats.touchdowns) },
-        { label: "TO", value: String(stats.turnovers) },
-      ];
-    case "LB":
-      return [
-        { label: "TACKLES", value: String(stats.tackles) },
-        { label: "TFL", value: String(stats.tacklesForLoss) },
-        { label: "SACK", value: String(stats.sacks) },
-        { label: "INT", value: String(stats.interceptions) },
-      ];
+    case "TE": return [
+      { label: "REC/TGT", value: `${stats.receptions}/${stats.targets}` },
+      { label: "REC YDS", value: String(stats.receivingYards) },
+      { label: "BLOCK W", value: String(save.football.match.advancedStats.blocksWon) },
+      { label: "TD", value: String(stats.touchdowns) },
+    ];
+    case "OT":
+    case "OG":
+    case "C": return [
+      { label: "PASS PRO", value: String(save.football.match.advancedStats.passProtectionWins) },
+      { label: "RUN BLOCK", value: String(save.football.match.advancedStats.runBlockWins) },
+      { label: "PRESS ALW", value: String(stats.pressuresAllowed) },
+      { label: "PANCAKES", value: String(stats.pancakes) },
+    ];
+    case "EDGE":
+    case "DT": return [
+      { label: "SACK", value: String(stats.sacks) },
+      { label: "HURRY", value: String(stats.hurries) },
+      { label: "TFL", value: String(stats.tacklesForLoss) },
+      { label: "RUN STOP", value: String(stats.runStops) },
+    ];
+    case "LB": return [
+      { label: "TACKLES", value: String(stats.tackles) },
+      { label: "TFL", value: String(stats.tacklesForLoss) },
+      { label: "SACK", value: String(stats.sacks) },
+      { label: "INT", value: String(stats.interceptions) },
+    ];
     case "CB":
-      return [
-        { label: "TACKLES", value: String(stats.tackles) },
-        { label: "PBU", value: String(stats.passBreakups) },
-        { label: "INT", value: String(stats.interceptions) },
-        { label: "TD", value: String(stats.touchdowns) },
-      ];
-    default:
-      return [];
+    case "S": return [
+      { label: "TACKLES", value: String(stats.tackles) },
+      { label: "PBU", value: String(stats.passBreakups) },
+      { label: "INT", value: String(stats.interceptions) },
+      { label: "COV SNAP", value: String(stats.coverageSnaps) },
+    ];
+    case "K": return [
+      { label: "FG", value: `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}` },
+      { label: "LONG", value: String(stats.longestFieldGoal) },
+      { label: "QUALITY", value: String(save.football.match.advancedStats.kickQuality) },
+      { label: "PTS", value: String(stats.fieldGoalsMade * 3) },
+    ];
+    case "P": return [
+      { label: "PUNTS", value: String(stats.punts) },
+      { label: "NET YDS", value: String(stats.puntYards) },
+      { label: "INSIDE 20", value: String(stats.puntsInside20) },
+      { label: "RET ALW", value: String(stats.returnYardsAllowed) },
+    ];
   }
 }
 
@@ -200,6 +234,7 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
     : football.school.shortName;
   const offenseCall = episode ? (match.heroUnit === "offense" ? episode.playCall : episode.opponentCall) : undefined;
   const defenseCall = episode ? (match.heroUnit === "defense" ? episode.playCall : episode.opponentCall) : undefined;
+  const specialCall = episode?.unit === "special" ? episode.playCall : undefined;
   const lastResult = match.completedEpisodes.at(-1);
   const assignmentRate = match.advancedStats.snaps > 0
     ? Math.round(match.advancedStats.assignmentWins / match.advancedStats.snaps * 100)
@@ -292,17 +327,35 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
 
           <section className="match-called-play match-called-play--kernel">
             <div className="match-call-duel">
-              <article>
-                <small>АТАКА · {offenseCall?.personnel}</small>
-                <strong>{offenseCall?.formation}</strong>
-                <span>{offenseCall?.concept}</span>
-              </article>
-              <b>VS</b>
-              <article>
-                <small>ЗАЩИТА · {defenseCall?.personnel}</small>
-                <strong>{defenseCall?.formation}</strong>
-                <span>{defenseCall?.concept}</span>
-              </article>
+              {specialCall ? (
+                <>
+                  <article>
+                    <small>СПЕЦКОМАНДА · {specialCall.personnel}</small>
+                    <strong>{specialCall.formation}</strong>
+                    <span>{specialCall.concept}</span>
+                  </article>
+                  <b>VS</b>
+                  <article>
+                    <small>БЛОК / ВОЗВРАТ</small>
+                    <strong>{episode.opponentCall.formation}</strong>
+                    <span>{episode.opponentCall.concept}</span>
+                  </article>
+                </>
+              ) : (
+                <>
+                  <article>
+                    <small>АТАКА · {offenseCall?.personnel}</small>
+                    <strong>{offenseCall?.formation}</strong>
+                    <span>{offenseCall?.concept}</span>
+                  </article>
+                  <b>VS</b>
+                  <article>
+                    <small>ЗАЩИТА · {defenseCall?.personnel}</small>
+                    <strong>{defenseCall?.formation}</strong>
+                    <span>{defenseCall?.concept}</span>
+                  </article>
+                </>
+              )}
             </div>
             <FormationBoard key={episode.id} episode={episode} />
             <div className="match-called-play__meta">

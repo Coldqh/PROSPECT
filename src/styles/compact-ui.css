@@ -205,6 +205,7 @@
 :root .formation-player { position: absolute; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font-size: var(--type-caption-size); font-weight: 800; transform: translate(-50%,-50%); box-shadow: 0 2px 7px rgba(0,0,0,.42); animation: formation-snap 1.55s var(--ease-emphasized) var(--snap-delay, 0ms) both; }
 :root .formation-player--offense { color: #fff; background: #d43a4e; border: 2px solid #ff7586; }
 :root .formation-player--defense { color: #e8edf5; background: #283246; border: 2px solid #8793a7; }
+:root .formation-player--special { color: #11151c; background: #f0c95a; border: 2px solid #ffe49a; }
 :root .formation-player.is-hero { width: 30px; height: 30px; z-index: 2; color: #07100a; background: #f5f6f8; border-color: #fff; box-shadow: 0 0 0 3px var(--accent),0 3px 12px rgba(0,0,0,.6); }
 :root .match-called-play__meta { margin-top: 7px; display: grid; grid-template-columns: 130px minmax(0,1fr); gap: 1px; overflow: hidden; border-radius: 8px; background: var(--line); }
 :root .match-called-play__meta span { min-width: 0; padding: 6px 7px; display: grid; background: #0a0d12; }
@@ -353,6 +354,7 @@
 }
 :root .formation-route--offense { stroke: #ff7586; }
 :root .formation-route--defense { stroke: #9ba8bc; }
+:root .formation-route--special { stroke: #f0c95a; }
 :root .formation-route.is-hero { stroke: #fff; stroke-width: 2.2; opacity: .9; }
 :root .formation-board__hash {
   position: absolute;

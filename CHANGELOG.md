@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.35.0 — ALL PLAYABLE POSITIONS
+
+### Карьера
+
+- герой может начать карьеру за все 14 позиций: QB, RB, WR, TE, OT, OG, C, EDGE, DT, LB, CB, S, K и P;
+- добавлены 42 позиционных архетипа, физические профили, номера и scheme fit;
+- создание персонажа, рекрутинг, college transition, портал и профессиональный драфт переведены на единый каталог позиций;
+- схема сохранения повышена до 26 с миграцией старой матчевой статистики.
+
+### Матч и статистика
+
+- TE получил маршруты, chip и блокирующие задания;
+- OT, OG и C получили pass protection, run block, double-team, pull и line call;
+- EDGE и DT получили rush, contain, stunt, gap control и penetration;
+- S получил deep zone, robber, man coverage и run support;
+- K и P играют отдельные специальные снэпы с настоящими блокирующими и return units;
+- добавлены sacks allowed, pressures allowed, pancakes, hurries, run stops, coverage snaps, field goals, longest field goal, punt yards, punts inside 20 и return yards allowed;
+- longest field goal агрегируется как максимум, а не сумма попыток;
+- все 22 слота снэпа продолжают использовать уникальных реальных игроков.
+
+### Проверки
+
+- пять архитектурных проверок — PASS;
+- синтаксис 137 TS/TSX-файлов — PASS;
+- полные матчи за все 14 позиций — PASS;
+- полный семираундовый draft flow за все 14 позиций — PASS.
+
 ## 0.34.0 — FULL FOOTBALL ROSTERS
 
 ### Полные составы
