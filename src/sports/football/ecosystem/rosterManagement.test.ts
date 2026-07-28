@@ -58,6 +58,12 @@ function criticalRoomFixture(team: EcosystemTeam, players: EcosystemPlayer[]) {
           form: player.id === changeCandidate.id ? 78 : player.form,
         };
       }
+      if (player.teamId === team.id) {
+        return {
+          ...player,
+          eligibility: { ...player.eligibility, scholarshipStatus: "full" as const },
+        };
+      }
       return player;
     });
 

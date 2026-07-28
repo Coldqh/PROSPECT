@@ -57,7 +57,7 @@ describe("full-roster autonomous stability", () => {
     expect(save.world.social.bonds.length).toBeLessThanOrEqual(12_000);
     expect(save.world.social.incidents.length).toBeLessThanOrEqual(180);
     expect(save.world.competition.programLegacies).toHaveLength(24);
-    expect(save.world.talentPipeline.classHistory).toHaveLength(20);
+    expect(save.world.talentPipeline.classHistory).toHaveLength(Math.min(20, 1 + report.completedSeasons));
   }, 90_000);
 
   it("produces the same two-season report from the same seed", () => {

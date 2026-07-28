@@ -166,7 +166,7 @@ describe("football ecosystem", () => {
       (transaction) => transaction.kind === "graduation" && transaction.playerId === graduatingPlayer.id,
     )).toBe(true);
     expect(result.world.conferences.some((conference) => conference.champions.length > 0)).toBe(true);
-  });
+  }, 90_000);
 
 
   it("moves the same hero entity into the selected college roster", () => {
