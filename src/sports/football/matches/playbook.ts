@@ -156,62 +156,72 @@ function point(x: number, y: number): MatchPoint {
   };
 }
 
+const PLAY_LOS_Y = 60;
+
+function offenseY(yardsBehindLine: number): number {
+  return PLAY_LOS_Y + yardsBehindLine;
+}
+
+function defenseY(yardsBeyondLine: number): number {
+  return PLAY_LOS_Y - yardsBeyondLine;
+}
+
 function offenseFormation(formation: string): FormationPlayer[] {
   const line: FormationPlayer[] = [
-    { slot: "LT", position: "OT", label: "LT", start: point(36, 62) },
-    { slot: "LG", position: "OG", label: "LG", start: point(43, 61) },
-    { slot: "C", position: "C", label: "C", start: point(50, 60) },
-    { slot: "RG", position: "OG", label: "RG", start: point(57, 61) },
-    { slot: "RT", position: "OT", label: "RT", start: point(64, 62) },
+    { slot: "LT", position: "OT", label: "LT", start: point(36, offenseY(0.25)) },
+    { slot: "LG", position: "OG", label: "LG", start: point(43, offenseY(0.12)) },
+    { slot: "C", position: "C", label: "C", start: point(50, offenseY(0)) },
+    { slot: "RG", position: "OG", label: "RG", start: point(57, offenseY(0.12)) },
+    { slot: "RT", position: "OT", label: "RT", start: point(64, offenseY(0.25)) },
   ];
   const skill: Record<string, FormationPlayer[]> = {
     "Gun Trips": [
-      { slot: "X", position: "WR", label: "X", start: point(10, 53) },
-      { slot: "Y", position: "TE", label: "Y", start: point(69, 55) },
-      { slot: "H", position: "WR", label: "H", start: point(78, 50) },
-      { slot: "Z", position: "WR", label: "Z", start: point(91, 53) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 73) },
-      { slot: "RB", position: "RB", label: "RB", start: point(42, 82) },
+      { slot: "X", position: "WR", label: "X", start: point(10, offenseY(0)) },
+      { slot: "Y", position: "TE", label: "Y", start: point(69, offenseY(0.45)) },
+      { slot: "H", position: "WR", label: "H", start: point(78, offenseY(1.2)) },
+      { slot: "Z", position: "WR", label: "Z", start: point(91, offenseY(0)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(5)) },
+      { slot: "RB", position: "RB", label: "RB", start: point(42, offenseY(6.5)) },
     ],
     "Gun Doubles": [
-      { slot: "X", position: "WR", label: "X", start: point(9, 52) },
-      { slot: "H", position: "WR", label: "H", start: point(24, 49) },
-      { slot: "Y", position: "TE", label: "Y", start: point(76, 49) },
-      { slot: "Z", position: "WR", label: "Z", start: point(91, 52) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 73) },
-      { slot: "RB", position: "RB", label: "RB", start: point(58, 82) },
+      { slot: "X", position: "WR", label: "X", start: point(9, offenseY(0)) },
+      { slot: "H", position: "WR", label: "H", start: point(24, offenseY(1.1)) },
+      { slot: "Y", position: "TE", label: "Y", start: point(76, offenseY(1.1)) },
+      { slot: "Z", position: "WR", label: "Z", start: point(91, offenseY(0)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(5)) },
+      { slot: "RB", position: "RB", label: "RB", start: point(58, offenseY(6.5)) },
     ],
     "Singleback Ace": [
-      { slot: "X", position: "WR", label: "X", start: point(10, 53) },
-      { slot: "Y", position: "TE", label: "Y", start: point(69, 56) },
-      { slot: "U", position: "TE", label: "U", start: point(31, 56) },
-      { slot: "Z", position: "WR", label: "Z", start: point(90, 53) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 68) },
-      { slot: "RB", position: "RB", label: "RB", start: point(50, 84) },
+      { slot: "X", position: "WR", label: "X", start: point(10, offenseY(0)) },
+      { slot: "Y", position: "TE", label: "Y", start: point(69, offenseY(0.35)) },
+      { slot: "U", position: "TE", label: "U", start: point(31, offenseY(0.35)) },
+      { slot: "Z", position: "WR", label: "Z", start: point(90, offenseY(0)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(0.9)) },
+      { slot: "RB", position: "RB", label: "RB", start: point(50, offenseY(7)) },
     ],
     "Pistol Strong": [
-      { slot: "X", position: "WR", label: "X", start: point(9, 53) },
-      { slot: "Z", position: "WR", label: "Z", start: point(91, 53) },
-      { slot: "Y", position: "TE", label: "Y", start: point(71, 56) },
-      { slot: "FB", position: "RB", label: "FB", start: point(40, 78) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 73) },
-      { slot: "RB", position: "RB", label: "RB", start: point(50, 88) },
+      { slot: "X", position: "WR", label: "X", start: point(9, offenseY(0)) },
+      { slot: "Z", position: "WR", label: "Z", start: point(91, offenseY(0)) },
+      { slot: "Y", position: "TE", label: "Y", start: point(71, offenseY(0.4)) },
+      { slot: "FB", position: "RB", label: "FB", start: point(40, offenseY(5.5)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(4)) },
+      { slot: "RB", position: "RB", label: "RB", start: point(50, offenseY(7.2)) },
     ],
     Empty: [
-      { slot: "X", position: "WR", label: "X", start: point(7, 52) },
-      { slot: "H", position: "WR", label: "H", start: point(22, 48) },
-      { slot: "F", position: "RB", label: "F", start: point(34, 51) },
-      { slot: "Y", position: "WR", label: "Y", start: point(78, 48) },
-      { slot: "Z", position: "WR", label: "Z", start: point(93, 52) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 74) },
+      { slot: "X", position: "WR", label: "X", start: point(7, offenseY(0)) },
+      { slot: "H", position: "WR", label: "H", start: point(22, offenseY(1.2)) },
+      { slot: "F", position: "RB", label: "F", start: point(34, offenseY(1.2)) },
+      { slot: "Y", position: "WR", label: "Y", start: point(78, offenseY(1.2)) },
+      { slot: "Z", position: "WR", label: "Z", start: point(93, offenseY(0)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(5)) },
     ],
     "Goal Line": [
-      { slot: "Y", position: "TE", label: "Y", start: point(69, 57) },
-      { slot: "U", position: "TE", label: "U", start: point(31, 57) },
-      { slot: "W", position: "TE", label: "W", start: point(76, 61) },
-      { slot: "FB", position: "RB", label: "FB", start: point(44, 76) },
-      { slot: "QB", position: "QB", label: "QB", start: point(50, 68) },
-      { slot: "RB", position: "RB", label: "RB", start: point(50, 84) },
+      { slot: "Y", position: "TE", label: "Y", start: point(69, offenseY(0.3)) },
+      { slot: "U", position: "TE", label: "U", start: point(31, offenseY(0.3)) },
+      { slot: "W", position: "TE", label: "W", start: point(76, offenseY(0.7)) },
+      { slot: "FB", position: "RB", label: "FB", start: point(44, offenseY(3.2)) },
+      { slot: "QB", position: "QB", label: "QB", start: point(50, offenseY(0.8)) },
+      { slot: "RB", position: "RB", label: "RB", start: point(50, offenseY(5.3)) },
     ],
   };
   return [...line, ...(skill[formation] ?? skill["Gun Doubles"]!)];
@@ -220,76 +230,76 @@ function offenseFormation(formation: string): FormationPlayer[] {
 function defenseFormation(formation: string): FormationPlayer[] {
   if (formation === "3–4 Odd") {
     return [
-      { slot: "LE", position: "EDGE", label: "DE", start: point(39, 42) },
-      { slot: "NT", position: "DT", label: "NT", start: point(50, 40) },
-      { slot: "RE", position: "EDGE", label: "DE", start: point(61, 42) },
-      { slot: "WILL", position: "LB", label: "W", start: point(28, 30) },
-      { slot: "MIKE", position: "LB", label: "M", start: point(44, 28) },
-      { slot: "SAM", position: "LB", label: "S", start: point(56, 28) },
-      { slot: "JACK", position: "LB", label: "J", start: point(72, 30) },
-      { slot: "LCB", position: "CB", label: "CB", start: point(9, 22) },
-      { slot: "RCB", position: "CB", label: "CB", start: point(91, 22) },
-      { slot: "FS", position: "S", label: "FS", start: point(39, 10) },
-      { slot: "SS", position: "S", label: "SS", start: point(61, 10) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(39, defenseY(0.8)) },
+      { slot: "NT", position: "DT", label: "NT", start: point(50, defenseY(0.65)) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(61, defenseY(0.8)) },
+      { slot: "WILL", position: "LB", label: "W", start: point(28, defenseY(4.3)) },
+      { slot: "MIKE", position: "LB", label: "M", start: point(44, defenseY(5.1)) },
+      { slot: "SAM", position: "LB", label: "S", start: point(56, defenseY(5.1)) },
+      { slot: "JACK", position: "LB", label: "J", start: point(72, defenseY(4.3)) },
+      { slot: "LCB", position: "CB", label: "CB", start: point(9, defenseY(2.2)) },
+      { slot: "RCB", position: "CB", label: "CB", start: point(91, defenseY(2.2)) },
+      { slot: "FS", position: "S", label: "FS", start: point(39, defenseY(13.5)) },
+      { slot: "SS", position: "S", label: "SS", start: point(61, defenseY(12.5)) },
     ];
   }
   if (formation === "Nickel 4–2–5") {
     return [
-      { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
-      { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
-      { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
-      { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
-      { slot: "WILL", position: "LB", label: "W", start: point(42, 27) },
-      { slot: "MIKE", position: "LB", label: "M", start: point(58, 27) },
-      { slot: "LCB", position: "CB", label: "CB", start: point(8, 21) },
-      { slot: "NB", position: "CB", label: "NB", start: point(28, 23) },
-      { slot: "RCB", position: "CB", label: "CB", start: point(92, 21) },
-      { slot: "FS", position: "S", label: "FS", start: point(41, 9) },
-      { slot: "SS", position: "S", label: "SS", start: point(63, 10) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(35, defenseY(0.85)) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(45, defenseY(0.65)) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(55, defenseY(0.65)) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(65, defenseY(0.85)) },
+      { slot: "WILL", position: "LB", label: "W", start: point(42, defenseY(5.1)) },
+      { slot: "MIKE", position: "LB", label: "M", start: point(58, defenseY(5.1)) },
+      { slot: "LCB", position: "CB", label: "CB", start: point(8, defenseY(2)) },
+      { slot: "NB", position: "CB", label: "NB", start: point(28, defenseY(4.2)) },
+      { slot: "RCB", position: "CB", label: "CB", start: point(92, defenseY(2)) },
+      { slot: "FS", position: "S", label: "FS", start: point(41, defenseY(13.8)) },
+      { slot: "SS", position: "S", label: "SS", start: point(63, defenseY(12.8)) },
     ];
   }
   if (formation === "Dime") {
     return [
-      { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
-      { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
-      { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
-      { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
-      { slot: "MIKE", position: "LB", label: "M", start: point(50, 27) },
-      { slot: "LCB", position: "CB", label: "CB", start: point(7, 21) },
-      { slot: "SCB", position: "CB", label: "DB", start: point(27, 22) },
-      { slot: "NB", position: "CB", label: "NB", start: point(73, 22) },
-      { slot: "RCB", position: "CB", label: "CB", start: point(93, 21) },
-      { slot: "FS", position: "S", label: "FS", start: point(39, 9) },
-      { slot: "SS", position: "S", label: "SS", start: point(61, 9) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(35, defenseY(0.9)) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(45, defenseY(0.65)) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(55, defenseY(0.65)) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(65, defenseY(0.9)) },
+      { slot: "MIKE", position: "LB", label: "M", start: point(50, defenseY(5.5)) },
+      { slot: "LCB", position: "CB", label: "CB", start: point(7, defenseY(3.2)) },
+      { slot: "SCB", position: "CB", label: "DB", start: point(27, defenseY(4.4)) },
+      { slot: "NB", position: "CB", label: "NB", start: point(73, defenseY(4.4)) },
+      { slot: "RCB", position: "CB", label: "CB", start: point(93, defenseY(3.2)) },
+      { slot: "FS", position: "S", label: "FS", start: point(39, defenseY(14.2)) },
+      { slot: "SS", position: "S", label: "SS", start: point(61, defenseY(14.2)) },
     ];
   }
   if (formation === "Bear Front" || formation === "Goal Line") {
     return [
-      { slot: "LE", position: "EDGE", label: "DE", start: point(31, 42) },
-      { slot: "DT1", position: "DT", label: "DT", start: point(40, 40) },
-      { slot: "NT", position: "DT", label: "NT", start: point(50, 39) },
-      { slot: "DT2", position: "DT", label: "DT", start: point(60, 40) },
-      { slot: "RE", position: "EDGE", label: "DE", start: point(69, 42) },
-      { slot: "WILL", position: "LB", label: "W", start: point(38, 27) },
-      { slot: "MIKE", position: "LB", label: "M", start: point(50, 25) },
-      { slot: "SAM", position: "LB", label: "S", start: point(62, 27) },
-      { slot: "LCB", position: "CB", label: "CB", start: point(9, 22) },
-      { slot: "RCB", position: "CB", label: "CB", start: point(91, 22) },
-      { slot: "FS", position: "S", label: "S", start: point(50, 10) },
+      { slot: "LE", position: "EDGE", label: "DE", start: point(31, defenseY(0.7)) },
+      { slot: "DT1", position: "DT", label: "DT", start: point(40, defenseY(0.55)) },
+      { slot: "NT", position: "DT", label: "NT", start: point(50, defenseY(0.5)) },
+      { slot: "DT2", position: "DT", label: "DT", start: point(60, defenseY(0.55)) },
+      { slot: "RE", position: "EDGE", label: "DE", start: point(69, defenseY(0.7)) },
+      { slot: "WILL", position: "LB", label: "W", start: point(38, defenseY(3.7)) },
+      { slot: "MIKE", position: "LB", label: "M", start: point(50, defenseY(3.5)) },
+      { slot: "SAM", position: "LB", label: "S", start: point(62, defenseY(3.7)) },
+      { slot: "LCB", position: "CB", label: "CB", start: point(9, defenseY(1.6)) },
+      { slot: "RCB", position: "CB", label: "CB", start: point(91, defenseY(1.6)) },
+      { slot: "FS", position: "S", label: "S", start: point(50, defenseY(9.5)) },
     ];
   }
   return [
-    { slot: "LE", position: "EDGE", label: "DE", start: point(35, 42) },
-    { slot: "DT1", position: "DT", label: "DT", start: point(45, 40) },
-    { slot: "DT2", position: "DT", label: "DT", start: point(55, 40) },
-    { slot: "RE", position: "EDGE", label: "DE", start: point(65, 42) },
-    { slot: "WILL", position: "LB", label: "W", start: point(31, 28) },
-    { slot: "MIKE", position: "LB", label: "M", start: point(50, 25) },
-    { slot: "SAM", position: "LB", label: "S", start: point(69, 28) },
-    { slot: "LCB", position: "CB", label: "CB", start: point(9, 21) },
-    { slot: "RCB", position: "CB", label: "CB", start: point(91, 21) },
-    { slot: "FS", position: "S", label: "FS", start: point(39, 9) },
-    { slot: "SS", position: "S", label: "SS", start: point(61, 10) },
+    { slot: "LE", position: "EDGE", label: "DE", start: point(35, defenseY(0.85)) },
+    { slot: "DT1", position: "DT", label: "DT", start: point(45, defenseY(0.65)) },
+    { slot: "DT2", position: "DT", label: "DT", start: point(55, defenseY(0.65)) },
+    { slot: "RE", position: "EDGE", label: "DE", start: point(65, defenseY(0.85)) },
+    { slot: "WILL", position: "LB", label: "W", start: point(31, defenseY(5.2)) },
+    { slot: "MIKE", position: "LB", label: "M", start: point(50, defenseY(5.5)) },
+    { slot: "SAM", position: "LB", label: "S", start: point(69, defenseY(5.2)) },
+    { slot: "LCB", position: "CB", label: "CB", start: point(9, defenseY(2.2)) },
+    { slot: "RCB", position: "CB", label: "CB", start: point(91, defenseY(2.2)) },
+    { slot: "FS", position: "S", label: "FS", start: point(39, defenseY(13.5)) },
+    { slot: "SS", position: "S", label: "SS", start: point(61, defenseY(12.5)) },
   ];
 }
 
@@ -318,7 +328,7 @@ function offenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
     const run = call.playType === "run";
     kind = run ? "run-block" : "pass-protection";
     task = run ? `Сместить фронт в ${call.runLane ?? "назначенный гэп"}` : "Сохранить глубину кармана";
-    end = point(player.start.x + direction * (run ? 5 : 1), player.start.y - (run ? 9 : 4));
+    end = point(player.start.x + direction * (run ? 4 : 1), player.start.y + (run ? -3 : 2.5));
   } else if (player.position === "QB") {
     if (call.playType === "run") {
       kind = "handoff";
@@ -327,7 +337,7 @@ function offenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
     } else {
       kind = "pass-read";
       task = `Пройти progression: ${call.progression.join(" → ") || "по структуре"}`;
-      end = point(player.start.x - direction * 4, Math.min(88, player.start.y + 10));
+      end = point(player.start.x - direction * 3, player.start.y + 2.5);
     }
   } else if (player.slot === call.primarySlot && (call.playType === "run" || player.position === "RB" && call.playType === "screen")) {
     kind = "carry";
@@ -386,15 +396,15 @@ function defenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
   if (isFront) {
     kind = "rush";
     task = call.tags.includes("run-commit") ? "Разрушить назначенный гэп" : "Сжать карман и удержать rush lane";
-    end = point(player.start.x + random.integer(-3, 3), player.start.y + 20);
+    end = point(player.start.x + random.integer(-3, 3), offenseY(5));
   } else if (isLinebacker && blitz && (player.slot === "MIKE" || player.slot === "SAM" || player.slot === "JACK")) {
     kind = "rush";
     task = `Атаковать ${call.strength === "middle" ? "A-gap" : `${call.strength} edge`}`;
-    end = point(50 + random.integer(-7, 7), 53);
+    end = point(50 + random.integer(-7, 7), offenseY(5));
   } else if (isLinebacker && call.tags.includes("heavy-box")) {
     kind = "run-fit";
     task = "Закрыть свой гэп и не потерять cutback";
-    end = point(player.start.x + (player.start.x < 50 ? 8 : -8), player.start.y + 15);
+    end = point(player.start.x + (player.start.x < 50 ? 5 : -5), defenseY(1));
   } else if (player.position === "CB" && man) {
     kind = "man-coverage";
     task = `Держать ${matchupSlot ?? "своего ресивера"} с правильным leverage`;
@@ -402,12 +412,12 @@ function defenseAssignment(player: FormationPlayer, call: MatchPlayCall, side: M
   } else if (player.slot === "FS" && call.concept.includes("Robber")) {
     kind = "zone-coverage";
     task = "Читать глаза QB и закрыть внутреннее окно";
-    end = point(50, 29);
+    end = point(50, defenseY(7));
     matchupSlot = "H";
   } else if (player.slot === "MIKE" && call.concept.includes("Quarters")) {
     kind = "zone-coverage";
     task = "Закрыть hook и не отпустить crosser";
-    end = point(50, 31);
+    end = point(50, defenseY(8));
   }
 
   return {
@@ -556,30 +566,30 @@ export function buildSpecialTeamsAssignments(
   const opponentSide = heroSide === "hero" ? "opponent" : "hero";
   const kicking: FormationPlayer[] = position === "K"
     ? [
-        { slot: "K", position: "K", label: "K", start: point(50, 82) },
-        { slot: "H", position: "P", label: "H", start: point(50, 72) },
-        { slot: "LS", position: "C", label: "LS", start: point(50, 58) },
-        { slot: "LT", position: "OT", label: "T", start: point(32, 57) }, { slot: "LG", position: "OG", label: "G", start: point(41, 57) },
-        { slot: "RG", position: "OG", label: "G", start: point(59, 57) }, { slot: "RT", position: "OT", label: "T", start: point(68, 57) },
-        { slot: "LW", position: "TE", label: "W", start: point(23, 58) }, { slot: "RW", position: "TE", label: "W", start: point(77, 58) },
-        { slot: "LUP", position: "RB", label: "U", start: point(14, 61) }, { slot: "RUP", position: "RB", label: "U", start: point(86, 61) },
+        { slot: "K", position: "K", label: "K", start: point(50, offenseY(12.5)) },
+        { slot: "H", position: "P", label: "H", start: point(50, offenseY(7)) },
+        { slot: "LS", position: "C", label: "LS", start: point(50, offenseY(0)) },
+        { slot: "LT", position: "OT", label: "T", start: point(32, offenseY(0.15)) }, { slot: "LG", position: "OG", label: "G", start: point(41, offenseY(0.1)) },
+        { slot: "RG", position: "OG", label: "G", start: point(59, offenseY(0.1)) }, { slot: "RT", position: "OT", label: "T", start: point(68, offenseY(0.15)) },
+        { slot: "LW", position: "TE", label: "W", start: point(23, offenseY(0.2)) }, { slot: "RW", position: "TE", label: "W", start: point(77, offenseY(0.2)) },
+        { slot: "LUP", position: "RB", label: "U", start: point(14, offenseY(1.2)) }, { slot: "RUP", position: "RB", label: "U", start: point(86, offenseY(1.2)) },
       ]
     : [
-        { slot: "P", position: "P", label: "P", start: point(50, 86) },
-        { slot: "LS", position: "C", label: "LS", start: point(50, 58) },
-        { slot: "LT", position: "OT", label: "T", start: point(31, 59) }, { slot: "LG", position: "OG", label: "G", start: point(40, 59) },
-        { slot: "RG", position: "OG", label: "G", start: point(60, 59) }, { slot: "RT", position: "OT", label: "T", start: point(69, 59) },
-        { slot: "LW", position: "TE", label: "W", start: point(23, 61) }, { slot: "RW", position: "TE", label: "W", start: point(77, 61) },
-        { slot: "LGUN", position: "WR", label: "G", start: point(8, 54) }, { slot: "RGUN", position: "WR", label: "G", start: point(92, 54) },
-        { slot: "PP", position: "RB", label: "PP", start: point(50, 72) },
+        { slot: "P", position: "P", label: "P", start: point(50, offenseY(14)) },
+        { slot: "LS", position: "C", label: "LS", start: point(50, offenseY(0)) },
+        { slot: "LT", position: "OT", label: "T", start: point(31, offenseY(0.2)) }, { slot: "LG", position: "OG", label: "G", start: point(40, offenseY(0.1)) },
+        { slot: "RG", position: "OG", label: "G", start: point(60, offenseY(0.1)) }, { slot: "RT", position: "OT", label: "T", start: point(69, offenseY(0.2)) },
+        { slot: "LW", position: "TE", label: "W", start: point(23, offenseY(0.7)) }, { slot: "RW", position: "TE", label: "W", start: point(77, offenseY(0.7)) },
+        { slot: "LGUN", position: "WR", label: "G", start: point(8, offenseY(0)) }, { slot: "RGUN", position: "WR", label: "G", start: point(92, offenseY(0)) },
+        { slot: "PP", position: "RB", label: "PP", start: point(50, offenseY(7)) },
       ];
   const returning: FormationPlayer[] = [
-    { slot: "R", position: "CB", label: "R", start: point(50, 8) },
-    { slot: "LJ", position: "CB", label: "J", start: point(8, 31) }, { slot: "RJ", position: "CB", label: "J", start: point(92, 31) },
-    { slot: "LE", position: "EDGE", label: "E", start: point(28, 45) }, { slot: "RE", position: "EDGE", label: "E", start: point(72, 45) },
-    { slot: "DT1", position: "DT", label: "D", start: point(42, 44) }, { slot: "DT2", position: "DT", label: "D", start: point(58, 44) },
-    { slot: "WILL", position: "LB", label: "W", start: point(34, 33) }, { slot: "MIKE", position: "LB", label: "M", start: point(50, 31) },
-    { slot: "SAM", position: "LB", label: "S", start: point(66, 33) }, { slot: "FS", position: "S", label: "S", start: point(50, 20) },
+    { slot: "R", position: "CB", label: "R", start: point(50, defenseY(35)) },
+    { slot: "LJ", position: "CB", label: "J", start: point(8, defenseY(2)) }, { slot: "RJ", position: "CB", label: "J", start: point(92, defenseY(2)) },
+    { slot: "LE", position: "EDGE", label: "E", start: point(28, defenseY(0.8)) }, { slot: "RE", position: "EDGE", label: "E", start: point(72, defenseY(0.8)) },
+    { slot: "DT1", position: "DT", label: "D", start: point(42, defenseY(0.6)) }, { slot: "DT2", position: "DT", label: "D", start: point(58, defenseY(0.6)) },
+    { slot: "WILL", position: "LB", label: "W", start: point(34, defenseY(4.5)) }, { slot: "MIKE", position: "LB", label: "M", start: point(50, defenseY(5)) },
+    { slot: "SAM", position: "LB", label: "S", start: point(66, defenseY(4.5)) }, { slot: "FS", position: "S", label: "S", start: point(50, defenseY(13)) },
   ];
   const kickAssignments: MatchPlayerAssignment[] = kicking.map((player) => {
     const isHero = player.position === position && player.slot === position;

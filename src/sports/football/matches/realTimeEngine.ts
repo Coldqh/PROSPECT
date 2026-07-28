@@ -170,10 +170,15 @@ export function liveFieldYardToWorldY(state: LivePlayEngineState, fieldYard: num
 
 export function liveFieldViewport(state: LivePlayEngineState, spanYards = DEFAULT_VIEW_YARDS): LiveFieldViewport {
   const carrier = currentCarrier(state);
-  const hero = state.players.find((player) => player.isHero);
-  const focusWorldY = state.ball.state === "flight" ? state.ball.y : carrier?.y ?? hero?.y ?? state.lineOfScrimmage;
+  // До снэпа камера всегда держит линию розыгрыша, карман и secondary.
+  // Иначе карьера за safety/CB центрировала экран на герое и прятала всю атаку.
+  const focusWorldY = state.phase === "pre-snap"
+    ? state.lineOfScrimmage
+    : state.ball.state === "flight"
+      ? state.ball.y
+      : carrier?.y ?? state.ball.y ?? state.lineOfScrimmage;
   const ballFieldYard = liveWorldToFieldYard(state, focusWorldY);
-  const forwardBias = state.turnoverCommitted ? -4 : 4;
+  const forwardBias = state.phase === "pre-snap" ? 3 : state.turnoverCommitted ? -4 : 4;
   const focusFieldYard = clamp(ballFieldYard + forwardBias, spanYards / 2, 100 - spanYards / 2);
   return {
     lowFieldYard: focusFieldYard - spanYards / 2,
@@ -959,12 +964,15 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
 
 export function createLivePlayEngine(episode: MatchEpisode, heroPosition: FootballPosition, seedText: string): LivePlayEngineState {
   const offense = episode.assignments.filter((assignment) => assignment.unit === "offense");
+  const snapLine = episode.assignments.filter((assignment) => assignment.slot === "C" || assignment.slot === "LS");
   const offensiveLine = offense.filter((assignment) => ["run-block", "pass-protection"].includes(assignment.kind) || assignment.slot === "C");
-  const lineOfScrimmage = offensiveLine.length > 0
-    ? offensiveLine.reduce((sum, assignment) => sum + assignment.start.y, 0) / offensiveLine.length
-    : offense.length > 0
-      ? offense.reduce((sum, assignment) => sum + assignment.start.y, 0) / offense.length
-      : 58;
+  const lineOfScrimmage = snapLine.length > 0
+    ? snapLine.reduce((sum, assignment) => sum + assignment.start.y, 0) / snapLine.length
+    : offensiveLine.length > 0
+      ? offensiveLine.reduce((sum, assignment) => sum + assignment.start.y, 0) / offensiveLine.length
+      : offense.length > 0
+        ? offense.reduce((sum, assignment) => sum + assignment.start.y, 0) / offense.length
+        : 60;
   const offenseCall = offenseCallForEpisode(episode);
   const seed = hashSeed(seedText);
   const players: LivePlayerState[] = episode.assignments.map((assignment) => {

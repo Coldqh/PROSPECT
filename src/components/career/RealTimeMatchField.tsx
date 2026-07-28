@@ -195,7 +195,7 @@ function drawField(canvas: HTMLCanvasElement, engine: LivePlayEngineState, analy
     const radius = player.isHero ? 13 : 10;
     context.beginPath();
     context.arc(px(player.x), screenY, radius, 0, Math.PI * 2);
-    context.fillStyle = player.isHero ? "#ef3e52" : player.unit === "defense" ? "#8d2633" : player.unit === "special" ? "#55436d" : "#172438";
+    context.fillStyle = player.isHero ? "#ef3e52" : player.unit === "defense" ? "#b82f42" : player.unit === "special" ? "#74529a" : "#2f78d0";
     context.fill();
     context.lineWidth = player.isHero ? 3 : 1.6;
     context.strokeStyle = player.hasBall ? "#f6dd68" : "rgba(255,255,255,.88)";
