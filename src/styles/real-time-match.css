@@ -1,11 +1,11 @@
-/* 0.37 real-time football engine */
+/* 0.38 real-time football game */
 .live-football {
   display: grid;
   gap: 8px;
 }
 
 .live-football__header {
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 10px;
   display: flex;
   align-items: center;
@@ -29,9 +29,7 @@
   letter-spacing: .05em;
 }
 
-.live-football__header strong {
-  font-size: var(--type-body-size);
-}
+.live-football__header strong { font-size: var(--type-body-size); }
 
 .live-football__header > span {
   padding: 5px 8px;
@@ -57,7 +55,7 @@
 
 .live-football__canvas {
   width: 100%;
-  height: 430px;
+  height: 610px;
   display: block;
   touch-action: none;
   cursor: crosshair;
@@ -86,39 +84,96 @@
 
 .live-football__controls {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
+  grid-template-columns: 138px minmax(0, 1fr);
   gap: 9px;
   align-items: stretch;
 }
 
-.live-dpad {
-  min-height: 132px;
+.live-keyboard-guide {
+  min-height: 104px;
+  padding: 8px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+
+.live-keyboard-guide small {
+  color: var(--text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: 800;
+}
+
+.live-keyboard-guide div {
+  display: grid;
+  grid-template-columns: repeat(3, 32px);
+  grid-template-rows: repeat(2, 32px);
   gap: 4px;
 }
 
-.live-dpad button,
-.live-dpad i {
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid var(--border-soft);
-  border-radius: 7px;
+.live-keyboard-guide kbd {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.2);
+  border-bottom-width: 3px;
+  border-radius: 6px;
   color: #fff;
-  background: var(--surface-raised);
-  font-size: var(--type-section-size);
-  font-weight: 900;
-  user-select: none;
-  touch-action: none;
+  background: var(--surface-soft);
+  font: 800 var(--type-body-size) Inter, sans-serif;
 }
 
-.live-dpad button:first-child { grid-column: 2; }
-.live-dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
-.live-dpad i { grid-column: 2; grid-row: 2; background: var(--surface-soft); }
-.live-dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
-.live-dpad button:last-child { grid-column: 2; grid-row: 3; }
-.live-dpad button:active { background: var(--accent); transform: scale(.96); }
+.live-keyboard-guide kbd:first-child { grid-column: 2; }
+.live-keyboard-guide kbd:nth-child(2) { grid-column: 1; grid-row: 2; }
+.live-keyboard-guide kbd:nth-child(3) { grid-column: 2; grid-row: 2; }
+.live-keyboard-guide kbd:last-child { grid-column: 3; grid-row: 2; }
+
+.live-joystick {
+  display: none;
+  position: relative;
+  width: 124px;
+  height: 124px;
+  align-self: center;
+  justify-self: center;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.08) 0 35%, transparent 36%),
+    var(--surface-raised);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.28);
+  touch-action: none;
+  user-select: none;
+}
+
+.live-joystick::before,
+.live-joystick::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  background: rgba(255,255,255,.12);
+  transform: translate(-50%, -50%);
+}
+
+.live-joystick::before { width: 76%; height: 1px; }
+.live-joystick::after { width: 1px; height: 76%; }
+
+.live-joystick > span {
+  position: absolute;
+  left: calc(50% - 23px);
+  top: calc(50% - 23px);
+  width: 46px;
+  height: 46px;
+  border: 2px solid rgba(255,255,255,.72);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 7px 18px rgba(0,0,0,.35);
+  transition: transform .06s linear;
+  pointer-events: none;
+}
+
+.live-joystick.is-active > span { transition: none; }
 
 .live-role-actions {
   min-width: 0;
@@ -156,9 +211,7 @@
   font-size: var(--type-body-size);
 }
 
-.live-receiver-buttons span {
-  color: var(--text-secondary);
-}
+.live-receiver-buttons span { color: var(--text-secondary); }
 
 .live-role-actions__main {
   display: grid;
@@ -173,11 +226,11 @@
 }
 
 .live-football__result {
-  min-height: 58px;
-  padding: 9px 11px;
+  min-height: 72px;
+  padding: 10px 12px;
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px 10px;
+  gap: 3px 12px;
   align-items: center;
   border: 1px solid rgba(255,255,255,.18);
   border-radius: 8px;
@@ -191,10 +244,7 @@
 }
 
 .live-football__result span,
-.live-football__result small {
-  min-width: 0;
-}
-
+.live-football__result small { min-width: 0; }
 .live-football__result small { color: var(--text-secondary); }
 
 @keyframes live-pressure-pulse {
@@ -202,12 +252,21 @@
   to { opacity: 1; }
 }
 
-@media (max-width: 560px) {
-  .live-football__canvas { height: 390px; }
+@media (pointer: coarse), (max-width: 720px) {
+  .live-football__canvas { height: 540px; }
+  .live-football__controls { grid-template-columns: 126px minmax(0, 1fr); }
+  .live-keyboard-guide { display: none; }
+  .live-joystick { display: block; }
+}
+
+@media (max-width: 420px) {
+  .live-football__canvas { height: 510px; }
   .live-football__controls { grid-template-columns: 112px minmax(0, 1fr); }
-  .live-dpad { min-height: 112px; }
+  .live-joystick { width: 108px; height: 108px; }
+  .live-receiver-buttons { grid-template-columns: repeat(3, minmax(44px, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .live-football__header > span.is-danger { animation: none; }
+  .live-joystick > span { transition: none; }
 }

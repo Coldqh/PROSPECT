@@ -5,8 +5,10 @@ import {
   decodeLivePlayOutcome,
   encodeLivePlayOutcome,
   issueLivePlayCommand,
+  liveFieldViewport,
   liveReceiverTargets,
   liveRoleActions,
+  liveWorldToFieldYard,
   stepLivePlayEngine,
   type MatchLivePlayOutcome,
 } from "./realTimeEngine";
@@ -169,6 +171,83 @@ describe("real-time football engine", () => {
     expect(state.events.some((event) => event.type === "throw")).toBe(false);
     expect(state.outcome).toBeDefined();
     expect(["run", "sack", "touchdown"]).toContain(state.outcome?.snapResult);
+  });
+
+
+
+  it("uses a yard-based camera and supports a real long touchdown", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "long-touchdown");
+    state.episode.fieldPosition = 20;
+    state.players.filter((player) => player.unit === "defense").forEach((player) => { player.down = true; });
+    issueLivePlayCommand(state, { type: "snap" });
+    issueLivePlayCommand(state, { type: "run" });
+    for (let frame = 0; frame < 1000 && !state.outcome; frame += 1) {
+      stepLivePlayEngine(state, { moveX: 0, moveY: -1 }, 1 / 60);
+    }
+    expect(state.outcome?.snapResult).toBe("touchdown");
+    expect(state.outcome?.yards).toBe(80);
+    expect(state.outcome?.endFieldPosition).toBe(100);
+    const viewport = liveFieldViewport(state);
+    expect(viewport.spanYards).toBe(36);
+    expect(viewport.highFieldYard - viewport.lowFieldYard).toBe(36);
+    expect(liveWorldToFieldYard(state, state.players.find((player) => player.isHero)!.y)).toBeGreaterThanOrEqual(99);
+  });
+
+  it("does not let the QB move before receiving the snap", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "snap-lock");
+    const qb = state.players.find((player) => player.isHero)!;
+    const start = { x: qb.x, y: qb.y };
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 8; frame += 1) {
+      stepLivePlayEngine(state, { moveX: 1, moveY: -1 }, 1 / 60);
+    }
+    expect(qb.x).toBeCloseTo(start.x, 4);
+    expect(qb.y).toBeCloseTo(start.y, 4);
+  });
+
+  it("turns a physical interception into a return that the offense can tackle", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "forced-interception");
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 20; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    const target = liveReceiverTargets(state).find((player) => player.slot === "H")!;
+    issueLivePlayCommand(state, { type: "throw", targetId: target.id });
+    const interceptor = state.players.find((player) => player.slot === "FS")!;
+    for (const defender of state.players.filter((player) => player.unit === "defense" && player.id !== interceptor.id)) defender.down = true;
+    interceptor.overall = 99;
+    interceptor.actionMode = "intercept";
+    interceptor.ballReactionDelay = 0;
+    interceptor.x = state.ball.targetX;
+    interceptor.y = state.ball.targetY;
+    target.x = 95;
+    target.y = 120;
+    state.randomState = 1;
+    for (let frame = 0; frame < 900 && !state.outcome; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    expect(state.events.some((entry) => entry.type === "interception")).toBe(true);
+    expect(state.events.some((entry) => entry.type === "tackle")).toBe(true);
+    expect(state.outcome?.turnover).toBe(true);
+    expect(state.outcome?.snapResult).toBe("turnover");
+  });
+
+  it("only creates interceptions from physical contact with the live ball", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "clean-window");
+    for (const defender of state.players.filter((player) => player.unit === "defense")) {
+      defender.x = 95;
+      defender.y = 95;
+      defender.startX = 95;
+      defender.startY = 95;
+      defender.ballReactionDelay = 2;
+    }
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 900 && !state.outcome; frame += 1) {
+      if (frame === 65) {
+        const target = liveReceiverTargets(state).find((player) => player.slot === "H");
+        expect(target).toBeDefined();
+        if (target) issueLivePlayCommand(state, { type: "throw", targetId: target.id });
+      }
+      stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    }
+    expect(state.events.some((entry) => entry.type === "interception")).toBe(false);
+    expect(["completion", "incomplete"]).toContain(state.outcome?.snapResult);
   });
 
   it("keeps role controls deliberately small", () => {

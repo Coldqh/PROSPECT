@@ -28,10 +28,17 @@ const required = [
   ["engine", "function tackleCarrier"],
   ["engine", "function startPass"],
   ["engine", "liveRoleActions"],
+  ["engine", "liveFieldViewport"],
+  ["engine", "liveWorldToFieldYard"],
+  ["engine", "turnoverCommitted"],
+  ["engine", "missed-tackle"],
   ["engine", "passCompleted"],
   ["field", "requestAnimationFrame"],
   ["field", "liveReceiverTargets"],
-  ["field", "live-dpad"],
+  ["field", "live-joystick"],
+  ["field", "live-keyboard-guide"],
+  ["field", "fieldSpotLabel"],
+  ["field", "endFieldPosition"],
   ["dashboard", '"key-moments"'],
   ["dashboard", "Analysis Mode"],
   ["dashboard", "RealTimeMatchField"],
@@ -55,4 +62,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Match experience architecture: OK (real-time agents, direct controls, live ball, tackles, modes, calendar)");
+console.log("Match experience architecture: OK (yard camera, physical passes, real returns, desktop arrows, mobile joystick)");

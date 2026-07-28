@@ -58,6 +58,7 @@ export interface LivePlayerState {
   down: boolean;
   blockedUntil: number;
   tackleCooldownUntil: number;
+  ballReactionDelay: number;
   actionBoostUntil: number;
   actionMode?: "burst" | "cut" | "secure" | "power" | "speed" | "anchor" | "break" | "tackle" | "intercept";
 }
@@ -76,11 +77,12 @@ export interface LiveBallState {
   flightElapsed: number;
   flightDuration: number;
   throwQuality: number;
+  throwStartedAt: number;
 }
 
 export interface LivePlayEvent {
   id: string;
-  type: "snap" | "handoff" | "pressure" | "throw" | "catch" | "drop" | "breakup" | "interception" | "tackle" | "sack" | "touchdown" | "whistle";
+  type: "snap" | "handoff" | "pressure" | "throw" | "catch" | "drop" | "breakup" | "interception" | "missed-tackle" | "tackle" | "sack" | "touchdown" | "out-of-bounds" | "whistle";
   time: number;
   x: number;
   y: number;
@@ -111,6 +113,9 @@ export interface MatchLivePlayOutcome {
   puntReturnYards?: number;
   kickDistance?: number;
   events: LivePlayEvent[];
+  startFieldPosition?: number;
+  endFieldPosition?: number;
+  firstDown?: boolean;
 }
 
 export interface LivePlayEngineState {
@@ -133,6 +138,7 @@ export interface LivePlayEngineState {
   passCompleted: boolean;
   passAttempted: boolean;
   passTargetId?: string;
+  turnoverCommitted: boolean;
   heroActionScore: number;
   heroTouchedPlay: boolean;
   events: LivePlayEvent[];
@@ -140,11 +146,54 @@ export interface LivePlayEngineState {
 }
 
 const LIVE_PREFIX = "live-play:";
-const FIELD_MIN_X = 4;
-const FIELD_MAX_X = 96;
-const FIELD_MIN_Y = 4;
-const FIELD_MAX_Y = 96;
+const FIELD_MIN_X = 2.5;
+const FIELD_MAX_X = 97.5;
+const WORLD_MIN_Y = -50;
+const WORLD_MAX_Y = 165;
 const YARDS_TO_FIELD = 1;
+const DEFAULT_VIEW_YARDS = 36;
+
+export interface LiveFieldViewport {
+  lowFieldYard: number;
+  highFieldYard: number;
+  focusFieldYard: number;
+  spanYards: number;
+}
+
+export function liveWorldToFieldYard(state: LivePlayEngineState, worldY: number): number {
+  return clamp(state.episode.fieldPosition + (state.lineOfScrimmage - worldY) / YARDS_TO_FIELD, 0, 100);
+}
+
+export function liveFieldYardToWorldY(state: LivePlayEngineState, fieldYard: number): number {
+  return state.lineOfScrimmage - (fieldYard - state.episode.fieldPosition) * YARDS_TO_FIELD;
+}
+
+export function liveFieldViewport(state: LivePlayEngineState, spanYards = DEFAULT_VIEW_YARDS): LiveFieldViewport {
+  const carrier = currentCarrier(state);
+  const hero = state.players.find((player) => player.isHero);
+  const focusWorldY = state.ball.state === "flight" ? state.ball.y : carrier?.y ?? hero?.y ?? state.lineOfScrimmage;
+  const ballFieldYard = liveWorldToFieldYard(state, focusWorldY);
+  const forwardBias = state.turnoverCommitted ? -4 : 4;
+  const focusFieldYard = clamp(ballFieldYard + forwardBias, spanYards / 2, 100 - spanYards / 2);
+  return {
+    lowFieldYard: focusFieldYard - spanYards / 2,
+    highFieldYard: focusFieldYard + spanYards / 2,
+    focusFieldYard,
+    spanYards,
+  };
+}
+
+function offenseGoalWorldY(state: LivePlayEngineState): number {
+  return liveFieldYardToWorldY(state, 100);
+}
+
+function defenseGoalWorldY(state: LivePlayEngineState): number {
+  return liveFieldYardToWorldY(state, 0);
+}
+
+function oppositeSide(side: MatchTeamSide): MatchTeamSide {
+  return side === "hero" ? "opponent" : "hero";
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -212,31 +261,31 @@ function routeFor(kind: string, start: MatchPoint, end: MatchPoint, slot: string
     const deep = call.tags.includes("shot") || call.tags.includes("deep") || call.tags.includes("long-yardage") || concept.includes("vertical");
     const quick = call.tags.includes("quick") || call.tags.includes("short") || call.tags.includes("screen") || concept.includes("mesh") || concept.includes("spacing") || concept.includes("stick");
     const depth = checkdown ? 5 : deep ? 28 : quick ? 8 : call.playType === "play-action" ? 17 : 14;
-    const finalY = clamp(start.y - depth, FIELD_MIN_Y, FIELD_MAX_Y);
+    const finalY = clamp(start.y - depth, WORLD_MIN_Y, WORLD_MAX_Y);
     if (concept.includes("mesh") && (slot === "H" || slot === "Y")) {
       const crossX = slot === "H" ? 72 : 28;
       return [
-        { x: start.x, y: clamp(start.y - 5, FIELD_MIN_Y, FIELD_MAX_Y) },
+        { x: start.x, y: clamp(start.y - 5, WORLD_MIN_Y, WORLD_MAX_Y) },
         { x: crossX, y: finalY },
         { x: clamp(crossX + (slot === "H" ? 8 : -8), FIELD_MIN_X, FIELD_MAX_X), y: finalY },
       ];
     }
     const finalX = clamp(start.x + horizontal, FIELD_MIN_X, FIELD_MAX_X);
-    const stem = { x: start.x, y: clamp(start.y - depth * 0.58, FIELD_MIN_Y, FIELD_MAX_Y) };
+    const stem = { x: start.x, y: clamp(start.y - depth * 0.58, WORLD_MIN_Y, WORLD_MAX_Y) };
     const breakPoint = Math.abs(horizontal) > 6
       ? { x: clamp(start.x + horizontal * 0.62, FIELD_MIN_X, FIELD_MAX_X), y: finalY }
-      : { x: clamp(start.x + (slot === "H" || slot === "Y" ? 2 : -2), FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - depth * 0.82, FIELD_MIN_Y, FIELD_MAX_Y) };
+      : { x: clamp(start.x + (slot === "H" || slot === "Y" ? 2 : -2), FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - depth * 0.82, WORLD_MIN_Y, WORLD_MAX_Y) };
     return [stem, breakPoint, { x: finalX, y: finalY }];
   }
   if (kind === "carry" || kind === "handoff") {
     const runDepth = call.tags.includes("goal-line") ? 6 : 13;
     return [
-      { x: clamp(start.x + horizontal * 0.2, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - 2, FIELD_MIN_Y, FIELD_MAX_Y) },
-      { x: clamp(start.x + horizontal * 0.7, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - runDepth * 0.55, FIELD_MIN_Y, FIELD_MAX_Y) },
-      { x: clamp(end.x, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - runDepth, FIELD_MIN_Y, FIELD_MAX_Y) },
+      { x: clamp(start.x + horizontal * 0.2, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - 2, WORLD_MIN_Y, WORLD_MAX_Y) },
+      { x: clamp(start.x + horizontal * 0.7, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - runDepth * 0.55, WORLD_MIN_Y, WORLD_MAX_Y) },
+      { x: clamp(end.x, FIELD_MIN_X, FIELD_MAX_X), y: clamp(start.y - runDepth, WORLD_MIN_Y, WORLD_MAX_Y) },
     ];
   }
-  return [{ x: clamp(end.x, FIELD_MIN_X, FIELD_MAX_X), y: clamp(end.y, FIELD_MIN_Y, FIELD_MAX_Y) }];
+  return [{ x: clamp(end.x, FIELD_MIN_X, FIELD_MAX_X), y: clamp(end.y, WORLD_MIN_Y, WORLD_MAX_Y) }];
 }
 
 function playerSpeed(player: LivePlayerState): number {
@@ -259,7 +308,7 @@ function moveToward(player: LivePlayerState, target: MatchPoint, speed: number, 
   player.facingX = direction.x;
   player.facingY = direction.y;
   player.x = clamp(player.x + player.vx * dt, FIELD_MIN_X, FIELD_MAX_X);
-  player.y = clamp(player.y + player.vy * dt, FIELD_MIN_Y, FIELD_MAX_Y);
+  player.y = clamp(player.y + player.vy * dt, WORLD_MIN_Y, WORLD_MAX_Y);
 }
 
 function moveByInput(player: LivePlayerState, input: LiveControlInput, speed: number, dt: number): void {
@@ -271,7 +320,7 @@ function moveByInput(player: LivePlayerState, input: LiveControlInput, speed: nu
     player.facingY = direction.y;
   }
   player.x = clamp(player.x + player.vx * dt, FIELD_MIN_X, FIELD_MAX_X);
-  player.y = clamp(player.y + player.vy * dt, FIELD_MIN_Y, FIELD_MAX_Y);
+  player.y = clamp(player.y + player.vy * dt, WORLD_MIN_Y, WORLD_MAX_Y);
 }
 
 function nearestPlayer(
@@ -315,14 +364,25 @@ function setCarrier(state: LivePlayEngineState, player: LivePlayerState): void {
 }
 
 function startPass(state: LivePlayEngineState, thrower: LivePlayerState, target: LivePlayerState): void {
-  if (state.ball.state !== "carried" || state.ball.carrierId !== thrower.id || thrower.y < state.lineOfScrimmage - 0.2) return;
+  if (
+    state.ball.state !== "carried"
+    || state.ball.carrierId !== thrower.id
+    || thrower.y < state.lineOfScrimmage - 0.2
+    || target.unit !== "offense"
+    || target.kind !== "route"
+    || target.down
+  ) return;
   const pressure = nearestPlayer(state, thrower, (candidate) => candidate.unit === "defense" && ["rush", "contain", "run-fit"].includes(candidate.kind));
   const pressureDistance = pressure ? distance(thrower, pressure) : 20;
   const lead = clamp((target.overall - 55) * 0.018 + 0.58, 0.45, 1.15);
-  const targetX = clamp(target.x + target.vx * lead, FIELD_MIN_X, FIELD_MAX_X);
-  const targetY = clamp(target.y + target.vy * lead, FIELD_MIN_Y, FIELD_MAX_Y);
-  const airDistance = Math.hypot(targetX - thrower.x, targetY - thrower.y);
+  const cleanTargetX = clamp(target.x + target.vx * lead, FIELD_MIN_X, FIELD_MAX_X);
+  const cleanTargetY = clamp(target.y + target.vy * lead, WORLD_MIN_Y, WORLD_MAX_Y);
+  const airDistance = Math.hypot(cleanTargetX - thrower.x, cleanTargetY - thrower.y);
   const quality = clamp(72 + thrower.overall * 0.22 - Math.max(0, 5 - pressureDistance) * 7 - Math.abs(thrower.vx) * 0.7 - Math.abs(thrower.vy) * 0.5, 20, 99);
+  const missRadius = clamp((100 - quality) * 0.035 + airDistance * 0.015, 0.15, 4.8);
+  const missAngle = random(state) * Math.PI * 2;
+  const targetX = clamp(cleanTargetX + Math.cos(missAngle) * missRadius, FIELD_MIN_X, FIELD_MAX_X);
+  const targetY = clamp(cleanTargetY + Math.sin(missAngle) * missRadius, WORLD_MIN_Y, WORLD_MAX_Y);
   state.players.forEach((candidate) => { candidate.hasBall = false; });
   state.passAttempted = true;
   state.passTargetId = target.id;
@@ -339,6 +399,7 @@ function startPass(state: LivePlayEngineState, thrower: LivePlayerState, target:
     flightElapsed: 0,
     flightDuration: clamp(0.45 + airDistance / 42, 0.55, 1.65),
     throwQuality: quality,
+    throwStartedAt: state.elapsed,
   };
   state.phase = "ball-flight";
   state.heroTouchedPlay = state.heroTouchedPlay || thrower.isHero || target.isHero;
@@ -461,7 +522,7 @@ function exactHeroDeltas(
     advanced.puntQuality = Math.max(1, Math.round(assignmentScore / 25));
   }
 
-  if (snapResult === "touchdown" && (carrier?.id === hero.id || target?.id === hero.id || state.heroPosition === "QB" && state.passAttempted)) {
+  if ((snapResult === "touchdown" || snapResult === "defensive-touchdown") && (carrier?.id === hero.id || target?.id === hero.id || state.heroPosition === "QB" && state.passAttempted)) {
     stats.touchdowns = 1;
   }
   return { stats, advanced, involved };
@@ -475,27 +536,40 @@ function finishPlay(
   turnover = false,
 ): MatchLivePlayOutcome {
   const spotY = carrier?.y ?? state.ball.y;
-  const rawYards = (state.lineOfScrimmage - spotY) / YARDS_TO_FIELD;
-  let yards = Math.round(rawYards);
-  if (snapResult === "incomplete" || snapResult === "turnover" && !carrier || snapResult === "field-goal" || snapResult === "missed-field-goal") yards = 0;
+  const endFieldPosition = liveWorldToFieldYard(state, spotY);
+  let yards = Math.round(endFieldPosition - state.episode.fieldPosition);
+  if (snapResult === "incomplete" || snapResult === "field-goal" || snapResult === "missed-field-goal") yards = 0;
   if (snapResult === "punt") yards = 42;
-  const touchdown = snapResult === "touchdown";
-  if (touchdown) yards = Math.max(0, 100 - state.episode.fieldPosition);
+  if (snapResult === "touchdown") yards = Math.max(0, 100 - state.episode.fieldPosition);
+  if (snapResult === "defensive-touchdown") yards = -state.episode.fieldPosition;
+  const resolvedTurnover = turnover || snapResult === "defensive-touchdown" || state.turnoverCommitted;
   const carrierImpact = carrier?.isHero ? clamp(yards, -10, 20) * 1.2 : 0;
   const actionScore = clamp(state.heroActionScore + (state.heroTouchedPlay ? 8 : 0) + carrierImpact, 20, 98);
-  const teamExecution = clamp(52 + yards * 2.1 + (snapResult === "completion" ? 10 : 0) + (touchdown ? 24 : 0) - (turnover ? 28 : 0), 12, 99);
+  const teamExecution = clamp(52 + yards * 2.1 + (snapResult === "completion" ? 10 : 0) + (snapResult === "touchdown" ? 24 : 0) - (resolvedTurnover ? 28 : 0), 12, 99);
   const targetId = state.passTargetId ?? state.ball.targetId;
   const target = targetId ? state.players.find((player) => player.id === targetId) : undefined;
-  const exact = exactHeroDeltas(state, snapResult, yards, turnover, target, carrier, actionScore);
-  const points = snapResult === "field-goal" ? 3 : touchdown ? 7 : 0;
-  const scoringSide = points > 0 ? state.offenseSide : undefined;
+  const exact = exactHeroDeltas(state, snapResult, yards, resolvedTurnover, target, carrier, actionScore);
+  const points = snapResult === "field-goal" ? 3 : snapResult === "touchdown" || snapResult === "defensive-touchdown" ? 7 : 0;
+  const scoringSide = points > 0
+    ? snapResult === "defensive-touchdown" ? oppositeSide(state.offenseSide) : state.offenseSide
+    : undefined;
+  const firstDown = !resolvedTurnover && snapResult !== "incomplete" && yards >= state.episode.distance;
+  state.phase = "whistle";
+  event(
+    state,
+    snapResult === "touchdown" || snapResult === "defensive-touchdown" ? "touchdown" : "whistle",
+    description,
+    carrier?.x ?? state.ball.x,
+    carrier?.y ?? state.ball.y,
+    carrier?.id,
+  );
   const outcome: MatchLivePlayOutcome = {
     version: 1,
     actionId: `live-${state.heroPosition.toLowerCase()}`,
     snapResult,
     yards,
     points,
-    turnover,
+    turnover: resolvedTurnover,
     teamExecutionScore: teamExecution,
     assignmentScore: actionScore,
     pressureOccurred: state.pressureOccurred,
@@ -504,80 +578,107 @@ function finishPlay(
     heroInvolved: exact.involved,
     statDelta: exact.stats,
     advancedDelta: exact.advanced,
-    events: state.events,
+    events: [...state.events],
+    startFieldPosition: state.episode.fieldPosition,
+    endFieldPosition: Math.round(endFieldPosition),
+    firstDown,
   };
   if (scoringSide) outcome.scoringSide = scoringSide;
   if (target) outcome.targetSlot = target.slot;
   if (carrier) outcome.ballCarrierSlot = carrier.slot;
-  state.phase = "whistle";
   state.outcome = outcome;
-  event(state, touchdown ? "touchdown" : "whistle", description, carrier?.x ?? state.ball.x, carrier?.y ?? state.ball.y, carrier?.id);
   return outcome;
 }
 
-function resolveCatch(state: LivePlayEngineState): MatchLivePlayOutcome | undefined {
+function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | undefined {
+  const progress = clamp(state.ball.flightElapsed / Math.max(0.01, state.ball.flightDuration), 0, 1);
   const target = state.ball.targetId ? state.players.find((player) => player.id === state.ball.targetId) : undefined;
-  const catchPoint = { x: state.ball.targetX, y: state.ball.targetY };
-  const offense = state.players.filter((player) => player.unit === "offense" && !player.down).sort((left, right) => distance(left, catchPoint) - distance(right, catchPoint));
-  const defense = state.players.filter((player) => player.unit === "defense" && !player.down).sort((left, right) => distance(left, catchPoint) - distance(right, catchPoint));
-  const receiver = target ?? offense[0];
-  const defender = defense[0];
-  const receiverDistance = receiver ? distance(receiver, catchPoint) : 99;
-  const defenderDistance = defender ? distance(defender, catchPoint) : 99;
-  const defenderPlayingBall = defender?.actionMode === "intercept" || defender?.actionMode === "break";
-  const receiverSecure = receiver?.actionMode === "secure";
-  const contestEdge = (defender?.overall ?? 55) - (receiver?.overall ?? 55) + (defenderPlayingBall ? 9 : 0) - (receiverSecure ? 8 : 0) + (defenderDistance - receiverDistance) * -7;
-  const roll = random(state) * 100;
+  const ballPoint = { x: state.ball.x, y: state.ball.y };
+  const receiverDistance = target ? distance(target, ballPoint) : 99;
+  const defenders = state.players
+    .filter((player) => player.unit === "defense" && !player.down && state.elapsed - state.ball.throwStartedAt >= player.ballReactionDelay)
+    .sort((left, right) => distance(left, ballPoint) - distance(right, ballPoint));
+  const defender = defenders[0];
+  const defenderDistance = defender ? distance(defender, ballPoint) : 99;
+  const catchableHeight = state.ball.z <= 3.1;
 
-  if (defender && defenderDistance <= 3.4 && contestEdge + roll * 0.25 > 28 && state.ball.throwQuality < 86) {
-    if (contestEdge + roll * 0.18 > 40) {
+  if (catchableHeight && defender && defenderDistance <= 1.45 && defenderDistance + 0.18 < receiverDistance) {
+    const canIntercept = ["CB", "S", "LB"].includes(defender.position);
+    const playBallBonus = defender.actionMode === "intercept" ? 18 : defender.actionMode === "break" ? 8 : 0;
+    const interceptionChance = clamp(10 + (defender.overall - 60) * 0.65 + playBallBonus - state.ball.throwQuality * 0.08 + Math.max(0, receiverDistance - defenderDistance) * 7, 4, 68);
+    if (canIntercept && random(state) * 100 <= interceptionChance) {
       setCarrier(state, defender);
+      state.turnoverCommitted = true;
+      state.phase = "live";
       state.heroActionScore += defender.isHero ? 30 : target?.isHero ? -24 : 0;
-      event(state, "interception", `${defender.slot} перехватывает мяч`, defender.x, defender.y, defender.id, receiver?.id);
-      return finishPlay(state, "turnover", defender, "Защитник читает бросок и забирает мяч.", true);
+      event(state, "interception", `${defender.slot} перехватывает мяч`, defender.x, defender.y, defender.id, target?.id);
+      return undefined;
     }
     state.heroActionScore += defender.isHero ? 18 : target?.isHero ? -12 : 0;
-    event(state, "breakup", `${defender.slot} сбивает передачу`, defender.x, defender.y, defender.id, receiver?.id);
-    return finishPlay(state, "incomplete", undefined, "Защитник успевает на мяч и разбивает передачу.");
+    event(state, "breakup", `${defender.slot} касается мяча`, defender.x, defender.y, defender.id, target?.id);
+    return finishPlay(state, "incomplete", undefined, "Защитник физически добирается до траектории и сбивает передачу.");
   }
 
-  const catchChance = clamp(state.ball.throwQuality + (receiver?.overall ?? 55) * 0.28 - receiverDistance * 9 - Math.max(0, 3.2 - defenderDistance) * 7 + (receiverSecure ? 9 : 0), 12, 98);
-  if (receiver && roll <= catchChance) {
-    state.passCompleted = true;
-    setCarrier(state, receiver);
-    state.heroTouchedPlay = state.heroTouchedPlay || receiver.isHero;
-    state.heroActionScore += receiver.isHero ? 16 : state.heroPosition === "QB" ? 12 : 0;
-    event(state, "catch", `${receiver.slot} принимает передачу`, receiver.x, receiver.y, receiver.id);
-    return undefined;
+  if (catchableHeight && target && receiverDistance <= 1.55) {
+    const nearestContest = defenders.find((candidate) => distance(candidate, target) <= 2.2);
+    const contestPenalty = nearestContest ? Math.max(0, 2.2 - distance(nearestContest, target)) * 12 : 0;
+    const secureBonus = target.actionMode === "secure" ? 10 : 0;
+    const catchChance = clamp(38 + target.overall * 0.55 + state.ball.throwQuality * 0.25 - contestPenalty + secureBonus, 18, 98);
+    if (random(state) * 100 <= catchChance) {
+      state.passCompleted = true;
+      setCarrier(state, target);
+      state.phase = "live";
+      state.heroTouchedPlay = state.heroTouchedPlay || target.isHero;
+      state.heroActionScore += target.isHero ? 16 : state.heroPosition === "QB" ? 12 : 0;
+      event(state, "catch", `${target.slot} принимает передачу`, target.x, target.y, target.id);
+      return undefined;
+    }
+    state.heroActionScore += target.isHero || state.heroPosition === "QB" ? -12 : 0;
+    event(state, "drop", `${target.slot} не удерживает мяч`, target.x, target.y, target.id);
+    return finishPlay(state, "incomplete", undefined, "Мяч доходит до ресивера, но приём не завершён.");
   }
 
-  state.heroActionScore += receiver?.isHero || state.heroPosition === "QB" ? -12 : 0;
-  event(state, "drop", "Передача не завершена", catchPoint.x, catchPoint.y, receiver?.id);
-  return finishPlay(state, "incomplete", undefined, "Мяч касается рук, но приём не завершён.");
+  if (progress >= 1) {
+    const description = target && receiverDistance <= 3.2
+      ? "Неточный бросок проходит рядом с ресивером, но вне радиуса уверенного приёма."
+      : "Передача уходит в свободную зону и падает на газон.";
+    event(state, "drop", "Незавершённая передача", state.ball.x, state.ball.y, target?.id);
+    return finishPlay(state, "incomplete", undefined, description);
+  }
+  return undefined;
 }
 
 function tackleCarrier(state: LivePlayEngineState, defender: LivePlayerState, carrier: LivePlayerState): MatchLivePlayOutcome | undefined {
-  if (state.elapsed < defender.tackleCooldownUntil || distance(defender, carrier) > 2.45) return undefined;
+  if (defender.id === carrier.id || defender.unit === carrier.unit || defender.down) return undefined;
+  if (state.elapsed < defender.tackleCooldownUntil || distance(defender, carrier) > 2.25) return undefined;
   defender.tackleCooldownUntil = state.elapsed + 0.65;
   const userBonus = defender.isHero && defender.actionMode === "tackle" ? 14 : 0;
   const secureBonus = carrier.actionMode === "secure" ? 13 : 0;
   const burstPenalty = carrier.actionMode === "cut" ? 11 : carrier.actionMode === "burst" ? 5 : 0;
-  const angle = normalize(carrier.vx, carrier.vy);
-  const pursuit = normalize(defender.x - carrier.x, defender.y - carrier.y);
-  const angleBonus = Math.max(-5, (angle.x * pursuit.x + angle.y * pursuit.y) * 8);
+  const carrierDirection = normalize(carrier.vx, carrier.vy);
+  const approachDirection = normalize(carrier.x - defender.x, carrier.y - defender.y);
+  const angleBonus = Math.max(-6, (carrierDirection.x * approachDirection.x + carrierDirection.y * approachDirection.y) * -8);
   const chance = clamp(58 + (defender.overall - carrier.overall) * 0.8 + userBonus + angleBonus - secureBonus - burstPenalty, 18, 94);
   if (random(state) * 100 > chance) {
     state.heroActionScore += defender.isHero ? -8 : carrier.isHero ? 8 : 0;
+    event(state, "missed-tackle", `${defender.slot} промахивается с тэклом`, defender.x, defender.y, defender.id, carrier.id);
     defender.x = clamp(defender.x - defender.facingX * 1.4, FIELD_MIN_X, FIELD_MAX_X);
-    defender.y = clamp(defender.y - defender.facingY * 1.4, FIELD_MIN_Y, FIELD_MAX_Y);
+    defender.y = clamp(defender.y - defender.facingY * 1.4, WORLD_MIN_Y, WORLD_MAX_Y);
     return undefined;
   }
   carrier.down = true;
   const isQuarterback = carrier.id === state.quarterbackId;
-  const sack = isQuarterback && carrier.y >= state.lineOfScrimmage;
+  const sack = isQuarterback && !state.turnoverCommitted && carrier.y >= state.lineOfScrimmage;
   state.heroActionScore += defender.isHero ? 22 : carrier.isHero ? -15 : 0;
   event(state, sack ? "sack" : "tackle", sack ? `${defender.slot} делает сэк` : `${defender.slot} завершает тэкл`, carrier.x, carrier.y, defender.id, carrier.id);
-  return finishPlay(state, sack ? "sack" : state.passCompleted ? "completion" : "run", carrier, sack ? "Карман закрывается, квотербек остановлен за линией скримиджа." : "Защитник фиксирует захват и завершает розыгрыш.");
+  const result = state.turnoverCommitted ? "turnover" : sack ? "sack" : state.passCompleted ? "completion" : "run";
+  return finishPlay(
+    state,
+    result,
+    carrier,
+    sack ? "Карман закрывается, квотербек остановлен за линией скримиджа." : state.turnoverCommitted ? "После перехвата атакующая команда останавливает возврат." : "Защитник фиксирует захват и завершает розыгрыш.",
+    state.turnoverCommitted,
+  );
 }
 
 function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState, dt: number): void {
@@ -586,8 +687,8 @@ function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState,
   if (!target) {
     const qb = quarterback(state);
     const escape = qb && Math.abs(qb.x - qb.startX) > 5
-      ? { x: clamp(qb.x + (player.x < qb.x ? -8 : 8), FIELD_MIN_X, FIELD_MAX_X), y: clamp(player.y - 4, FIELD_MIN_Y, FIELD_MAX_Y) }
-      : { x: player.x, y: clamp(player.y - 2, FIELD_MIN_Y, FIELD_MAX_Y) };
+      ? { x: clamp(qb.x + (player.x < qb.x ? -8 : 8), FIELD_MIN_X, FIELD_MAX_X), y: clamp(player.y - 4, WORLD_MIN_Y, WORLD_MAX_Y) }
+      : { x: player.x, y: clamp(player.y - 2, WORLD_MIN_Y, WORLD_MAX_Y) };
     moveToward(player, escape, playerSpeed(player) * 0.7, dt);
     return;
   }
@@ -623,7 +724,8 @@ function blockerStep(state: LivePlayEngineState, blocker: LivePlayerState, dt: n
 }
 
 function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number): void {
-  if (player.down) return;
+  if (player.down || player.hasBall) return;
+  const carrier = currentCarrier(state);
   if (player.isHero) {
     const boost = player.actionMode === "speed" ? 1.2 : player.actionMode === "break" || player.actionMode === "tackle" || player.actionMode === "intercept" ? 1.13 : 1;
     moveByInput(player, input, playerSpeed(player) * boost, dt);
@@ -634,26 +736,43 @@ function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input
     return;
   }
   if (state.elapsed < player.blockedUntil) return;
-  const carrier = currentCarrier(state);
+
+  if (state.turnoverCommitted && carrier) {
+    if (player.unit === carrier.unit) {
+      const threat = nearestPlayer(state, player, (candidate) => candidate.unit !== carrier.unit);
+      if (threat && distance(player, threat) < 10) moveToward(player, threat, playerSpeed(player) * 0.72, dt);
+      else moveToward(player, { x: carrier.x, y: carrier.y + 4 }, playerSpeed(player) * 0.72, dt);
+    } else {
+      moveToward(player, carrier, playerSpeed(player) * 1.02, dt);
+    }
+    return;
+  }
+
   const qb = quarterback(state);
   let target: MatchPoint | LivePlayerState;
   if (state.ball.state === "flight") {
+    const reactionElapsed = state.elapsed - state.ball.throwStartedAt;
+    if (reactionElapsed < player.ballReactionDelay) return;
     target = { x: state.ball.targetX, y: state.ball.targetY };
   } else if (carrier && (carrier.id !== qb?.id || state.runCommitted || carrier.y < state.lineOfScrimmage - 0.5)) {
     target = carrier;
   } else if (["rush", "contain", "run-fit"].includes(player.kind)) {
     target = carrier ?? qb ?? { x: 50, y: state.lineOfScrimmage + 7 };
   } else if (player.kind === "man-coverage") {
-    target = playerBySlot(state, player.matchupSlot, "offense") ?? { x: player.x, y: player.y - 1 };
+    const receiver = playerBySlot(state, player.matchupSlot, "offense");
+    target = receiver
+      ? { x: clamp(receiver.x + Math.sign(50 - receiver.x) * 0.8, FIELD_MIN_X, FIELD_MAX_X), y: receiver.y - 1.1 }
+      : { x: player.x, y: player.y - 1 };
   } else {
     const threat = nearestPlayer(state, player, (candidate) => candidate.unit === "offense" && candidate.kind === "route");
     const zone = player.route[player.routeIndex] ?? { x: player.startX, y: player.startY - 6 };
-    target = threat && distance(player, threat) < 12 ? threat : zone;
+    target = threat && distance(player, threat) < 12 ? { x: threat.x, y: threat.y - 1.2 } : zone;
   }
   moveToward(player, target, playerSpeed(player) * (["rush", "contain"].includes(player.kind) ? 1.02 : 0.92), dt);
 }
 
 function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number): void {
+  if (state.ball.state === "snap") return;
   if (player.isHero) {
     const boost = player.actionMode === "burst" ? 1.12 : 1;
     moveByInput(player, input, playerSpeed(player) * boost, dt);
@@ -684,16 +803,40 @@ function carrierStep(state: LivePlayEngineState, carrier: LivePlayerState, input
     const boost = carrier.actionMode === "burst" ? 1.2 : carrier.actionMode === "cut" ? 1.1 : carrier.actionMode === "secure" ? 0.9 : 1;
     moveByInput(carrier, input, playerSpeed(carrier) * boost, dt);
   } else {
-    const defenders = state.players.filter((player) => player.unit === "defense" && !player.down);
-    const closest = [...defenders].sort((left, right) => distance(carrier, left) - distance(carrier, right))[0];
-    const routeTarget = carrier.route[carrier.routeIndex] ?? { x: carrier.x, y: FIELD_MIN_Y };
-    const avoidX = closest && distance(carrier, closest) < 6 ? clamp(carrier.x + (carrier.x <= closest.x ? -6 : 6), FIELD_MIN_X, FIELD_MAX_X) : routeTarget.x;
-    moveToward(carrier, { x: avoidX, y: routeTarget.y }, playerSpeed(carrier) * 1.02, dt);
-    if (distance(carrier, routeTarget) < 1.2) carrier.routeIndex += 1;
+    const opponents = state.players.filter((player) => player.unit !== carrier.unit && !player.down);
+    const closest = [...opponents].sort((left, right) => distance(carrier, left) - distance(carrier, right))[0];
+    const goalY = carrier.unit === "defense" ? defenseGoalWorldY(state) : offenseGoalWorldY(state);
+    const scriptedTarget = carrier.unit === "offense" ? carrier.route[carrier.routeIndex] : undefined;
+    const baseTarget = scriptedTarget ?? { x: carrier.x, y: goalY };
+    const avoidX = closest && distance(carrier, closest) < 6
+      ? clamp(carrier.x + (carrier.x <= closest.x ? -6 : 6), FIELD_MIN_X, FIELD_MAX_X)
+      : baseTarget.x;
+    moveToward(carrier, { x: avoidX, y: baseTarget.y }, playerSpeed(carrier) * 1.02, dt);
+    if (scriptedTarget && distance(carrier, scriptedTarget) < 1.2) carrier.routeIndex += 1;
   }
   state.ball.x = carrier.x;
   state.ball.y = carrier.y;
   state.ball.z = 0;
+}
+
+function separatePlayers(state: LivePlayEngineState): void {
+  for (let leftIndex = 0; leftIndex < state.players.length; leftIndex += 1) {
+    const left = state.players[leftIndex];
+    if (!left || left.down) continue;
+    for (let rightIndex = leftIndex + 1; rightIndex < state.players.length; rightIndex += 1) {
+      const right = state.players[rightIndex];
+      if (!right || right.down) continue;
+      const gap = distance(left, right);
+      const minimum = left.unit === right.unit ? 0.85 : 0.62;
+      if (gap >= minimum || gap < 0.0001) continue;
+      const direction = normalize(left.x - right.x, left.y - right.y);
+      const correction = (minimum - gap) * 0.5;
+      left.x = clamp(left.x + direction.x * correction, FIELD_MIN_X, FIELD_MAX_X);
+      left.y = clamp(left.y + direction.y * correction, WORLD_MIN_Y, WORLD_MAX_Y);
+      right.x = clamp(right.x - direction.x * correction, FIELD_MIN_X, FIELD_MAX_X);
+      right.y = clamp(right.y - direction.y * correction, WORLD_MIN_Y, WORLD_MAX_Y);
+    }
+  }
 }
 
 function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: number): MatchLivePlayOutcome | undefined {
@@ -726,16 +869,20 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
 
   const offensePlayers = state.players.filter((player) => player.unit === "offense" && !player.down);
   const defensePlayers = state.players.filter((player) => player.unit === "defense" && !player.down);
-  const carrier = currentCarrier(state);
+  const carrierBeforeMovement = currentCarrier(state);
 
   for (const player of offensePlayers) {
+    if (player.hasBall) continue;
+    if (state.turnoverCommitted && carrierBeforeMovement) {
+      moveToward(player, carrierBeforeMovement, playerSpeed(player) * 0.98, dt);
+      continue;
+    }
     if (player.id === state.quarterbackId) quarterbackStep(state, player, input, dt);
-    else if (player.hasBall) carrierStep(state, player, input, dt);
     else if (["run-block", "pass-protection", "kick-protection"].includes(player.kind)) {
       if (player.isHero) moveByInput(player, input, playerSpeed(player) * 0.75, dt);
       blockerStep(state, player, dt);
     } else if (player.kind === "route" || player.kind === "carry" || player.kind === "handoff") {
-      if (player.isHero && !player.hasBall) {
+      if (player.isHero) {
         const boost = player.actionMode === "burst" ? 1.18 : player.actionMode === "cut" ? 1.1 : 1;
         moveByInput(player, input, playerSpeed(player) * boost, dt);
       } else offensiveRouteStep(state, player, dt);
@@ -751,12 +898,32 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
     }
   }
 
+  const carrier = currentCarrier(state);
+  if (carrier) {
+    if (carrier.id === state.quarterbackId && !state.turnoverCommitted) quarterbackStep(state, carrier, input, dt);
+    else carrierStep(state, carrier, input, dt);
+    if (state.ball.state === "carried") {
+      state.ball.x = carrier.x;
+      state.ball.y = carrier.y;
+      state.ball.z = 0;
+    }
+  }
+
   for (const player of defensePlayers) defenderStep(state, player, input, dt);
+  separatePlayers(state);
 
   const activeCarrier = currentCarrier(state);
   if (activeCarrier) {
-    if (activeCarrier.y <= FIELD_MIN_Y + 0.4) return finishPlay(state, "touchdown", activeCarrier, "Игрок пересекает линию зачётной зоны.");
-    for (const defender of defensePlayers) {
+    const offensiveTouchdown = activeCarrier.unit === "offense" && activeCarrier.y <= offenseGoalWorldY(state);
+    const defensiveTouchdown = activeCarrier.unit === "defense" && state.turnoverCommitted && activeCarrier.y >= defenseGoalWorldY(state);
+    if (offensiveTouchdown) return finishPlay(state, "touchdown", activeCarrier, "Игрок пересекает линию зачётной зоны.");
+    if (defensiveTouchdown) return finishPlay(state, "defensive-touchdown", activeCarrier, "Защитник возвращает перехват в зачётную зону.", true);
+    if (activeCarrier.x <= FIELD_MIN_X + 0.15 || activeCarrier.x >= FIELD_MAX_X - 0.15) {
+      event(state, "out-of-bounds", `${activeCarrier.slot} выходит за боковую`, activeCarrier.x, activeCarrier.y, activeCarrier.id);
+      return finishPlay(state, state.turnoverCommitted ? "turnover" : state.passCompleted ? "completion" : "run", activeCarrier, "Игрок выходит за боковую, розыгрыш завершён.", state.turnoverCommitted);
+    }
+    const tacklers = state.players.filter((player) => player.unit !== activeCarrier.unit && !player.down);
+    for (const defender of tacklers) {
       const result = tackleCarrier(state, defender, activeCarrier);
       if (result) return result;
     }
@@ -768,7 +935,8 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
     state.ball.x = state.ball.startX + (state.ball.targetX - state.ball.startX) * progress;
     state.ball.y = state.ball.startY + (state.ball.targetY - state.ball.startY) * progress;
     state.ball.z = Math.sin(progress * Math.PI) * (4 + state.ball.flightDuration * 2.5);
-    if (progress >= 1) return resolveCatch(state);
+    const flightOutcome = resolveBallFlight(state);
+    if (flightOutcome) return flightOutcome;
   }
 
   if (qb && state.ball.state === "carried" && state.ball.carrierId === qb.id) {
@@ -779,8 +947,11 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
     }
   }
 
-  if (state.elapsed > 10.5) {
-    if (activeCarrier) return finishPlay(state, activeCarrier.id === state.quarterbackId && activeCarrier.y >= state.lineOfScrimmage ? "sack" : "run", activeCarrier, "Розыгрыш заканчивается по свистку.");
+  if (state.elapsed > 12.5) {
+    if (activeCarrier) {
+      const result = state.turnoverCommitted ? "turnover" : activeCarrier.id === state.quarterbackId && activeCarrier.y >= state.lineOfScrimmage ? "sack" : state.passCompleted ? "completion" : "run";
+      return finishPlay(state, result, activeCarrier, "Розыгрыш заканчивается по свистку.", state.turnoverCommitted);
+    }
     return finishPlay(state, "incomplete", undefined, "Розыгрыш заканчивается без завершённой передачи.");
   }
   return undefined;
@@ -823,6 +994,7 @@ export function createLivePlayEngine(episode: MatchEpisode, heroPosition: Footba
       down: false,
       blockedUntil: 0,
       tackleCooldownUntil: 0,
+      ballReactionDelay: assignment.unit === "defense" ? clamp(0.12 + (82 - (assignment.overall ?? 65)) * 0.006, 0.08, 0.34) : 0,
       actionBoostUntil: 0,
     };
     if (assignment.matchupSlot) state.matchupSlot = assignment.matchupSlot;
@@ -853,14 +1025,16 @@ export function createLivePlayEngine(episode: MatchEpisode, heroPosition: Footba
       flightElapsed: 0,
       flightDuration: 0,
       throwQuality: 0,
+      throwStartedAt: 0,
     },
     lineOfScrimmage,
-    firstDownY: clamp(lineOfScrimmage - episode.distance * YARDS_TO_FIELD, FIELD_MIN_Y, FIELD_MAX_Y),
+    firstDownY: clamp(lineOfScrimmage - episode.distance * YARDS_TO_FIELD, WORLD_MIN_Y, WORLD_MAX_Y),
     offenseSide: episode.possession,
     pressureOccurred: false,
     runCommitted: false,
     passCompleted: false,
     passAttempted: false,
+    turnoverCommitted: false,
     heroActionScore: 55,
     heroTouchedPlay: false,
     events: [],
@@ -881,7 +1055,7 @@ export function issueLivePlayCommand(state: LivePlayEngineState, command: LivePl
     event(state, "snap", "Снэп", state.ball.x, state.ball.y);
     return;
   }
-  if (state.phase === "pre-snap" || !hero) return;
+  if (state.phase === "pre-snap" || !hero || hero.down) return;
   if (command.type === "throw") {
     const qb = quarterback(state);
     const target = state.players.find((player) => player.id === command.targetId && player.unit === "offense");
@@ -889,7 +1063,7 @@ export function issueLivePlayCommand(state: LivePlayEngineState, command: LivePl
     return;
   }
   if (command.type === "run") {
-    if (hero.id === state.quarterbackId) {
+    if (hero.id === state.quarterbackId && state.ball.state === "carried" && state.ball.carrierId === hero.id) {
       state.runCommitted = true;
       hero.actionMode = "burst";
       hero.actionBoostUntil = state.elapsed + 1.2;
