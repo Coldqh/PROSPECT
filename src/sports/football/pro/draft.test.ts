@@ -269,7 +269,7 @@ describe("professional draft ecosystem", () => {
     const after = prepared.football.professional.heroCareer;
     expect(after?.weeklyPlan.resolved).toBe(true);
     expect(after?.weeklyPlan.focus).toBe("competition");
-    expect(after?.coachTrust).not.toBe(before.coachTrust);
+    expect(after?.weeklyPlan.coachTrustDelta).toBeCloseTo((after?.coachTrust ?? before.coachTrust) - before.coachTrust, 5);
     expect(after?.depthRank).toBeGreaterThanOrEqual(1);
     expect(["active", "questionable", "out", "injured-reserve"]).toContain(after?.availability);
     expect(() => setProfessionalWeekFocus(prepared, "recovery")).toThrow();

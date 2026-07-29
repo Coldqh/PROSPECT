@@ -217,6 +217,17 @@ type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistr
 type LegacyMatchWithHeroControl = CareerSave["football"]["match"] & { heroControlMode: "assisted" | "manual" | "spectator" };
 type LegacyFootballWithHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithHeroControl };
 
+
+interface LegacyPerformanceSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 30 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: CareerSave["football"];
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
+  history: HistoryEntry[];
+}
+
 interface LegacyHeroControlSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 29 };
   character: CareerSave["character"];
@@ -534,6 +545,24 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
 }
 
 
+
+function migrateVersionThirty(input: LegacyPerformanceSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v31`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Оценка исполнения подключена",
+        description: "Каждый снэп и матч получили позиционные критерии, числовую оценку и тренерский разбор.",
+      },
+    ],
+  });
+}
+
 function migrateVersionTwentyNine(input: LegacyHeroControlSave): CareerSave {
   const { heroControlMode: _legacyMode, ...match } = input.football.match;
   return parseMigratedSave({
@@ -611,14 +640,21 @@ function migrateVersionTwentySeven(input: LegacyProfessionalLeagueSave): CareerS
   return migrated;
 }
 
+function moveMigrationEventLast(save: CareerSave, eventId: string): CareerSave {
+  const event = save.history.find((item) => item.id === eventId);
+  if (!event) return save;
+  return { ...save, history: [...save.history.filter((item) => item.id !== eventId), event] };
+}
+
 function migrateVersionTwentySix(input: LegacyMatchExperienceSave): CareerSave {
-  return migrateVersionTwentySeven({
+  const eventId = `migration-${input.meta.id}-v27`;
+  const migrated = migrateVersionTwentySeven({
     ...input,
     meta: { ...input.meta, schemaVersion: 27 },
     history: [
       ...input.history,
       {
-        id: `migration-${input.meta.id}-v27`,
+        id: eventId,
         occurredAt: input.meta.updatedAt,
         type: "save-migrated",
         title: "Матчевый опыт обновлён",
@@ -626,16 +662,18 @@ function migrateVersionTwentySix(input: LegacyMatchExperienceSave): CareerSave {
       },
     ],
   });
+  return moveMigrationEventLast(migrated, eventId);
 }
 
 function migrateVersionTwentyFive(input: LegacyFivePositionCareerSave): CareerSave {
-  return migrateVersionTwentySix({
+  const eventId = `migration-${input.meta.id}-v26`;
+  const migrated = migrateVersionTwentySix({
     ...input,
     meta: { ...input.meta, schemaVersion: 26 },
     history: [
       ...input.history,
       {
-        id: `migration-${input.meta.id}-v26`,
+        id: eventId,
         occurredAt: input.meta.updatedAt,
         type: "save-migrated",
         title: "Карьера всех позиций подключена",
@@ -643,6 +681,7 @@ function migrateVersionTwentyFive(input: LegacyFivePositionCareerSave): CareerSa
       },
     ],
   });
+  return moveMigrationEventLast(migrated, eventId);
 }
 
 function migrateVersionTwentyFour(input: LegacyFullRosterSave): CareerSave {
@@ -1293,6 +1332,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 30) return migratedResult(migrateVersionThirty(input as LegacyPerformanceSave), 30);
   if (schemaVersion === 29) return migratedResult(migrateVersionTwentyNine(input as LegacyHeroControlSave), 29);
   if (schemaVersion === 28) return migratedResult(migrateVersionTwentyEight(input as LegacyPreControlSave), 28);
   if (schemaVersion === 27) return migratedResult(migrateVersionTwentySeven(input as LegacyProfessionalLeagueSave), 27);

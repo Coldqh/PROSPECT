@@ -553,3 +553,15 @@
 @media (max-width: 430px) {
   .professional-week-plan > div { grid-template-columns: 1fr; }
 }
+
+.professional-performance-history { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.professional-performance-history > header { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.professional-performance-history > header div { display: grid; gap: 3px; }
+.professional-performance-history > header small { color: var(--muted); font-size: 13px; }
+.professional-performance-history > header strong { font-size: 17px; }
+.professional-performance-history > header > span { font-weight: 800; }
+.professional-performance-history > article { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border-radius: 10px; background: var(--surface-3); }
+.professional-performance-history article > div { min-width: 0; display: grid; gap: 4px; }
+.professional-performance-history article p { margin: 0; color: var(--muted); }
+.professional-performance-history article footer { display: flex; flex-wrap: wrap; gap: 5px; }
+.professional-performance-history article footer em { padding: 3px 6px; border-radius: 6px; background: var(--surface-1); color: var(--muted); font-size: 13px; font-style: normal; }

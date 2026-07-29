@@ -257,8 +257,8 @@ describe("real-time football engine", () => {
 
   it("keeps physical interceptions rare even when a defender wins the catch point", () => {
     expect(livePassInterceptionChance(74, 0, 82, 0.3)).toBeLessThan(5);
-    expect(livePassInterceptionChance(99, 7, 20, 2)).toBeLessThanOrEqual(21);
-    expect(livePassInterceptionChance(55, 0, 99, 0)).toBeGreaterThanOrEqual(0.8);
+    expect(livePassInterceptionChance(99, 7, 20, 2)).toBeLessThanOrEqual(11.5);
+    expect(livePassInterceptionChance(55, 0, 99, 0)).toBeGreaterThanOrEqual(0.25);
   });
 
   it("hands control to the player only while movement input is active", () => {

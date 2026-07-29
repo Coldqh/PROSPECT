@@ -112,6 +112,11 @@ export function ProfessionalTransitionDashboard({
     .filter((player) => player.teamId === heroCareer?.teamId && player.availability !== "active")
     .sort((left, right) => right.injuryWeeks - left.injuryWeeks)
     .slice(0, 8);
+  const recentPerformance = [...(heroCareer?.gameLog ?? [])].reverse().slice(0, 5);
+  const gradedGames = (heroCareer?.gameLog ?? []).filter((game) => game.performanceScore !== undefined);
+  const averagePerformance = gradedGames.length > 0
+    ? gradedGames.reduce((sum, game) => sum + (game.performanceScore ?? 0), 0) / gradedGames.length
+    : undefined;
 
   if (showMatch) {
     return (
@@ -284,6 +289,16 @@ export function ProfessionalTransitionDashboard({
             <article><small>Trust</small><strong>{Math.round(heroCareer?.coachTrust ?? 0)}</strong><span>{heroCareer?.gamesPlayed ?? 0} игр</span></article>
             <article><small>Cap space</small><strong>{heroTeam ? money(heroTeam.capSpace) : "—"}</strong><span>{heroTeam ? `${heroTeam.rosterSize}/53` : "рынок"}</span></article>
           </div>
+
+          {recentPerformance.length > 0 && (
+            <div className="professional-performance-history">
+              <header><div><small>ОЦЕНКА ИСПОЛНЕНИЯ</small><strong>Последние матчи</strong></div><span>{averagePerformance !== undefined ? `${averagePerformance.toFixed(1)}/100` : "—"}</span></header>
+              {recentPerformance.map((game) => <article key={game.gameId}>
+                <span className={`result-grade result-grade--${game.grade.toLowerCase()}`}>{game.grade}<small>{Math.round(game.performanceScore ?? 0)}</small></span>
+                <div><strong>Неделя {game.week} · {game.won ? "Победа" : "Поражение"} {game.teamScore}:{game.opponentScore}</strong><p>{game.evaluationSummary ?? `${game.snaps} снэпов`}</p>{game.criterionScores && <footer>{game.criterionScores.map((item) => <em key={item.id}>{item.label} {Math.round(item.score)}</em>)}</footer>}</div>
+              </article>)}
+            </div>
+          )}
 
           {heroCareer?.weeklyPlan && league.phase !== "complete" && (
             <div className={`professional-week-plan${heroCareer.weeklyPlan.resolved ? " is-resolved" : ""}`}>

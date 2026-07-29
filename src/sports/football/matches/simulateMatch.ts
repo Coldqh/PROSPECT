@@ -9,6 +9,7 @@ import { buildSnapAssignments, buildSpecialTeamsAssignments, callPlay, describeH
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats } from "./createMatchState";
 import { calculateDecisionForecast, decisionScoreCenter } from "./decisionForecast";
 import { decodeLivePlayOutcome } from "./realTimeEngine";
+import { aggregateMatchEvaluation, evaluateSnapPerformance, gradeFromPerformanceScore } from "./performanceEvaluation";
 import type {
   FootballMatchState,
   MatchAdvancedStatLine,
@@ -335,10 +336,7 @@ function puntNetYards(punter: SpecialistSnapshot, random: SeededRandom): number 
 }
 
 function gradeFromScore(score: number): MatchOutcomeGrade {
-  if (score >= 80) return "A";
-  if (score >= 64) return "B";
-  if (score >= 47) return "C";
-  return "D";
+  return gradeFromPerformanceScore(score);
 }
 
 function heroTeamId(save: CareerSave): string {
@@ -653,13 +651,13 @@ function simulateSpecialTeamsSnap(
 
 export function simulatedPassInterceptionChance(teamEdge: number, aggression: number, pressured: boolean): number {
   return Math.max(
-    .003,
+    .002,
     Math.min(
-      .072,
-      .006
-        + Math.max(0, -teamEdge) * .00115
-        + aggression * .00018
-        + (pressured ? .012 : 0),
+      .045,
+      .004
+        + Math.max(0, -teamEdge) * .00075
+        + aggression * .0001
+        + (pressured ? .008 : 0),
     ),
   );
 }
@@ -1120,7 +1118,8 @@ function resultCopy(episode: MatchEpisode, simulation: SnapSimulation, grade: Ma
 }
 
 function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalResult {
-  const grade = gradeFromScore(match.coachGrade);
+  const evaluation = aggregateMatchEvaluation(save.football.position, match.completedEpisodes.map((item) => item.evaluation).filter((item): item is NonNullable<typeof item> => Boolean(item)));
+  const grade = evaluation.grade;
   const won = match.heroScore > match.opponentScore;
   const assignmentRate = match.advancedStats.snaps > 0
     ? Math.round(match.advancedStats.assignmentWins / match.advancedStats.snaps * 100)
@@ -1142,8 +1141,8 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
     P: `${match.stats.punts} пантов, ${match.stats.puntYards} net yards, inside 20: ${match.stats.puntsInside20}`,
   };
   const spotlight = spotlightByPosition[save.football.position];
-  const coachTrustDelta = round((match.coachGrade - 55) * .11, 1);
-  const visibilityDelta = round(Math.max(0, (match.coachGrade - 52) * .09) + (won ? .8 : 0), 1);
+  const coachTrustDelta = round((evaluation.score - 68) * .08, 1);
+  const visibilityDelta = round(Math.max(0, (evaluation.score - 62) * .07) + (won ? .8 : 0), 1);
   const professionalTeam = save.meta.phase === "professional-career"
     ? save.football.professional.teams.find((team) => team.id === save.football.professional.heroCareer?.teamId)
     : undefined;
@@ -1156,10 +1155,12 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
     opponentScore: match.opponentScore,
     grade,
     headline: won ? "Победа закрыта" : "Матч упущен",
-    summary: `${teamName} ${won ? "побеждает" : "проигрывает"} ${match.heroScore}:${match.opponentScore}. Штаб ставит ${grade}.`,
+    summary: `${teamName} ${won ? "побеждает" : "проигрывает"} ${match.heroScore}:${match.opponentScore}. Индивидуальная оценка ${Math.round(evaluation.score)} (${grade}).`,
     spotlight,
     coachTrustDelta,
     visibilityDelta,
+    score: evaluation.score,
+    evaluation,
   };
 }
 
@@ -1239,6 +1240,32 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
   } else {
     started = startControlledDrive(started, GAME_SECONDS, random.integer(22, 28), 1);
   }
+  const entryQuarter = match.entryQuarter ?? 1;
+  if (entryQuarter > 1) {
+    const targetClock = entryQuarter === 2 ? 33 * 60 : entryQuarter === 3 ? 21 * 60 : 9 * 60;
+    let side: MatchTeamSide = started.possession;
+    let driveNumber = started.driveNumber;
+    while (started.gameClockSeconds > targetClock && driveNumber < 9) {
+      const background = backgroundDrive(
+        save,
+        side,
+        started.gameClockSeconds,
+        25,
+        driveNumber,
+        `${save.meta.worldSeed}:${match.gameId}:bench:${driveNumber}`,
+      );
+      started = {
+        ...started,
+        heroScore: started.heroScore + background.heroScoreDelta,
+        opponentScore: started.opponentScore + background.opponentScoreDelta,
+        gameClockSeconds: background.gameClockSeconds,
+        drives: [...started.drives, background.summary],
+      };
+      side = otherSide(side);
+      driveNumber += 1;
+    }
+    started = startControlledDrive(started, Math.min(started.gameClockSeconds, targetClock), random.integer(20, 34), driveNumber);
+  }
   started = { ...started, currentEpisode: generateEpisode(save, started, 0) };
 
   return {
@@ -1271,7 +1298,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
   const assignmentScore = liveOutcome
     ? clamp(liveOutcome.assignmentScore)
     : clamp(decisionScoreCenter(save, match, selected) + random.integer(-16, 16));
-  const grade = gradeFromScore(assignmentScore);
+  const preliminaryGrade = gradeFromScore(assignmentScore);
   const simulation: SnapSimulation = liveOutcome
     ? {
         snapResult: liveOutcome.snapResult,
@@ -1293,9 +1320,23 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     : simulateSnap(save, match, episode, assignmentScore, selected, random);
   const statResolution = liveOutcome
     ? { stats: liveOutcome.statDelta, advanced: liveOutcome.advancedDelta, involved: liveOutcome.heroInvolved }
-    : makeStatDelta(save, episode, simulation, grade, random);
-  const coachDelta = round(grade === "A" ? 2.4 : grade === "B" ? 1 : grade === "C" ? -.6 : -2.6, 1);
-  const confidenceDelta = round(grade === "A" ? 1.3 : grade === "B" ? .5 : grade === "C" ? -.3 : -1.1, 1);
+    : makeStatDelta(save, episode, simulation, preliminaryGrade, random);
+  const evaluation = evaluateSnapPerformance({
+    position: save.football.position,
+    episode,
+    assignmentScore,
+    teamExecutionScore: simulation.teamExecutionScore,
+    snapResult: simulation.snapResult,
+    yards: simulation.yards,
+    involved: statResolution.involved,
+    pressureOccurred: Boolean(simulation.pressureOccurred),
+    statDelta: statResolution.stats,
+    advancedDelta: statResolution.advanced,
+    liveSignals: liveOutcome?.evaluationSignals,
+  });
+  const grade = evaluation.grade;
+  const coachDelta = round((evaluation.score - 68) * .055, 1);
+  const confidenceDelta = round((evaluation.score - 68) * .028, 1);
   const fatigueDelta = round(1 + selected.difficulty * .013 + (selected.risk === "aggressive" ? .65 : 0), 1);
   const snapTime = liveOutcome
     ? clampInteger(liveOutcome.elapsedSeconds + (simulation.snapResult === "incomplete" ? 8 : 24), 8, 42)
@@ -1335,6 +1376,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     ballCarrierSlot: simulation.ballCarrierSlot,
     statDelta: statResolution.stats,
     advancedDelta: statResolution.advanced,
+    evaluation,
   };
 
   let heroScore = match.heroScore + (simulation.scoringSide === "hero" ? simulation.points : 0);
@@ -1413,7 +1455,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     gameClockSeconds,
     playClockSeconds: 25,
     heroFatigue: clamp(match.heroFatigue + fatigueDelta),
-    coachGrade: clamp(match.coachGrade + coachDelta),
+    coachGrade: round((match.completedEpisodes.reduce((sum, item) => sum + (item.evaluation?.score ?? item.assignmentScore), 0) + evaluation.score) / (match.completedEpisodes.length + 1), 1),
     episodeIndex: match.episodeIndex + 1,
     driveDown: nextDown,
     driveDistance: nextDistance,

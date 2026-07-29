@@ -22,6 +22,7 @@ import {
   type LivePlayEngineState,
   type MatchLivePlayOutcome,
 } from "../../sports/football/matches/realTimeEngine";
+import { evaluateSnapPerformance } from "../../sports/football/matches/performanceEvaluation";
 import type { MatchEpisode } from "../../sports/football/matches/types";
 
 interface RealTimeMatchFieldProps {
@@ -353,6 +354,19 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
   }, [analysisMode, episode.id]);
 
   const actions = useMemo(() => liveRoleActions(heroPosition), [heroPosition]);
+  const snapEvaluation = useMemo(() => hud.outcome ? evaluateSnapPerformance({
+    position: heroPosition,
+    episode,
+    assignmentScore: hud.outcome.assignmentScore,
+    teamExecutionScore: hud.outcome.teamExecutionScore,
+    snapResult: hud.outcome.snapResult,
+    yards: hud.outcome.yards,
+    involved: hud.outcome.heroInvolved,
+    pressureOccurred: hud.outcome.pressureOccurred,
+    statDelta: hud.outcome.statDelta,
+    advancedDelta: hud.outcome.advancedDelta,
+    liveSignals: hud.outcome.evaluationSignals,
+  }) : undefined, [episode, heroPosition, hud.outcome]);
   const receivers = liveReceiverTargets(engineRef.current);
   const canThrow = heroPosition === "QB" && hud.phase === "live" && !hud.runCommitted && !hud.outcome;
 
@@ -432,9 +446,11 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
           <div className="live-snap-result-layer" role="presentation">
             <section className={`live-snap-result-dialog${hud.outcome.turnover ? " is-turnover" : ""}`} role="dialog" aria-modal="true" aria-label="Итог снэпа">
               <small>ИТОГ СНЭПА</small>
-              <strong>{resultTitle(hud.outcome)}</strong>
+              <div className="live-snap-result-grade"><b>{snapEvaluation?.grade ?? "C"}</b><strong>{Math.round(snapEvaluation?.score ?? hud.outcome.assignmentScore)}</strong><span>/100</span></div>
+              <h3>{resultTitle(hud.outcome)}</h3>
               <div><span>{hud.outcome.yards >= 0 ? "+" : ""}{hud.outcome.yards} ярдов</span><span>{fieldSpotLabel(hud.outcome.endFieldPosition ?? episode.fieldPosition)}</span></div>
-              <p>{hud.outcome.description}</p>
+              <p>{snapEvaluation?.summary ?? hud.outcome.description}</p>
+              {snapEvaluation && <div className="live-snap-result-criteria">{snapEvaluation.criteria.map((item) => <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)} <em className={item.delta >= 0 ? "is-positive" : "is-negative"}>{item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}</em></strong><small>{item.detail}</small></article>)}</div>}
               <footer><span>Задание {Math.round(hud.outcome.assignmentScore)}</span><span>Команда {Math.round(hud.outcome.teamExecutionScore)}</span></footer>
               <button type="button" disabled={disabled} onClick={submitOutcome}>{disabled ? "Сохранение…" : "Следующий снэп"}</button>
             </section>

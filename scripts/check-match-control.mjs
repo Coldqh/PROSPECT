@@ -8,7 +8,7 @@ const required = [
   ["src/components/career/RealTimeMatchField.tsx", "is-manual-override"],
   ["src/components/career/RealTimeMatchField.tsx", "АВТОМАРШРУТ"],
   ["src/components/career/RealTimeMatchField.tsx", "live-snap-result-dialog"],
-  ["src/components/career/MatchDashboard.tsx", "Автопилот + мгновенный перехват"],
+  ["src/components/career/MatchDashboard.tsx", "Автопилот + мгновенное ручное вмешательство"],
 ];
 for (const [path, token] of required) {
   if (!read(path).includes(token)) throw new Error(`${path}: missing ${token}`);

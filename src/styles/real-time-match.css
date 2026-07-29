@@ -402,3 +402,19 @@
 .live-football__autopilot-state small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .live-football__autopilot-state small { color: var(--text-secondary); }
 .live-football.is-manual-override .live-football__canvas { box-shadow: inset 0 0 0 1px rgba(239, 51, 64, .35); }
+
+/* 0.42 positional snap grading */
+.live-snap-result-grade { justify-content: flex-start !important; gap: 8px !important; }
+.live-snap-result-grade b { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 9px; background: var(--accent); color: #fff; font-size: 22px; }
+.live-snap-result-grade strong { font-size: 34px; color: #fff; }
+.live-snap-result-grade span { color: var(--text-secondary) !important; }
+.live-snap-result-dialog > h3 { margin: 0; color: #fff; font-size: 20px; }
+.live-snap-result-criteria { display: grid !important; gap: 6px !important; }
+.live-snap-result-criteria article { padding: 8px 9px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; border: 1px solid var(--border-soft); border-radius: 8px; }
+.live-snap-result-criteria article span { font-weight: 800; }
+.live-snap-result-criteria article strong { color: #fff; }
+.live-snap-result-criteria article small { grid-column: 1 / -1; color: var(--text-secondary); }
+
+.live-snap-result-criteria strong em { margin-left: 5px; font-size: 13px; font-style: normal; }
+.live-snap-result-criteria strong em.is-positive { color: var(--success); }
+.live-snap-result-criteria strong em.is-negative { color: var(--danger); }

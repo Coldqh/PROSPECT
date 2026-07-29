@@ -2,6 +2,7 @@ import type { FootballPosition } from "../career/types";
 import type {
   MatchAdvancedStatLine,
   MatchEpisode,
+  MatchLiveEvaluationSignals,
   MatchPoint,
   MatchSnapResult,
   MatchStatLine,
@@ -116,6 +117,7 @@ export interface MatchLivePlayOutcome {
   startFieldPosition?: number;
   endFieldPosition?: number;
   firstDown?: boolean;
+  evaluationSignals?: MatchLiveEvaluationSignals;
 }
 
 export interface LivePlayEngineState {
@@ -141,6 +143,14 @@ export interface LivePlayEngineState {
   turnoverCommitted: boolean;
   heroActionScore: number;
   heroTouchedPlay: boolean;
+  heroRouteDeviationTotal: number;
+  heroRouteSamples: number;
+  heroSeparationTotal: number;
+  heroSeparationSamples: number;
+  heroCoverageTotal: number;
+  heroCoverageSamples: number;
+  qbDecisionQuality: number;
+  qbTimeToThrow: number;
   events: LivePlayEvent[];
   outcome?: MatchLivePlayOutcome;
 }
@@ -206,6 +216,15 @@ function clamp(value: number, min: number, max: number): number {
 
 function distance(left: Pick<LivePlayerState, "x" | "y"> | MatchPoint, right: Pick<LivePlayerState, "x" | "y"> | MatchPoint): number {
   return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
+function distanceToSegment(pointValue: MatchPoint, start: MatchPoint, end: MatchPoint): number {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared < 0.0001) return distance(pointValue, start);
+  const projection = clamp(((pointValue.x - start.x) * dx + (pointValue.y - start.y) * dy) / lengthSquared, 0, 1);
+  return distance(pointValue, { x: start.x + dx * projection, y: start.y + dy * projection });
 }
 
 function normalize(x: number, y: number): { x: number; y: number } {
@@ -303,7 +322,7 @@ function playerSpeed(player: LivePlayerState): number {
         : player.position === "OT" || player.position === "OG" || player.position === "C" || player.position === "DT"
           ? 6.8
           : 8.6;
-  return base * (0.78 + player.overall / 350);
+  return base * (0.78 + player.overall / 350) * 0.78;
 }
 
 function moveToward(player: LivePlayerState, target: MatchPoint, speed: number, dt: number): void {
@@ -351,10 +370,38 @@ function quarterback(state: LivePlayEngineState): LivePlayerState | undefined {
   return state.quarterbackId ? state.players.find((player) => player.id === state.quarterbackId) : undefined;
 }
 
-function openScore(state: LivePlayEngineState, receiver: LivePlayerState): number {
-  const defender = nearestPlayer(state, receiver, (candidate) => candidate.unit === "defense");
-  const separation = defender ? distance(receiver, defender) : 12;
-  return separation * 8 + receiver.overall * 0.35 - Math.abs(receiver.x - 50) * 0.12;
+interface QuarterbackTargetRead {
+  receiver: LivePlayerState;
+  score: number;
+  separation: number;
+  depth: number;
+  progressionIndex: number;
+  risk: number;
+}
+
+function quarterbackTargetRead(state: LivePlayEngineState, receiver: LivePlayerState): QuarterbackTargetRead {
+  const defenders = state.players.filter((candidate) => candidate.unit === "defense" && !candidate.down);
+  const closest = [...defenders].sort((left, right) => distance(receiver, left) - distance(receiver, right))[0];
+  const separation = closest ? distance(receiver, closest) : 12;
+  const depth = Math.max(0, state.lineOfScrimmage - receiver.y);
+  const call = offenseCallForEpisode(state.episode);
+  const progressionIndex = Math.max(0, call.progression.indexOf(receiver.slot));
+  const needed = state.episode.distance;
+  const sticksValue = depth >= needed ? 12 : -Math.max(0, needed - depth) * 1.8;
+  const leverageRisk = closest
+    ? Math.max(0, 2.6 - separation) * 12 + Math.max(0, receiver.y - closest.y) * 2.4
+    : 0;
+  const sidelinePenalty = Math.max(0, 8 - Math.min(receiver.x, 100 - receiver.x)) * 1.5;
+  const progressionBonus = Math.max(0, 18 - progressionIndex * 5.5);
+  const checkdownBonus = receiver.slot === "RB" && state.elapsed >= 2.8 ? 8 : 0;
+  const score = separation * 10.5
+    + receiver.overall * 0.22
+    + sticksValue
+    + progressionBonus
+    + checkdownBonus
+    - leverageRisk
+    - sidelinePenalty;
+  return { receiver, score, separation, depth, progressionIndex, risk: leverageRisk + sidelinePenalty };
 }
 
 function setCarrier(state: LivePlayEngineState, player: LivePlayerState): void {
@@ -379,12 +426,12 @@ function startPass(state: LivePlayEngineState, thrower: LivePlayerState, target:
   ) return;
   const pressure = nearestPlayer(state, thrower, (candidate) => candidate.unit === "defense" && ["rush", "contain", "run-fit"].includes(candidate.kind));
   const pressureDistance = pressure ? distance(thrower, pressure) : 20;
-  const lead = clamp((target.overall - 55) * 0.018 + 0.58, 0.45, 1.15);
+  const lead = clamp((target.overall - 55) * 0.012 + 0.48, 0.38, 0.92);
   const cleanTargetX = clamp(target.x + target.vx * lead, FIELD_MIN_X, FIELD_MAX_X);
   const cleanTargetY = clamp(target.y + target.vy * lead, WORLD_MIN_Y, WORLD_MAX_Y);
   const airDistance = Math.hypot(cleanTargetX - thrower.x, cleanTargetY - thrower.y);
   const quality = clamp(72 + thrower.overall * 0.22 - Math.max(0, 5 - pressureDistance) * 7 - Math.abs(thrower.vx) * 0.7 - Math.abs(thrower.vy) * 0.5, 20, 99);
-  const missRadius = clamp((100 - quality) * 0.035 + airDistance * 0.015, 0.15, 4.8);
+  const missRadius = clamp((100 - quality) * 0.018 + airDistance * 0.008, 0.08, 2.35);
   const missAngle = random(state) * Math.PI * 2;
   const targetX = clamp(cleanTargetX + Math.cos(missAngle) * missRadius, FIELD_MIN_X, FIELD_MAX_X);
   const targetY = clamp(cleanTargetY + Math.sin(missAngle) * missRadius, WORLD_MIN_Y, WORLD_MAX_Y);
@@ -533,6 +580,43 @@ function exactHeroDeltas(
   return { stats, advanced, involved };
 }
 
+function sampleHeroMovement(state: LivePlayEngineState, player: LivePlayerState): void {
+  if (!player.isHero) return;
+  if (player.kind === "route") {
+    const next = player.route[player.routeIndex] ?? player.route[player.route.length - 1];
+    const previous = player.route[Math.max(0, player.routeIndex - 1)] ?? { x: player.startX, y: player.startY };
+    const deviation = next ? distanceToSegment(player, previous, next) : 0;
+    const defender = nearestPlayer(state, player, (candidate) => candidate.unit === "defense");
+    state.heroRouteDeviationTotal += deviation;
+    state.heroRouteSamples += 1;
+    state.heroSeparationTotal += defender ? distance(player, defender) : 8;
+    state.heroSeparationSamples += 1;
+  }
+  if (player.kind === "man-coverage" || player.kind === "zone-coverage") {
+    const threat = player.matchupSlot
+      ? playerBySlot(state, player.matchupSlot, "offense")
+      : nearestPlayer(state, player, (candidate) => candidate.unit === "offense" && candidate.kind === "route");
+    if (threat) {
+      state.heroCoverageTotal += distance(player, threat);
+      state.heroCoverageSamples += 1;
+    }
+  }
+}
+
+function evaluationSignals(state: LivePlayEngineState): MatchLiveEvaluationSignals {
+  const routeDeviation = state.heroRouteSamples > 0 ? state.heroRouteDeviationTotal / state.heroRouteSamples : 0;
+  const separation = state.heroSeparationSamples > 0 ? state.heroSeparationTotal / state.heroSeparationSamples : 0;
+  const coverageDistance = state.heroCoverageSamples > 0 ? state.heroCoverageTotal / state.heroCoverageSamples : 0;
+  return {
+    routeAdherence: state.heroRouteSamples > 0 ? clamp(100 - routeDeviation * 9.5, 18, 98) : undefined,
+    separationScore: state.heroSeparationSamples > 0 ? clamp(42 + separation * 13, 20, 98) : undefined,
+    coverageScore: state.heroCoverageSamples > 0 ? clamp(100 - coverageDistance * 10.5, 18, 98) : undefined,
+    decisionQuality: state.qbDecisionQuality > 0 ? clamp(state.qbDecisionQuality, 20, 98) : undefined,
+    timingScore: state.qbTimeToThrow > 0 ? clamp(92 - Math.abs(state.qbTimeToThrow - 2.65) * 18, 25, 98) : undefined,
+    timeToThrow: state.qbTimeToThrow > 0 ? state.qbTimeToThrow : undefined,
+  };
+}
+
 function finishPlay(
   state: LivePlayEngineState,
   snapResult: MatchSnapResult,
@@ -587,6 +671,7 @@ function finishPlay(
     startFieldPosition: state.episode.fieldPosition,
     endFieldPosition: Math.round(endFieldPosition),
     firstDown,
+    evaluationSignals: evaluationSignals(state),
   };
   if (scoringSide) outcome.scoringSide = scoringSide;
   if (target) outcome.targetSlot = target.slot;
@@ -597,13 +682,13 @@ function finishPlay(
 
 export function livePassInterceptionChance(defenderOverall: number, playBallBonus: number, throwQuality: number, leverage: number): number {
   return clamp(
-    2.5
-      + Math.max(0, defenderOverall - 70) * 0.24
-      + playBallBonus
-      - throwQuality * 0.025
-      + Math.max(0, leverage) * 1.8,
-    0.8,
-    21,
+    0.7
+      + Math.max(0, defenderOverall - 70) * 0.12
+      + playBallBonus * 0.55
+      - throwQuality * 0.035
+      + Math.max(0, leverage) * 0.9,
+    0.25,
+    11.5,
   );
 }
 
@@ -619,7 +704,7 @@ function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | u
   const defenderDistance = defender ? distance(defender, ballPoint) : 99;
   const catchableHeight = state.ball.z <= 3.1;
 
-  if (catchableHeight && defender && defenderDistance <= 1.45 && defenderDistance + 0.18 < receiverDistance) {
+  if (catchableHeight && defender && defenderDistance <= 1.25 && defenderDistance + 0.35 < receiverDistance) {
     const canIntercept = ["CB", "S", "LB"].includes(defender.position);
     const playBallBonus = defender.actionMode === "intercept" ? 7 : defender.actionMode === "break" ? 3 : 0;
     // A defender reaching the catch point should usually create a breakup, not an interception.
@@ -643,11 +728,11 @@ function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | u
     return finishPlay(state, "incomplete", undefined, "Защитник физически добирается до траектории и сбивает передачу.");
   }
 
-  if (catchableHeight && target && receiverDistance <= 1.55) {
-    const nearestContest = defenders.find((candidate) => distance(candidate, target) <= 2.2);
-    const contestPenalty = nearestContest ? Math.max(0, 2.2 - distance(nearestContest, target)) * 12 : 0;
-    const secureBonus = target.actionMode === "secure" ? 10 : 0;
-    const catchChance = clamp(38 + target.overall * 0.55 + state.ball.throwQuality * 0.25 - contestPenalty + secureBonus, 18, 98);
+  if (catchableHeight && target && receiverDistance <= 1.9) {
+    const nearestContest = defenders.find((candidate) => distance(candidate, target) <= 2.1);
+    const contestPenalty = nearestContest ? Math.max(0, 2.1 - distance(nearestContest, target)) * 13 : 0;
+    const secureBonus = target.actionMode === "secure" ? 8 : 0;
+    const catchChance = clamp(24 + target.overall * 0.38 + state.ball.throwQuality * 0.25 - contestPenalty + secureBonus, 24, 94);
     if (random(state) * 100 <= catchChance) {
       state.passCompleted = true;
       setCarrier(state, target);
@@ -660,6 +745,20 @@ function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | u
     state.heroActionScore += target.isHero || state.heroPosition === "QB" ? -12 : 0;
     event(state, "drop", `${target.slot} не удерживает мяч`, target.x, target.y, target.id);
     return finishPlay(state, "incomplete", undefined, "Мяч доходит до ресивера, но приём не завершён.");
+  }
+
+  if (progress >= 1 && catchableHeight && target && receiverDistance <= 2.35) {
+    const nearestContest = defenders.find((candidate) => distance(candidate, target) <= 1.8);
+    const lateCatchChance = clamp(28 + target.overall * 0.28 + state.ball.throwQuality * 0.18 - (nearestContest ? 18 : 0), 12, 68);
+    if (random(state) * 100 <= lateCatchChance) {
+      state.passCompleted = true;
+      setCarrier(state, target);
+      state.phase = "live";
+      state.heroTouchedPlay = state.heroTouchedPlay || target.isHero;
+      state.heroActionScore += target.isHero ? 12 : state.heroPosition === "QB" ? 9 : 0;
+      event(state, "catch", `${target.slot} вытягивает неточную передачу`, target.x, target.y, target.id);
+      return undefined;
+    }
   }
 
   if (progress >= 1) {
@@ -719,6 +818,12 @@ export function liveHeroControlActive(input: LiveControlInput): boolean {
 
 function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState, dt: number): void {
   if (player.hasBall) return;
+  if (state.ball.state === "flight" && state.ball.targetId === player.id) {
+    const adjustmentTarget = { x: state.ball.targetX, y: state.ball.targetY };
+    moveToward(player, adjustmentTarget, playerSpeed(player) * 1.02, dt);
+    if (player.isHero) sampleHeroMovement(state, player);
+    return;
+  }
   const target = player.route[player.routeIndex];
   if (!target) {
     const qb = quarterback(state);
@@ -733,6 +838,7 @@ function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState,
     const defender = nearestPlayer(state, player, (candidate) => candidate.unit === "defense");
     const separation = defender ? distance(player, defender) : 8;
     state.heroActionScore += clamp(separation - 2.2, -2, 5) * dt * 1.25;
+    sampleHeroMovement(state, player);
   }
   if (distance(player, target) < 1.2) player.routeIndex += 1;
 }
@@ -765,6 +871,7 @@ function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input
   if (player.isHero && heroHasManualControl(player, input)) {
     const boost = player.actionMode === "speed" ? 1.2 : player.actionMode === "break" || player.actionMode === "tackle" || player.actionMode === "intercept" ? 1.13 : 1;
     moveByInput(player, input, playerSpeed(player) * boost, dt);
+    sampleHeroMovement(state, player);
     if (player.kind === "man-coverage" && player.matchupSlot) {
       const target = playerBySlot(state, player.matchupSlot, "offense");
       if (target) state.heroActionScore += clamp(3.8 - distance(player, target), -3, 3) * dt * 1.2;
@@ -821,17 +928,27 @@ function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, in
     state.pressureOccurred = true;
     if (!state.events.some((entry) => entry.type === "pressure")) event(state, "pressure", "Давление добирается до QB", player.x, player.y, rusher?.id, player.id);
   }
+  const call = offenseCallForEpisode(state.episode);
   const receivers = state.players.filter((candidate) => candidate.unit === "offense" && candidate.kind === "route" && !candidate.down);
-  const best = [...receivers].sort((left, right) => openScore(state, right) - openScore(state, left))[0];
-  if (best && state.elapsed > 1.15 && (openScore(state, best) > 42 || pressureDistance < 4.2 || state.elapsed > 3.6)) {
-    startPass(state, player, best);
+  const reads = receivers.map((receiver) => quarterbackTargetRead(state, receiver)).sort((left, right) => right.score - left.score);
+  const best = reads[0];
+  const quickConcept = call.tags.includes("quick") || call.tags.includes("short") || call.playType === "screen";
+  const deepConcept = call.tags.includes("shot") || call.tags.includes("deep") || call.tags.includes("long-yardage");
+  const minimumReadTime = quickConcept ? 1.65 : deepConcept ? 2.65 : 2.1;
+  const emergency = pressureDistance < 3.5;
+  const forcedDecision = state.elapsed > (deepConcept ? 4.6 : 3.95);
+  const acceptableWindow = best && best.score >= (emergency ? 35 : quickConcept ? 48 : 54);
+  if (best && state.elapsed >= minimumReadTime && (acceptableWindow || emergency || forcedDecision)) {
+    state.qbDecisionQuality = clamp(58 + best.score * 0.45 - best.risk * 0.5 - (emergency ? 5 : 0), 20, 98);
+    state.qbTimeToThrow = state.elapsed;
+    startPass(state, player, best.receiver);
     return;
   }
   const dropTarget = pressureDistance < 4.7 && rusher
     ? { x: clamp(player.x + (player.x - rusher.x) * 0.8, 20, 80), y: clamp(player.y - 1.5, state.lineOfScrimmage - 5, state.lineOfScrimmage + 12) }
-    : { x: player.startX, y: player.startY + 6 };
-  moveToward(player, dropTarget, playerSpeed(player) * 0.72, dt);
-  if (state.elapsed > 4.2 && pressureDistance < 5) state.runCommitted = true;
+    : { x: player.startX, y: player.startY + (deepConcept ? 7.2 : 5.5) };
+  moveToward(player, dropTarget, playerSpeed(player) * 0.64, dt);
+  if (state.elapsed > 4.8 && pressureDistance < 4.8) state.runCommitted = true;
 }
 
 function carrierStep(state: LivePlayEngineState, carrier: LivePlayerState, input: LiveControlInput, dt: number): void {
@@ -927,6 +1044,7 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
       if (manualHero) {
         const boost = player.actionMode === "burst" ? 1.18 : player.actionMode === "cut" ? 1.1 : 1;
         moveByInput(player, input, playerSpeed(player) * boost, dt);
+        sampleHeroMovement(state, player);
       } else offensiveRouteStep(state, player, dt);
     }
   }
@@ -989,7 +1107,7 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
     }
   }
 
-  if (state.elapsed > 12.5) {
+  if (state.elapsed > 15.5) {
     if (activeCarrier) {
       const result = state.turnoverCommitted ? "turnover" : activeCarrier.id === state.quarterbackId && activeCarrier.y >= state.lineOfScrimmage ? "sack" : state.passCompleted ? "completion" : "run";
       return finishPlay(state, result, activeCarrier, "Розыгрыш заканчивается по свистку.", state.turnoverCommitted);
@@ -1082,6 +1200,14 @@ export function createLivePlayEngine(episode: MatchEpisode, heroPosition: Footba
     turnoverCommitted: false,
     heroActionScore: 55,
     heroTouchedPlay: false,
+    heroRouteDeviationTotal: 0,
+    heroRouteSamples: 0,
+    heroSeparationTotal: 0,
+    heroSeparationSamples: 0,
+    heroCoverageTotal: 0,
+    heroCoverageSamples: 0,
+    qbDecisionQuality: 0,
+    qbTimeToThrow: 0,
     events: [],
   };
   if (quarterbackPlayer) state.quarterbackId = quarterbackPlayer.id;

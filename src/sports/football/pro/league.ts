@@ -534,7 +534,7 @@ function focusSummary(focus: ProfessionalWeekFocus): string {
   return "Игрок разобрал плейбук, установки и ключи соперника.";
 }
 
-export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWeekFocus): CareerSave {
+export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWeekFocus, preserveCompletedMatch = false): CareerSave {
   const state = save.football.professional;
   const career = state.heroCareer;
   const league = state.league;
@@ -586,7 +586,7 @@ export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWe
     focus,
     resolved: true,
     readinessDelta: effects.readinessDelta,
-    coachTrustDelta: effects.coachTrustDelta,
+    coachTrustDelta: Math.round((coachTrust - career.coachTrust) * 10) / 10,
     healthDelta: effects.healthDelta,
     depthDelta: effects.depthDelta,
     injuryRisk: effects.injuryRisk,
@@ -594,7 +594,8 @@ export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWe
   };
   const eligible = state.status === "roster" && role !== "inactive";
   const activeGame = eligible ? findHeroGame({ ...league, roster }, career.teamId, league.week) : undefined;
-  const nextLeague: ProfessionalLeagueState = { ...league, roster, transactions, activeGameId: activeGame?.id };
+  const activeGameId = preserveCompletedMatch ? league.activeGameId : activeGame?.id;
+  const nextLeague: ProfessionalLeagueState = { ...league, roster, transactions, activeGameId };
   let next: CareerSave = {
     ...save,
     character: { ...save.character, condition: { ...save.character.condition, health } },
@@ -609,7 +610,7 @@ export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWe
       },
     },
   };
-  if (activeGame && save.football.match.status === "upcoming") {
+  if (!preserveCompletedMatch && activeGame && save.football.match.status === "upcoming") {
     next = { ...next, football: { ...next.football, match: createProfessionalMatchState(next, activeGame) } };
   }
   return next;
@@ -755,9 +756,18 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
   const opponent = save.football.professional.teams.find((team) => team.id === opponentId);
   const random = new SeededRandom(save.meta.worldSeed).fork(`professional-match:${game.id}`);
   const role = career.role;
-  const totalEpisodes = save.football.position === "K" || save.football.position === "P"
-    ? role === "starter" ? 10 : role === "rotation" || role === "special-teams" ? 7 : 4
-    : role === "starter" ? 96 : role === "rotation" ? 48 : 26;
+  const specialist = save.football.position === "K" || save.football.position === "P";
+  const totalEpisodes = specialist
+    ? role === "starter" ? 7 : role === "rotation" || role === "special-teams" ? 4 : 1
+    : role === "starter" ? 64 : role === "rotation" ? 30 : role === "special-teams" ? 10 : 1;
+  const entryQuarter = role === "starter" ? 1 as const : role === "rotation" ? 2 as const : role === "special-teams" ? 3 as const : 4 as const;
+  const benchSummary = role === "starter"
+    ? "Первый состав: игрок начинает матч на поле."
+    : role === "rotation"
+      ? "Ротация: старт на лавке, выход после первой четверти."
+      : role === "special-teams"
+        ? "Глубокий резерв: основные снэпы только после вызова штаба."
+        : "Игрок не заявлен на матч.";
   const openingFieldPosition = random.integer(18, 34);
   return {
     moduleVersion: 1,
@@ -784,6 +794,9 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     coachGrade: Math.max(44, Math.min(74, Math.round((career.coachTrust ?? 55) * 0.38 + 35))),
     episodeIndex: 0,
     totalEpisodes,
+    rosterRole: role,
+    entryQuarter,
+    benchSummary,
     driveDown: 1,
     driveDistance: 10,
     driveFieldPosition: openingFieldPosition,
@@ -1198,10 +1211,12 @@ export function isProfessionalMatchAwaitingResolution(save: CareerSave): boolean
 
 export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
   const unresolvedPlan = save.football.professional.heroCareer?.weeklyPlan;
-  if (unresolvedPlan && !unresolvedPlan.resolved) return finalizeProfessionalMatch(setProfessionalWeekFocus(save, unresolvedPlan.focus));
-  const state = save.football.professional;
-  const match = save.football.match;
-  if (!isProfessionalMatchAwaitingResolution(save) || match.status !== "complete" || !match.finalResult) throw new Error("Professional match is not ready to finalize");
+  const prepared = unresolvedPlan && !unresolvedPlan.resolved
+    ? setProfessionalWeekFocus(save, unresolvedPlan.focus, true)
+    : save;
+  const state = prepared.football.professional;
+  const match = prepared.football.match;
+  if (state.league.activeGameId !== match.gameId || match.status !== "complete" || !match.finalResult) throw new Error("Professional match is not ready to finalize");
   const league = state.league;
   const game = league.schedule.find((item) => item.id === league.activeGameId);
   const career = state.heroCareer;
@@ -1210,7 +1225,7 @@ export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
   const forced = heroHome ? { home: match.heroScore, away: match.opponentScore } : { home: match.opponentScore, away: match.heroScore };
   const resolvedSchedule = league.schedule.map((item) => {
     if (item.week !== league.week || item.status === "complete") return item;
-    return resolveScheduledGame(save.meta.worldSeed, item, state.teams, item.id === game.id ? forced : undefined);
+    return resolveScheduledGame(prepared.meta.worldSeed, item, state.teams, item.id === game.id ? forced : undefined);
   });
   const teams = applyGameRecords(state.teams, resolvedSchedule);
   const log = {
@@ -1222,20 +1237,23 @@ export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
     teamScore: match.heroScore,
     opponentScore: match.opponentScore,
     grade: match.finalResult.grade,
+    performanceScore: match.finalResult.score,
+    evaluationSummary: match.finalResult.evaluation?.summary,
+    criterionScores: match.finalResult.evaluation?.criteria.map((item) => ({ id: item.id, label: item.label, score: item.score })),
     snaps: match.advancedStats.snaps,
     stats: match.stats,
   };
   const updated: CareerSave = {
-    ...save,
+    ...prepared,
     football: {
-      ...save.football,
+      ...prepared.football,
       professional: {
         ...state,
         heroCareer: {
           ...career,
           coachTrust: clamp(career.coachTrust + match.finalResult.coachTrustDelta),
           gamesPlayed: career.gamesPlayed + 1,
-          starts: career.starts + (career.role === "starter" ? 1 : 0),
+          starts: career.starts + (match.rosterRole === "starter" ? 1 : 0),
           snaps: career.snaps + match.advancedStats.snaps,
           gameLog: [...career.gameLog, log],
         },

@@ -33,7 +33,7 @@ const required = [
   ["dashboard", "professional-standings"],
   ["dashboard", "onAdvanceProfessionalOffseason"],
   ["dashboard", "MatchDashboard"],
-  ["schema", "CURRENT_SCHEMA_VERSION = 30"],
+  ["schema", "CURRENT_SCHEMA_VERSION = 31"],
   ["migrations", "migrateVersionTwentySeven"],
   ["tests", "53-player clubs"],
   ["tests", "real-time match kernel"],

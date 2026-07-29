@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 30;
+export const CURRENT_SCHEMA_VERSION = 31;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -377,6 +377,36 @@ const matchEpisodeSchema = z.object({
   options: z.array(matchDecisionOptionSchema).min(3).max(4),
 });
 
+const matchEvaluationCriterionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  category: z.enum(["assignment", "technique", "decision", "execution", "impact", "discipline"]),
+  score: z.number().min(0).max(100),
+  weight: z.number().positive(),
+  delta: z.number(),
+  detail: z.string().min(1),
+});
+
+const matchSnapEvaluationSchema = z.object({
+  score: z.number().min(0).max(100),
+  grade: z.enum(["A", "B", "C", "D"]),
+  summary: z.string().min(1),
+  criteria: z.array(matchEvaluationCriterionSchema),
+  strengths: z.array(z.string()),
+  corrections: z.array(z.string()),
+});
+
+const matchGameEvaluationSchema = z.object({
+  score: z.number().min(0).max(100),
+  grade: z.enum(["A", "B", "C", "D"]),
+  snapCount: z.number().int().nonnegative(),
+  roleLabel: z.string().min(1),
+  criteria: z.array(matchEvaluationCriterionSchema),
+  bestSnapIds: z.array(z.string()),
+  worstSnapIds: z.array(z.string()),
+  summary: z.string().min(1),
+});
+
 const matchEpisodeResultSchema = z.object({
   id: z.string().min(1),
   episodeId: z.string().min(1),
@@ -407,6 +437,7 @@ const matchEpisodeResultSchema = z.object({
   ballCarrierSlot: z.string().min(1).optional(),
   statDelta: matchStatLineSchema,
   advancedDelta: matchAdvancedStatLineSchema.default(emptyAdvancedMatchStats),
+  evaluation: matchSnapEvaluationSchema.optional(),
 });
 
 const matchDriveSummarySchema = z.object({
@@ -451,6 +482,9 @@ const footballMatchSchema = z.object({
   coachGrade: z.number().min(0).max(100),
   episodeIndex: z.number().int().nonnegative(),
   totalEpisodes: z.number().int().min(1),
+  rosterRole: z.enum(["starter", "rotation", "special-teams", "inactive", "practice-squad", "free-agent"]).optional(),
+  entryQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+  benchSummary: z.string().min(1).optional(),
   driveDown: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
   driveDistance: z.number().int().min(1).max(99).default(10),
   driveFieldPosition: z.number().int().min(0).max(100).default(25),
@@ -480,6 +514,8 @@ const footballMatchSchema = z.object({
     spotlight: z.string().min(2),
     coachTrustDelta: z.number(),
     visibilityDelta: z.number(),
+    score: z.number().min(0).max(100).optional(),
+    evaluation: matchGameEvaluationSchema.optional(),
   }).optional(),
 });
 
@@ -848,7 +884,7 @@ const professionalStateSchema = z.object({
   heroCareer: z.object({
     teamId: z.string().min(1).optional(), seasonYear: z.number().int().min(2020).max(2200), week: z.number().int().min(1).max(30), role: z.enum(["starter", "rotation", "special-teams", "inactive", "practice-squad", "free-agent"]),
     depthRank: z.number().int().min(1), coachTrust: z.number().min(0).max(100), gamesPlayed: z.number().int().nonnegative(), starts: z.number().int().nonnegative(), snaps: z.number().int().nonnegative(),
-    gameLog: z.array(z.object({ seasonYear: z.number().int().min(2020).max(2200), gameId: z.string().min(1), week: z.number().int().min(1), opponentId: z.string().min(1), won: z.boolean(), teamScore: z.number().int().nonnegative(), opponentScore: z.number().int().nonnegative(), grade: z.enum(["A", "B", "C", "D"]), snaps: z.number().int().nonnegative(), stats: professionalMatchStatsSchema })),
+    gameLog: z.array(z.object({ seasonYear: z.number().int().min(2020).max(2200), gameId: z.string().min(1), week: z.number().int().min(1), opponentId: z.string().min(1), won: z.boolean(), teamScore: z.number().int().nonnegative(), opponentScore: z.number().int().nonnegative(), grade: z.enum(["A", "B", "C", "D"]), performanceScore: z.number().min(0).max(100).optional(), evaluationSummary: z.string().min(1).optional(), criterionScores: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), score: z.number().min(0).max(100) })).optional(), snaps: z.number().int().nonnegative(), stats: professionalMatchStatsSchema })),
     availability: z.enum(["active", "questionable", "out", "injured-reserve"]).default("active"),
     weeklyPlan: z.object({
       seasonYear: z.number().int().min(2020).max(2200), week: z.number().int().min(1).max(30), focus: z.enum(["playbook", "technique", "recovery", "competition"]), resolved: z.boolean(),

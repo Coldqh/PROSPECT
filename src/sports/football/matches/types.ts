@@ -180,6 +180,48 @@ export interface MatchAdvancedStatLine {
   puntQuality: number;
 }
 
+
+export type MatchEvaluationCategory = "assignment" | "technique" | "decision" | "execution" | "impact" | "discipline";
+
+export interface MatchEvaluationCriterion {
+  id: string;
+  label: string;
+  category: MatchEvaluationCategory;
+  score: number;
+  weight: number;
+  delta: number;
+  detail: string;
+}
+
+export interface MatchSnapEvaluation {
+  score: number;
+  grade: MatchOutcomeGrade;
+  summary: string;
+  criteria: MatchEvaluationCriterion[];
+  strengths: string[];
+  corrections: string[];
+}
+
+export interface MatchGameEvaluation {
+  score: number;
+  grade: MatchOutcomeGrade;
+  snapCount: number;
+  roleLabel: string;
+  criteria: MatchEvaluationCriterion[];
+  bestSnapIds: string[];
+  worstSnapIds: string[];
+  summary: string;
+}
+
+export interface MatchLiveEvaluationSignals {
+  routeAdherence?: number | undefined;
+  separationScore?: number | undefined;
+  coverageScore?: number | undefined;
+  decisionQuality?: number | undefined;
+  timingScore?: number | undefined;
+  timeToThrow?: number | undefined;
+}
+
 export interface MatchEpisodeResult {
   id: string;
   episodeId: string;
@@ -210,6 +252,7 @@ export interface MatchEpisodeResult {
   ballCarrierSlot?: string | undefined;
   statDelta: MatchStatLine;
   advancedDelta: MatchAdvancedStatLine;
+  evaluation?: MatchSnapEvaluation | undefined;
 }
 
 export interface MatchDriveSummary {
@@ -239,6 +282,8 @@ export interface MatchFinalResult {
   spotlight: string;
   coachTrustDelta: number;
   visibilityDelta: number;
+  score?: number | undefined;
+  evaluation?: MatchGameEvaluation | undefined;
 }
 
 export interface FootballMatchState {
@@ -266,6 +311,9 @@ export interface FootballMatchState {
   coachGrade: number;
   episodeIndex: number;
   totalEpisodes: number;
+  rosterRole?: "starter" | "rotation" | "special-teams" | "inactive" | "practice-squad" | "free-agent" | undefined;
+  entryQuarter?: 1 | 2 | 3 | 4 | undefined;
+  benchSummary?: string | undefined;
   driveDown: 1 | 2 | 3 | 4;
   driveDistance: number;
   driveFieldPosition: number;

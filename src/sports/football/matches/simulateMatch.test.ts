@@ -103,9 +103,9 @@ function finish(save: CareerSave): CareerSave {
 
 describe("interception balance", () => {
   it("caps simulated interception probability at a realistic snap rate", () => {
-    expect(simulatedPassInterceptionChance(5, 50, false)).toBeLessThan(.02);
-    expect(simulatedPassInterceptionChance(-10, 75, true)).toBeLessThan(.05);
-    expect(simulatedPassInterceptionChance(-100, 100, true)).toBe(.072);
+    expect(simulatedPassInterceptionChance(5, 50, false)).toBeLessThan(.012);
+    expect(simulatedPassInterceptionChance(-10, 75, true)).toBeLessThan(.035);
+    expect(simulatedPassInterceptionChance(-100, 100, true)).toBe(.045);
   });
 });
 

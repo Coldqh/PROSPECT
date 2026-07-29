@@ -227,6 +227,9 @@ export interface ProfessionalHeroGameLog {
   teamScore: number;
   opponentScore: number;
   grade: MatchOutcomeGrade;
+  performanceScore?: number | undefined;
+  evaluationSummary?: string | undefined;
+  criterionScores?: Array<{ id: string; label: string; score: number }> | undefined;
   snaps: number;
   stats: MatchStatLine;
 }
