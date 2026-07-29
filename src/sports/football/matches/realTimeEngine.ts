@@ -1031,7 +1031,16 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
   for (const player of offensePlayers) {
     if (player.hasBall) continue;
     if (state.turnoverCommitted && carrierBeforeMovement) {
-      moveToward(player, carrierBeforeMovement, playerSpeed(player) * 0.98, dt);
+      // Do not trail a returner at the same speed. Offensive players take an
+      // interception angle toward the return lane so a nearby player can
+      // realistically finish the play before an automatic pick-six.
+      const pursuitLead = clamp(distance(player, carrierBeforeMovement) * 0.18, 1.5, 5.5);
+      const returnDirection = normalize(carrierBeforeMovement.vx, carrierBeforeMovement.vy);
+      const pursuitTarget = {
+        x: clamp(carrierBeforeMovement.x + returnDirection.x * pursuitLead, FIELD_MIN_X, FIELD_MAX_X),
+        y: clamp(carrierBeforeMovement.y + returnDirection.y * pursuitLead, WORLD_MIN_Y, WORLD_MAX_Y),
+      };
+      moveToward(player, pursuitTarget, playerSpeed(player) * 1.08, dt);
       continue;
     }
     if (player.id === state.quarterbackId) quarterbackStep(state, player, input, dt);

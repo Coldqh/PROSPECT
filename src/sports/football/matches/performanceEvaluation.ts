@@ -176,13 +176,25 @@ export function evaluateSnapPerformance(input: SnapEvaluationInput): MatchSnapEv
   const sorted = [...criteria].sort((left, right) => right.score - left.score);
   const strongest = sorted[0];
   const weakest = sorted[sorted.length - 1];
+  const corrections = [...criteria]
+    .sort((left, right) => left.score - right.score)
+    .filter((item) => item.score < 68)
+    .slice(0, 2)
+    .map((item) => item.label);
+  const passProtectionFailure = ["OT", "OG", "C"].includes(input.position)
+    && (input.episode.playCall.playType === "pass" || input.episode.playCall.playType === "play-action" || input.episode.playCall.playType === "screen")
+    && (input.statDelta.pressuresAllowed > 0 || input.statDelta.sacksAllowed > 0);
+  if (passProtectionFailure && !corrections.includes("Protection")) {
+    corrections.unshift("Protection");
+    corrections.splice(2);
+  }
   return {
     score,
     grade: gradeFromPerformanceScore(score),
     summary: `${strongest?.label ?? "Исполнение"}: ${Math.round(strongest?.score ?? score)}. ${weakest && weakest.score < 68 ? `Исправить: ${weakest.label.toLowerCase()}.` : "Критических ошибок нет."}`,
     criteria,
     strengths: sorted.filter((item) => item.score >= 78).slice(0, 2).map((item) => item.label),
-    corrections: [...criteria].sort((left, right) => left.score - right.score).filter((item) => item.score < 68).slice(0, 2).map((item) => item.label),
+    corrections,
   };
 }
 
