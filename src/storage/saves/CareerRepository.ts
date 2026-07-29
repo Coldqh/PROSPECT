@@ -30,6 +30,13 @@ import {
   runProfessionalDraft,
   selectProfessionalAgent,
 } from "../../sports/football/pro/draft";
+import {
+  acceptProfessionalFreeAgentOffer,
+  advanceProfessionalOffseason,
+  advanceProfessionalWeek,
+  finalizeProfessionalMatch,
+  isProfessionalMatchAwaitingResolution,
+} from "../../sports/football/pro/league";
 import { loadSportModule } from "../../core/sports/sportRegistry";
 import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
@@ -193,6 +200,10 @@ export class CareerRepository {
       if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
       return this.save(startMatch(current, mode, analysisMode));
     }
+    if (current.meta.phase === "professional-career") {
+      if (!isProfessionalMatchAwaitingResolution(current)) throw new Error("No professional match is ready");
+      return this.save(startMatch(current, mode, analysisMode));
+    }
     if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
     if (toGameDateKey(current.meta.currentDate) !== toGameDateKey(current.football.match.scheduledDate)) throw new Error("Match is not scheduled for today");
@@ -284,6 +295,27 @@ export class CareerRepository {
   async advanceProfessionalTrainingCamp(careerId: string, approach: ProfessionalCampApproach): Promise<CareerSave> {
     const current = await this.load(careerId);
     return this.save(advanceProfessionalTrainingCamp(current, approach));
+  }
+
+
+  async finalizeProfessionalMatch(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(finalizeProfessionalMatch(current));
+  }
+
+  async advanceProfessionalWeek(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(advanceProfessionalWeek(current));
+  }
+
+  async advanceProfessionalOffseason(careerId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(advanceProfessionalOffseason(current));
+  }
+
+  async acceptProfessionalFreeAgentOffer(careerId: string, teamId: string): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(acceptProfessionalFreeAgentOffer(current, teamId));
   }
 
   async advanceDay(careerId: string): Promise<CareerSave> {

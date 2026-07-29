@@ -1,5 +1,6 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
+import type { MatchOutcomeGrade, MatchStatLine } from "../matches/types";
 
 export type ProfessionalStatus =
   | "dormant"
@@ -12,12 +13,16 @@ export type ProfessionalStatus =
   | "training-camp"
   | "roster"
   | "practice-squad"
+  | "free-agent"
   | "cut";
 
 export type ProfessionalConference = "AFC" | "NFC";
 export type ProfessionalCampApproach = "controlled" | "balanced" | "aggressive";
 export type ProfessionalEvaluationFocus = "athletic" | "technical" | "interview";
 export type ProfessionalRosterOutcome = "active-roster" | "practice-squad" | "released";
+export type ProfessionalSeasonPhase = "preseason" | "regular-season" | "playoffs" | "complete";
+export type ProfessionalContractStatus = "active" | "practice-squad" | "free-agent" | "injured-reserve";
+export type ProfessionalTransactionKind = "signing" | "release" | "waiver-claim" | "injury" | "promotion" | "cap-move";
 
 export interface ProfessionalTeam {
   id: string;
@@ -29,7 +34,11 @@ export interface ProfessionalTeam {
   rosterStrength: number;
   wins: number;
   losses: number;
+  salaryCap: number;
+  payroll: number;
+  deadCap: number;
   capSpace: number;
+  rosterSize: number;
   needs: Record<FootballPosition, number>;
 }
 
@@ -148,8 +157,93 @@ export interface ProfessionalTrainingCamp {
   outcome?: ProfessionalRosterOutcome | undefined;
 }
 
+export interface ProfessionalRosterPlayer {
+  id: string;
+  name: string;
+  teamId?: string | undefined;
+  position: FootballPosition;
+  age: number;
+  overall: number;
+  potential: number;
+  health: number;
+  form: number;
+  depthRank: number;
+  yearsRemaining: number;
+  annualSalary: number;
+  guaranteedRemaining: number;
+  status: ProfessionalContractStatus;
+  isHero: boolean;
+}
+
+export interface ProfessionalGame {
+  id: string;
+  seasonYear: number;
+  week: number;
+  date: GameDate;
+  homeTeamId: string;
+  awayTeamId: string;
+  status: "scheduled" | "complete";
+  homeScore?: number | undefined;
+  awayScore?: number | undefined;
+  playoffRound?: "wild-card" | "conference" | "championship" | undefined;
+}
+
+export interface ProfessionalTransaction {
+  id: string;
+  seasonYear: number;
+  week: number;
+  kind: ProfessionalTransactionKind;
+  playerId: string;
+  playerName: string;
+  position: FootballPosition;
+  fromTeamId?: string | undefined;
+  toTeamId?: string | undefined;
+  value: number;
+  summary: string;
+}
+
+export interface ProfessionalHeroGameLog {
+  seasonYear: number;
+  gameId: string;
+  week: number;
+  opponentId: string;
+  won: boolean;
+  teamScore: number;
+  opponentScore: number;
+  grade: MatchOutcomeGrade;
+  snaps: number;
+  stats: MatchStatLine;
+}
+
+export interface ProfessionalHeroCareer {
+  teamId?: string | undefined;
+  seasonYear: number;
+  week: number;
+  role: "starter" | "rotation" | "special-teams" | "practice-squad" | "free-agent";
+  depthRank: number;
+  coachTrust: number;
+  gamesPlayed: number;
+  starts: number;
+  snaps: number;
+  gameLog: ProfessionalHeroGameLog[];
+}
+
+export interface ProfessionalLeagueState {
+  seasonYear: number;
+  phase: ProfessionalSeasonPhase;
+  week: number;
+  totalWeeks: number;
+  schedule: ProfessionalGame[];
+  roster: ProfessionalRosterPlayer[];
+  freeAgents: ProfessionalRosterPlayer[];
+  transactions: ProfessionalTransaction[];
+  playoffTeamIds: string[];
+  championTeamId?: string | undefined;
+  activeGameId?: string | undefined;
+}
+
 export interface FootballProfessionalState {
-  version: 1;
+  version: 2;
   status: ProfessionalStatus;
   draftYear: number;
   declared: boolean;
@@ -167,5 +261,7 @@ export interface FootballProfessionalState {
   campInvites: ProfessionalCampInvite[];
   contract?: ProfessionalRookieContract | undefined;
   camp?: ProfessionalTrainingCamp | undefined;
+  league: ProfessionalLeagueState;
+  heroCareer?: ProfessionalHeroCareer | undefined;
   lastSummary: string;
 }

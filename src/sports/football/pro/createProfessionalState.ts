@@ -1,6 +1,6 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
-import type { FootballProfessionalState, ProfessionalAgent, ProfessionalTeam } from "./types";
+import type { FootballProfessionalState, ProfessionalAgent, ProfessionalLeagueState, ProfessionalTeam } from "./types";
 
 const TEAM_IDENTITIES = [
   ["Austin", "Outlaws", "AUS"],
@@ -28,6 +28,8 @@ const AGENTS = [
   ["agent-chen", "Audrey Chen", "Apex Football", 89, 87, 84, 93, 5.0, 57, "Работает с верхушкой драфта, но требует дорогую комиссию и агрессивную стратегию."],
 ] as const;
 
+export const PROFESSIONAL_SALARY_CAP = 255_000_000;
+
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
 }
@@ -40,6 +42,8 @@ function createTeams(worldSeed: string): ProfessionalTeam[] {
     const rating = teamRandom.integer(66, 89);
     const wins = Math.max(2, Math.min(14, Math.round((rating - 58) / 3 + teamRandom.integer(-2, 2))));
     const losses = 17 - wins;
+    const payroll = teamRandom.integer(184, 244) * 1_000_000;
+    const deadCap = teamRandom.integer(1, 18) * 1_000_000;
     const needs = Object.fromEntries(positions.map((position) => [position, clamp(teamRandom.integer(34, 94) + (rating < 73 ? 7 : 0))])) as Record<FootballPosition, number>;
     return {
       id: `pro-${shortName.toLowerCase()}`,
@@ -51,7 +55,11 @@ function createTeams(worldSeed: string): ProfessionalTeam[] {
       rosterStrength: rating,
       wins,
       losses,
-      capSpace: teamRandom.integer(18, 74),
+      salaryCap: PROFESSIONAL_SALARY_CAP,
+      payroll,
+      deadCap,
+      capSpace: Math.max(0, PROFESSIONAL_SALARY_CAP - payroll - deadCap),
+      rosterSize: 0,
       needs,
     };
   });
@@ -72,11 +80,25 @@ function createAgents(): ProfessionalAgent[] {
   }));
 }
 
+export function createEmptyProfessionalLeague(draftYear: number): ProfessionalLeagueState {
+  return {
+    seasonYear: draftYear,
+    phase: "preseason",
+    week: 0,
+    totalWeeks: 15,
+    schedule: [],
+    roster: [],
+    freeAgents: [],
+    transactions: [],
+    playoffTeamIds: [],
+  };
+}
+
 export function createInitialProfessionalState(worldSeed: string, position: FootballPosition, draftYear = 2030): FootballProfessionalState {
   const teams = createTeams(worldSeed);
   const averageNeed = teams.reduce((sum, team) => sum + team.needs[position], 0) / teams.length;
   return {
-    version: 1,
+    version: 2,
     status: "dormant",
     draftYear,
     declared: false,
@@ -89,6 +111,7 @@ export function createInitialProfessionalState(worldSeed: string, position: Foot
     draftOrder: [],
     draftResults: [],
     campInvites: [],
+    league: createEmptyProfessionalLeague(draftYear),
     lastSummary: "Профессиональные клубы ведут собственный сезон, обновляют потребности и готовят порядок драфта.",
   };
 }

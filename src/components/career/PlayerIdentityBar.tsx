@@ -30,7 +30,7 @@ function roleLabel(save: CareerSave): string {
     return {
       dormant: "Подготовка", decision: "Решение по драфту", "agent-selection": "Выбор агента", evaluation: "Combine",
       "draft-ready": "Готов к драфту", drafted: "Выбран на драфте", undrafted: "Свободный агент",
-      "training-camp": "Тренировочный лагерь", roster: "Активный состав", "practice-squad": "Тренировочный состав", cut: "Свободный агент",
+      "training-camp": "Тренировочный лагерь", roster: "Активный состав", "practice-squad": "Тренировочный состав", "free-agent": "Свободный агент", cut: "Свободный агент",
     }[status];
   }
   if (save.meta.phase === "college-season" && save.football.college.heroCareer) {

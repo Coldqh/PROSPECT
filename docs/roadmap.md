@@ -26,7 +26,7 @@
 - [x] Mobile-first editorial interface and unified navigation
 - [x] Interactive college match layer and full multi-year athlete progression
 - [x] Professional draft, contracts and pro football ecosystem
-- [ ] Autonomous professional league, salary cap, free agency and interactive pro seasons
+- [x] Autonomous professional league, salary cap, free agency and interactive pro seasons
 
 ## v0.11 — High school to college
 
@@ -260,3 +260,17 @@
 - drawer получил focus trap, Escape, восстановление фокуса и блокировку фоновой прокрутки;
 - короткие анимации используются для входа страниц, карточек, шкал, drawer, sheet и маршрутов;
 - игровая логика и схема сохранений не изменены.
+
+## v0.39 — Autonomous professional league
+
+- sixteen persistent clubs with active 53-player rosters and separate practice-squad contracts;
+- salary cap, payroll, dead cap and available cap space recalculated after every personnel move;
+- autonomous free agency driven by position need, player quality and available cap space;
+- deterministic fifteen-week round robin with 120 regular-season games;
+- conference seeding, wild card, conference finals and championship game;
+- interactive professional games use the same real-time football kernel as school and college;
+- professional depth chart, coach trust, role, starts, snaps, game logs and standings persist across the season;
+- offseason ages players, expires contracts, creates rookies, resolves free agency and starts the next 120-game season;
+- practice-squad development can lead to promotion with a corresponding active-roster release;
+- released heroes receive concrete one-year free-agent offers instead of reaching a dead end;
+- deterministic migration from schema v27 to v28.

@@ -48,7 +48,7 @@ export default function CareerOverviewScreen() {
 
   if (careerSave.meta.phase === "professional-draft" || careerSave.meta.phase === "professional-career") return (
     <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
-      <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} />
+      <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeProfessionalMatch={state.finalizeProfessionalMatch} onAdvanceProfessionalWeek={state.advanceProfessionalWeek} onAdvanceProfessionalOffseason={state.advanceProfessionalOffseason} onAcceptFreeAgentOffer={state.acceptProfessionalFreeAgentOffer} />
       {commonDrawer(true)}
     </ScreenShell>
   );

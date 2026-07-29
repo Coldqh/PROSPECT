@@ -376,3 +376,120 @@
   .professional-agent-grid button section { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .professional-agent-grid button section span:nth-child(n + 4) { display: none; }
 }
+
+/* v0.39 professional season */
+.professional-match-shell { display: grid; gap: 10px; }
+.professional-back-button {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+}
+.professional-back-button svg { width: 18px; height: 18px; }
+.professional-season { display: grid; gap: 10px; }
+.professional-season__head,
+.professional-position-room > header,
+.professional-free-agent-market > header,
+.professional-transactions > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.professional-season__head h2 { margin: 2px 0 0; }
+.professional-season__head small,
+.professional-position-room header small,
+.professional-free-agent-market header small,
+.professional-transactions header small { display: block; color: var(--muted); font-size: var(--type-caption-size); font-weight: 800; letter-spacing: .08em; }
+.professional-season__head > strong { font-size: 22px; }
+.professional-season-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.professional-season-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.professional-season-grid small,
+.professional-season-grid span { color: var(--muted); font-size: var(--type-caption-size); text-transform: uppercase; }
+.professional-season-grid strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.professional-next-game,
+.professional-champion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--line));
+  border-radius: var(--radius-md);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface));
+}
+.professional-next-game > div,
+.professional-champion > div { min-width: 0; display: grid; gap: 2px; }
+.professional-next-game small,
+.professional-next-game span,
+.professional-champion small { color: var(--muted); font-size: var(--type-caption-size); font-weight: 800; }
+.professional-next-game button {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  min-width: 72px;
+  min-height: 58px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 900;
+}
+.professional-next-game button svg,
+.professional-champion > svg { width: 22px; height: 22px; }
+.professional-position-room,
+.professional-free-agent-market,
+.professional-transactions { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.professional-position-room article,
+.professional-free-agent-market > button,
+.professional-transactions article {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+}
+.professional-position-room article.is-hero { color: var(--accent); }
+.professional-position-room article > div,
+.professional-free-agent-market button > div { min-width: 0; display: grid; gap: 1px; }
+.professional-position-room article small,
+.professional-free-agent-market button small { overflow: hidden; color: var(--muted); font-size: var(--type-caption-size); text-overflow: ellipsis; white-space: nowrap; }
+.professional-position-room article em,
+.professional-free-agent-market button em { font-style: normal; font-weight: 900; }
+.professional-free-agent-market > button > span,
+.professional-transactions article > span { font-size: var(--type-caption-size); font-weight: 900; color: var(--accent); }
+.professional-transactions article { grid-template-columns: 34px minmax(0, 1fr); }
+.professional-transactions p { margin: 0; color: var(--muted); font-size: var(--type-caption-size); line-height: 1.35; }
+.professional-standings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.professional-standings section { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.professional-standings header,
+.professional-standings article { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 6px 8px; }
+.professional-standings header { grid-template-columns: minmax(0, 1fr) auto; border-bottom: 1px solid var(--line); }
+.professional-standings article { font-size: var(--type-caption-size); }
+.professional-standings article.is-hero { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
+.professional-standings em { font-style: normal; font-weight: 800; }
+
+@media (max-width: 430px) {
+  .professional-standings { grid-template-columns: 1fr; }
+}

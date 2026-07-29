@@ -1,13 +1,13 @@
 {
   "name": "prospect",
   "private": true,
-  "version": "0.38.0",
+  "version": "0.39.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && tsc -b && vite build",
+    "build": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run check:professional-league && tsc -b && vite build",
     "preview": "vite preview",
-    "test": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run test:architecture && npm run test:unit && npm run test:stability",
+    "test": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run check:professional-league && npm run test:architecture && npm run test:unit && npm run test:stability",
     "test:unit": "vitest run --exclude src/sports/football/ecosystem/stability.test.ts --exclude src/sports/football/ecosystem/stabilityDeterminism.test.ts",
     "test:stability": "vitest run src/sports/football/ecosystem/stability.test.ts --maxWorkers=1 --no-file-parallelism && vitest run src/sports/football/ecosystem/stabilityDeterminism.test.ts --maxWorkers=1 --no-file-parallelism",
     "test:watch": "vitest",
@@ -19,7 +19,8 @@
     "check:ecosystem-visibility": "node scripts/check-ecosystem-visibility.mjs",
     "check:full-rosters": "node scripts/check-full-rosters.mjs",
     "check:playable-positions": "node scripts/check-playable-positions.mjs",
-    "check:match-experience": "node scripts/check-match-experience.mjs"
+    "check:match-experience": "node scripts/check-match-experience.mjs",
+    "check:professional-league": "node scripts/check-professional-league.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

@@ -14,6 +14,16 @@ import {
   runProfessionalDraft,
   selectProfessionalAgent,
 } from "./draft";
+import {
+  acceptProfessionalFreeAgentOffer,
+  advanceProfessionalOffseason,
+  advanceProfessionalWeek,
+  finalizeProfessionalMatch,
+  initializeProfessionalLeague,
+  isProfessionalMatchAwaitingResolution,
+  professionalStandings,
+} from "./league";
+import { startMatch } from "../matches/simulateMatch";
 
 function draftEligibleCareer(seed = "professional-draft-test"): CareerSave {
   const generated = createFootballCareerState(seed, createLegacyFootballSetup(seed));
@@ -127,6 +137,32 @@ function reachCamp(save: CareerSave): CareerSave {
   return acceptProfessionalCampInvite(next, invite.teamId);
 }
 
+
+function activeProfessionalCareer(seed = "professional-active-season"): CareerSave {
+  let save = reachCamp(draftEligibleCareer(seed));
+  const camp = save.football.professional.camp;
+  if (!camp) throw new Error("No professional camp");
+  save = {
+    ...save,
+    character: {
+      ...save.character,
+      condition: { ...save.character.condition, health: 100, fatigue: 0, confidence: 90 },
+      personality: { ...save.character.personality, coachability: 96 },
+    },
+    football: {
+      ...save.football,
+      ratings: { ...save.football.ratings, overall: 94, athleticism: 94, technique: 94, footballIq: 94 },
+      professional: {
+        ...save.football.professional,
+        camp: { ...camp, coachTrust: 92, rosterRank: 1 },
+      },
+    },
+  };
+  for (let day = 0; day < 4; day += 1) save = advanceProfessionalTrainingCamp(save, "controlled");
+  if (save.football.professional.status !== "roster") throw new Error("Test career did not reach the active roster");
+  return save;
+}
+
 describe("professional draft ecosystem", () => {
   it("creates an autonomous seven-round draft around the hero", () => {
     const opened = openProfessionalDraftProcess(draftEligibleCareer());
@@ -186,13 +222,102 @@ describe("professional draft ecosystem", () => {
   it("turns camp performance into a persistent roster decision", () => {
     let save = reachCamp(draftEligibleCareer("professional-camp"));
     for (let day = 0; day < 4; day += 1) save = advanceProfessionalTrainingCamp(save, "balanced");
-    expect(["roster", "practice-squad", "cut"]).toContain(save.football.professional.status);
+    expect(["roster", "practice-squad", "free-agent"]).toContain(save.football.professional.status);
     expect(save.football.professional.camp?.sessions).toHaveLength(4);
     expect(save.football.professional.camp?.outcome).toBeDefined();
     expect(save.football.professional.contract?.teamId).toBe(save.football.professional.camp?.teamId);
     expect(save.football.professional.contract?.agentFee).toBeGreaterThan(0);
     expect(save.meta.phase).toBe("professional-career");
     expect(save.football.stage).toBe("professional-career");
+  });
+
+  it("lets a released athlete sign without breaking the 53-player active roster", () => {
+    let save = reachCamp(lowStockCareer("professional-free-agent-signing"));
+    for (let day = 0; day < 4; day += 1) save = advanceProfessionalTrainingCamp(save, "aggressive");
+    expect(save.football.professional.status).toBe("free-agent");
+    const offer = save.football.professional.campInvites[0];
+    if (!offer) throw new Error("No free-agent offer");
+    save = acceptProfessionalFreeAgentOffer(save, offer.teamId);
+    expect(["roster", "practice-squad"]).toContain(save.football.professional.status);
+    expect(save.football.professional.heroCareer?.teamId).toBe(offer.teamId);
+    expect(save.football.professional.teams.every((team) => team.rosterSize === 53)).toBe(true);
+  });
+
+  it("creates cap-valid 53-player clubs and a complete regular-season calendar", () => {
+    const save = activeProfessionalCareer("professional-league-rosters");
+    const state = save.football.professional;
+    expect(state.league.schedule.filter((game) => !game.playoffRound)).toHaveLength(120);
+    expect(state.league.roster.filter((player) => player.status !== "free-agent")).toHaveLength(16 * 53);
+    expect(state.teams.every((team) => team.rosterSize === 53)).toBe(true);
+    expect(state.teams.every((team) => team.payroll + team.deadCap <= team.salaryCap)).toBe(true);
+    expect(state.league.freeAgents.length).toBeGreaterThan(0);
+    expect(state.league.transactions.length).toBeGreaterThan(0);
+  });
+
+  it("runs the hero professional game through the real-time match kernel", () => {
+    let save = activeProfessionalCareer("professional-interactive-week");
+    const firstGameId = save.football.professional.league.activeGameId;
+    expect(firstGameId).toBe(save.football.match.gameId);
+    save = startMatch(save, "auto", false);
+    expect(save.football.match.status).toBe("complete");
+    save = finalizeProfessionalMatch(save);
+    expect(save.football.professional.heroCareer?.gamesPlayed).toBe(1);
+    expect(save.football.professional.heroCareer?.gameLog).toHaveLength(1);
+    expect(save.football.professional.league.week).toBe(2);
+    expect(save.football.professional.teams.reduce((sum, team) => sum + team.wins, 0)).toBe(8);
+    expect(professionalStandings(save.football.professional.teams)[0]?.wins).toBeGreaterThanOrEqual(1);
+  });
+
+  it("resolves a complete professional season and seven-game playoff", () => {
+    let save = activeProfessionalCareer("professional-complete-season");
+    let safety = 0;
+    while (save.football.professional.league.phase !== "complete" && safety < 25) {
+      if (isProfessionalMatchAwaitingResolution(save)) {
+        save = finalizeProfessionalMatch(startMatch(save, "auto", false));
+      } else {
+        save = advanceProfessionalWeek(save);
+      }
+      safety += 1;
+    }
+    const league = save.football.professional.league;
+    expect(league.phase).toBe("complete");
+    expect(league.championTeamId).toBeDefined();
+    expect(league.schedule.filter((game) => game.status === "complete" && !game.playoffRound)).toHaveLength(120);
+    expect(league.schedule.filter((game) => game.status === "complete" && game.playoffRound)).toHaveLength(7);
+    expect(save.football.professional.teams.every((team) => team.wins + team.losses === 15)).toBe(true);
+
+    const completedSeasonYear = league.seasonYear;
+    const careerGames = save.football.professional.heroCareer?.gamesPlayed ?? 0;
+    save = advanceProfessionalOffseason(save);
+    const nextLeague = save.football.professional.league;
+    expect(nextLeague.seasonYear).toBe(completedSeasonYear + 1);
+    expect(nextLeague.phase).toBe("regular-season");
+    expect(nextLeague.schedule).toHaveLength(120);
+    expect(save.football.professional.teams.every((team) => team.rosterSize === 53)).toBe(true);
+    expect(save.football.professional.teams.every((team) => team.payroll + team.deadCap <= team.salaryCap)).toBe(true);
+    expect(save.football.professional.heroCareer?.gamesPlayed ?? 0).toBe(careerGames);
+  });
+
+  it("advances a practice-squad week while the autonomous league resolves every game", () => {
+    const active = activeProfessionalCareer("professional-practice-week");
+    const career = active.football.professional.heroCareer;
+    if (!career) throw new Error("No professional hero career");
+    let save: CareerSave = {
+      ...active,
+      football: {
+        ...active.football,
+        professional: {
+          ...active.football.professional,
+          status: "practice-squad",
+          heroCareer: { ...career, role: "practice-squad" },
+          league: { ...active.football.professional.league, activeGameId: undefined },
+        },
+      },
+    };
+    save = advanceProfessionalWeek(save);
+    expect(save.football.professional.league.week).toBe(2);
+    expect(save.football.professional.teams.reduce((sum, team) => sum + team.wins, 0)).toBe(8);
+    expect(save.football.professional.heroCareer?.coachTrust).toBeGreaterThanOrEqual(0);
   });
 
   it("is deterministic for the same world seed", () => {

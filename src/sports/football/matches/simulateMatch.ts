@@ -217,6 +217,23 @@ function assignmentOptions(position: FootballPosition, hero: MatchPlayerAssignme
 }
 
 function ownTeamRatings(save: CareerSave): TeamRatings {
+  const professionalCareer = save.meta.phase === "professional-career" ? save.football.professional.heroCareer : undefined;
+  if (professionalCareer?.teamId) {
+    const team = save.football.professional.teams.find((item) => item.id === professionalCareer.teamId);
+    const roster = save.football.professional.league.roster.filter((player) => player.teamId === professionalCareer.teamId && player.status === "active");
+    const offensePositions = new Set<FootballPosition>(["QB", "RB", "WR", "TE", "OT", "OG", "C"]);
+    const defensePositions = new Set<FootballPosition>(["EDGE", "DT", "LB", "CB", "S"]);
+    const average = (players: typeof roster, fallback: number) => players.length > 0
+      ? players.reduce((sum, player) => sum + player.overall, 0) / players.length
+      : fallback;
+    const base = team?.rosterStrength ?? 72;
+    return {
+      offense: clamp(average(roster.filter((player) => offensePositions.has(player.position)), base) * .82 + base * .18),
+      defense: clamp(average(roster.filter((player) => defensePositions.has(player.position)), base) * .82 + base * .18),
+      coaching: clamp((team?.prestige ?? base) * .7 + professionalCareer.coachTrust * .3),
+      cohesion: clamp(58 + professionalCareer.coachTrust * .28 + (team?.prestige ?? base) * .12),
+    };
+  }
   const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
   if (collegeCareer) {
     const team = save.world.teams.find((item) => item.id === collegeCareer.teamId);
@@ -242,6 +259,22 @@ function ownTeamRatings(save: CareerSave): TeamRatings {
 }
 
 function opponentTeamRatings(save: CareerSave, opponentId: string): TeamRatings {
+  if (save.meta.phase === "professional-career") {
+    const team = save.football.professional.teams.find((item) => item.id === opponentId);
+    const roster = save.football.professional.league.roster.filter((player) => player.teamId === opponentId && player.status === "active");
+    const offensePositions = new Set<FootballPosition>(["QB", "RB", "WR", "TE", "OT", "OG", "C"]);
+    const defensePositions = new Set<FootballPosition>(["EDGE", "DT", "LB", "CB", "S"]);
+    const average = (players: typeof roster, fallback: number) => players.length > 0
+      ? players.reduce((sum, player) => sum + player.overall, 0) / players.length
+      : fallback;
+    const base = team?.rosterStrength ?? 72;
+    return {
+      offense: clamp(average(roster.filter((player) => offensePositions.has(player.position)), base) * .84 + base * .16),
+      defense: clamp(average(roster.filter((player) => defensePositions.has(player.position)), base) * .84 + base * .16),
+      coaching: clamp((team?.prestige ?? base) * .82 + base * .18),
+      cohesion: clamp(54 + (team?.prestige ?? base) * .34),
+    };
+  }
   if (save.meta.phase === "college-season") {
     const team = save.world.teams.find((item) => item.id === opponentId);
     const culture = save.world.social.teamCultures.find((item) => item.teamId === opponentId);
@@ -268,7 +301,12 @@ function specialistForSide(
   position: "K" | "P",
 ): SpecialistSnapshot {
   const teamId = side === "hero" ? heroTeamId(save) : save.football.match.opponentId;
-  const player = save.world.players
+  const professionalPlayer = save.meta.phase === "professional-career"
+    ? save.football.professional.league.roster
+      .filter((candidate) => candidate.teamId === teamId && candidate.position === position && candidate.status === "active")
+      .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall)[0]
+    : undefined;
+  const player = professionalPlayer ?? save.world.players
     .filter((candidate) => candidate.teamId === teamId
       && candidate.position === position
       && candidate.status !== "injured"
@@ -304,6 +342,9 @@ function gradeFromScore(score: number): MatchOutcomeGrade {
 }
 
 function heroTeamId(save: CareerSave): string {
+  if (save.meta.phase === "professional-career") {
+    return save.football.professional.heroCareer?.teamId ?? save.football.professional.contract?.teamId ?? save.football.school.id;
+  }
   return save.meta.phase === "college-season"
     ? save.football.college.heroCareer?.teamId ?? save.football.college.signedProgramId ?? save.football.school.id
     : save.football.school.id;
@@ -329,29 +370,43 @@ function bindRosterToAssignments(
     const position = assignmentPosition(assignment.position);
     if (!position) return assignment;
     if (assignment.isHero) {
-      const hero = save.world.players.find((player) => player.isHero);
+      const professionalHero = save.meta.phase === "professional-career"
+        ? save.football.professional.league.roster.find((player) => player.isHero)
+        : undefined;
+      const hero = professionalHero ?? save.world.players.find((player) => player.isHero);
       return {
         ...assignment,
         playerId: hero?.id ?? "hero",
         playerName: save.character.identity.fullName,
         overall: hero?.overall ?? save.football.ratings.overall,
         health: hero?.health ?? save.character.condition.health,
-        depthRank: hero?.depthRank ?? save.football.depthChart.rank,
+        depthRank: hero?.depthRank ?? save.football.professional.heroCareer?.depthRank ?? save.football.depthChart.rank,
       };
     }
     const roomKey = `${assignment.side}:${position}`;
     const roomIndex = usedByRoom.get(roomKey) ?? 0;
     usedByRoom.set(roomKey, roomIndex + 1);
-    const room = save.world.players
+    const professionalRoom = save.meta.phase === "professional-career"
+      ? save.football.professional.league.roster
+        .filter((player) => player.teamId === teamIds[assignment.side]
+          && player.position === position
+          && !player.isHero
+          && player.status === "active")
+        .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall || right.form - left.form)
+      : undefined;
+    const worldRoom = save.world.players
       .filter((player) => player.teamId === teamIds[assignment.side]
         && player.position === position
         && !player.isHero
         && player.status !== "injured"
         && player.eligibility.athleticallyEligible)
       .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall || right.form - left.form);
-    const player = room[roomIndex] ?? room[roomIndex % Math.max(1, room.length)] ?? save.world.players
-      .filter((candidate) => candidate.teamId === teamIds[assignment.side] && candidate.position === position && !candidate.isHero)
-      .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall)[roomIndex];
+    const room = professionalRoom ?? worldRoom;
+    const player = room[roomIndex] ?? room[roomIndex % Math.max(1, room.length)] ?? (professionalRoom
+      ? professionalRoom[roomIndex]
+      : save.world.players
+        .filter((candidate) => candidate.teamId === teamIds[assignment.side] && candidate.position === position && !candidate.isHero)
+        .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall)[roomIndex]);
     if (!player) return assignment;
     return {
       ...assignment,
@@ -365,9 +420,12 @@ function bindRosterToAssignments(
 }
 
 function canHeroCheck(save: CareerSave): boolean {
+  const professionalCareer = save.meta.phase === "professional-career" ? save.football.professional.heroCareer : undefined;
   const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
-  const coachTrust = collegeCareer?.coachTrust ?? save.football.depthChart.coachTrust;
-  const isStarter = collegeCareer ? collegeCareer.role === "starter" : save.football.depthChart.rank === 1;
+  const coachTrust = professionalCareer?.coachTrust ?? collegeCareer?.coachTrust ?? save.football.depthChart.coachTrust;
+  const isStarter = professionalCareer
+    ? professionalCareer.role === "starter"
+    : collegeCareer ? collegeCareer.role === "starter" : save.football.depthChart.rank === 1;
   if (!isStarter) return false;
 
   if (save.football.position === "QB") {
@@ -377,9 +435,11 @@ function canHeroCheck(save: CareerSave): boolean {
   const defensiveCaptain = (save.football.position === "LB" || save.football.position === "S")
     && save.football.ratings.footballIq >= 80
     && coachTrust >= 82
-    && (collegeCareer
-      ? collegeCareer.lockerRoomStanding >= 78
-      : save.football.ratings.competitiveness >= 75);
+    && (professionalCareer
+      ? professionalCareer.coachTrust >= 84
+      : collegeCareer
+        ? collegeCareer.lockerRoomStanding >= 78
+        : save.football.ratings.competitiveness >= 75);
   const lineCaller = save.football.position === "C"
     && save.football.ratings.footballIq >= 82
     && coachTrust >= 76;
@@ -1071,9 +1131,12 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
   const spotlight = spotlightByPosition[save.football.position];
   const coachTrustDelta = round((match.coachGrade - 55) * .11, 1);
   const visibilityDelta = round(Math.max(0, (match.coachGrade - 52) * .09) + (won ? .8 : 0), 1);
-  const teamName = save.meta.phase === "college-season"
+  const professionalTeam = save.meta.phase === "professional-career"
+    ? save.football.professional.teams.find((team) => team.id === save.football.professional.heroCareer?.teamId)
+    : undefined;
+  const teamName = professionalTeam?.shortName ?? (save.meta.phase === "college-season"
     ? save.football.college.program?.shortName ?? "Программа"
-    : save.football.school.shortName;
+    : save.football.school.shortName);
   return {
     won,
     heroScore: match.heroScore,
@@ -1447,6 +1510,8 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
           },
         },
       };
+    } else if (save.meta.phase === "professional-career") {
+      nextFootball = { ...save.football, match: nextMatch };
     } else {
       const season = applyCompletedMatchToSeason(save, nextMatch);
       nextFootball = {

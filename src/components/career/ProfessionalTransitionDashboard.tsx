@@ -1,5 +1,9 @@
+import { useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../../sports/football/pro/types";
+import type { MatchParticipationMode } from "../../sports/football/matches/types";
+import { professionalStandings } from "../../sports/football/pro/league";
+import { MatchDashboard } from "./MatchDashboard";
 import { Icon } from "../ui/Icon";
 
 interface ProfessionalTransitionDashboardProps {
@@ -12,6 +16,12 @@ interface ProfessionalTransitionDashboardProps {
   onRunDraft(): Promise<void>;
   onAcceptCampInvite(teamId: string): Promise<void>;
   onAdvanceCamp(approach: ProfessionalCampApproach): Promise<void>;
+  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
+  onResolveMatchDecision(optionId: string): Promise<void>;
+  onFinalizeProfessionalMatch(): Promise<void>;
+  onAdvanceProfessionalWeek(): Promise<void>;
+  onAdvanceProfessionalOffseason(): Promise<void>;
+  onAcceptFreeAgentOffer(teamId: string): Promise<void>;
 }
 
 function money(value: number): string {
@@ -31,6 +41,7 @@ function statusLabel(status: CareerSave["football"]["professional"]["status"]): 
     "training-camp": "Лагерь",
     roster: "Активный состав",
     "practice-squad": "Тренировочный состав",
+    "free-agent": "Свободный агент",
     cut: "Отчислен",
   }[status];
 }
@@ -54,6 +65,12 @@ export function ProfessionalTransitionDashboard({
   onRunDraft,
   onAcceptCampInvite,
   onAdvanceCamp,
+  onStartMatch,
+  onResolveMatchDecision,
+  onFinalizeProfessionalMatch,
+  onAdvanceProfessionalWeek,
+  onAdvanceProfessionalOffseason,
+  onAcceptFreeAgentOffer,
 }: ProfessionalTransitionDashboardProps) {
   const professional = save.football.professional;
   const selectedAgent = professional.agents.find((agent) => agent.id === professional.selectedAgentId);
@@ -62,6 +79,36 @@ export function ProfessionalTransitionDashboard({
   const heroRank = professional.prospects.findIndex((prospect) => prospect.isHero) + 1;
   const topProspects = professional.prospects.slice(0, 8);
   const recentDraft = professional.draftResults.filter((pick) => pick.round <= 2).slice(0, 12);
+  const [matchOpen, setMatchOpen] = useState(false);
+  const league = professional.league;
+  const heroCareer = professional.heroCareer;
+  const heroTeam = heroCareer?.teamId ? professional.teams.find((team) => team.id === heroCareer.teamId) : undefined;
+  const activeGame = league.activeGameId ? league.schedule.find((game) => game.id === league.activeGameId) : undefined;
+  const opponentId = activeGame && heroTeam ? (activeGame.homeTeamId === heroTeam.id ? activeGame.awayTeamId : activeGame.homeTeamId) : undefined;
+  const opponent = opponentId ? professional.teams.find((team) => team.id === opponentId) : undefined;
+  const standings = professionalStandings(professional.teams);
+  const matchBelongsToLeague = Boolean(activeGame && save.football.match.gameId === activeGame.id);
+  const showMatch = matchBelongsToLeague && (matchOpen || save.football.match.status !== "upcoming");
+  const champion = league.championTeamId ? professional.teams.find((team) => team.id === league.championTeamId) : undefined;
+  const positionRoom = league.roster
+    .filter((player) => player.teamId === heroCareer?.teamId && player.position === save.football.position)
+    .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall);
+
+  if (showMatch) {
+    return (
+      <div className="professional-shell professional-match-shell">
+        {save.football.match.status === "upcoming" && <button type="button" className="professional-back-button" onClick={() => setMatchOpen(false)}><Icon name="arrow-left" /> Сезон</button>}
+        <MatchDashboard
+          save={save}
+          mutating={mutating}
+          {...(actionError ? { actionError } : {})}
+          onStartMatch={onStartMatch}
+          onResolveDecision={onResolveMatchDecision}
+          onFinalizeMatch={async () => { await onFinalizeProfessionalMatch(); setMatchOpen(false); }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="professional-shell">
@@ -194,12 +241,68 @@ export function ProfessionalTransitionDashboard({
         </section>
       )}
 
-      {(professional.status === "roster" || professional.status === "practice-squad" || professional.status === "cut") && (
+      {(professional.status === "roster" || professional.status === "practice-squad" || professional.status === "free-agent" || professional.status === "cut") && (
         <section className={`professional-outcome professional-outcome--${professional.status}`}>
           <Icon name={professional.status === "roster" ? "trophy" : professional.status === "practice-squad" ? "team" : "close"} />
-          <small>РЕШЕНИЕ КЛУБА</small>
-          <h2>{professional.status === "roster" ? "Активный состав" : professional.status === "practice-squad" ? "Тренировочный состав" : "Контракт расторгнут"}</h2>
-          {professional.contract && <strong>{professional.contract.teamName} · {money(professional.contract.totalValue)}</strong>}
+          <small>СТАТУС ИГРОКА</small>
+          <h2>{professional.status === "roster" ? "Активный состав" : professional.status === "practice-squad" ? "Тренировочный состав" : "Свободный агент"}</h2>
+          {professional.contract && professional.status !== "free-agent" && <strong>{professional.contract.teamName} · {money(professional.contract.totalValue)}</strong>}
+        </section>
+      )}
+
+      {save.meta.phase === "professional-career" && (
+        <section className="professional-season">
+          <header className="professional-season__head">
+            <div><small>{league.phase === "playoffs" ? "ПЛЕЙ-ОФФ" : league.phase === "complete" ? "СЕЗОН ЗАВЕРШЁН" : "РЕГУЛЯРНЫЙ СЕЗОН"}</small><h2>{league.seasonYear} · Неделя {league.week}</h2></div>
+            <strong>{heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "FA"}</strong>
+          </header>
+
+          {champion && <div className="professional-champion"><Icon name="trophy" /><div><small>ЧЕМПИОН</small><strong>{champion.city} {champion.name}</strong></div></div>}
+
+          <div className="professional-season-grid">
+            <article><small>Клуб</small><strong>{heroTeam ? `${heroTeam.city} ${heroTeam.name}` : "Нет контракта"}</strong><span>{heroCareer?.role ?? "free-agent"}</span></article>
+            <article><small>Depth</small><strong>#{heroCareer?.depthRank ?? "—"}</strong><span>{save.football.position}</span></article>
+            <article><small>Trust</small><strong>{Math.round(heroCareer?.coachTrust ?? 0)}</strong><span>{heroCareer?.gamesPlayed ?? 0} игр</span></article>
+            <article><small>Cap space</small><strong>{heroTeam ? money(heroTeam.capSpace) : "—"}</strong><span>{heroTeam ? `${heroTeam.rosterSize}/53` : "рынок"}</span></article>
+          </div>
+
+          {activeGame && heroTeam && opponent && (
+            <div className="professional-next-game">
+              <div><small>{activeGame.playoffRound ? activeGame.playoffRound.toUpperCase() : `WEEK ${activeGame.week}`}</small><strong>{heroTeam.shortName} — {opponent.shortName}</strong><span>{activeGame.date.month}/{activeGame.date.day} · {opponent.wins}–{opponent.losses}</span></div>
+              <button type="button" disabled={mutating} onClick={() => setMatchOpen(true)}><Icon name="football" /><span>Играть</span></button>
+            </div>
+          )}
+
+          {(professional.status === "free-agent" || professional.status === "cut") && professional.campInvites.length > 0 && (
+            <div className="professional-free-agent-market">
+              <header><small>ПРЕДЛОЖЕНИЯ</small><strong>Рынок свободных агентов</strong></header>
+              {professional.campInvites.map((offer) => <button type="button" key={offer.teamId} disabled={mutating} onClick={() => void onAcceptFreeAgentOffer(offer.teamId)}><span>{offer.shortName}</span><div><strong>{offer.teamName}</strong><small>{offer.summary}</small></div><em>{Math.round(offer.rosterOpportunity)}</em></button>)}
+            </div>
+          )}
+
+          {positionRoom.length > 0 && (
+            <div className="professional-position-room">
+              <header><small>POSITION ROOM</small><strong>{save.football.position}</strong></header>
+              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · {player.age} лет</small></div><em>{Math.round(player.overall)}</em></article>)}
+            </div>
+          )}
+
+          <div className="professional-standings">
+            {(["AFC", "NFC"] as const).map((conference) => <section key={conference}><header><small>{conference}</small><strong>W–L</strong></header>{standings.filter((team) => team.conference === conference).slice(0, 8).map((team, index) => <article key={team.id} className={team.id === heroTeam?.id ? "is-hero" : ""}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.wins}–{team.losses}</em></article>)}</section>)}
+          </div>
+
+          {league.transactions.length > 0 && <div className="professional-transactions"><header><small>ТРАНЗАКЦИИ</small><strong>Последние сделки</strong></header>{league.transactions.slice(-5).reverse().map((transaction) => <article key={transaction.id}><span>{transaction.position}</span><p>{transaction.summary}</p></article>)}</div>}
+
+          {league.phase !== "complete" && !activeGame && professional.status !== "free-agent" && professional.status !== "cut" && (
+            <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceProfessionalWeek()}>
+              <span><small>{professional.status === "practice-squad" ? "Тренировка и решение штаба" : "Симуляция остальных матчей"}</small><strong>{mutating ? "Расчёт…" : "Завершить неделю"}</strong></span><Icon name="arrow-right" />
+            </button>
+          )}
+          {league.phase === "complete" && (
+            <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceProfessionalOffseason()}>
+              <span><small>Контракты, рынок и новые ростеры</small><strong>{mutating ? "Расчёт…" : `Начать сезон ${league.seasonYear + 1}`}</strong></span><Icon name="arrow-right" />
+            </button>
+          )}
         </section>
       )}
 

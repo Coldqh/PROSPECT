@@ -35,6 +35,10 @@ interface CareerSaveState {
   runProfessionalDraft(): Promise<void>;
   acceptProfessionalCampInvite(teamId: string): Promise<void>;
   advanceProfessionalTrainingCamp(approach: ProfessionalCampApproach): Promise<void>;
+  finalizeProfessionalMatch(): Promise<void>;
+  advanceProfessionalWeek(): Promise<void>;
+  advanceProfessionalOffseason(): Promise<void>;
+  acceptProfessionalFreeAgentOffer(teamId: string): Promise<void>;
 }
 
 export function useCareerSave(careerId: string | undefined): CareerSaveState {
@@ -372,6 +376,61 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const finalizeProfessionalMatch = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.finalizeProfessionalMatch(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось зафиксировать профессиональный матч.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const advanceProfessionalWeek = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.advanceProfessionalWeek(careerId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить неделю профессионального сезона.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const advanceProfessionalOffseason = useCallback(async () => {
+    if (!careerId) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.advanceProfessionalOffseason(careerId));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Не удалось начать новый профессиональный сезон");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId]);
+
+  const acceptProfessionalFreeAgentOffer = useCallback(async (teamId: string) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.acceptProfessionalFreeAgentOffer(careerId, teamId));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось подписать контракт свободного агента.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   return {
     ...(save ? { save } : {}),
     loading,
@@ -399,5 +458,9 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     runProfessionalDraft,
     acceptProfessionalCampInvite,
     advanceProfessionalTrainingCamp,
+    finalizeProfessionalMatch,
+    advanceProfessionalWeek,
+    advanceProfessionalOffseason,
+    acceptProfessionalFreeAgentOffer,
   };
 }

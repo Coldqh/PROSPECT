@@ -2,6 +2,8 @@ import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import type { MatchStatLine } from "../matches/types";
+import { PROFESSIONAL_SALARY_CAP } from "./createProfessionalState";
+import { createHeroFreeAgentOffers, initializeProfessionalLeague } from "./league";
 import type {
   FootballProfessionalState,
   ProfessionalAgent,
@@ -112,12 +114,17 @@ function refreshProfessionalTeams(teams: ProfessionalTeam[], draftYear: number, 
       const annualPressure = random.fork(`need:${position}`).integer(28, 96) * 0.48;
       return [position, clamp(inherited + annualPressure + (rosterStrength < 70 ? 5 : 0))];
     })) as Record<FootballPosition, number>;
+    const deadCap = Math.max(0, Math.round((team.deadCap * 0.62 + random.integer(1, 16) * 1_000_000 * 0.38) / 10_000) * 10_000);
+    const payroll = Math.min(PROFESSIONAL_SALARY_CAP - deadCap - 6_000_000, Math.max(150_000_000, Math.round((team.payroll * 0.74 + random.integer(172, 238) * 1_000_000 * 0.26) / 10_000) * 10_000));
     return {
       ...team,
       rosterStrength,
       wins,
       losses: 17 - wins,
-      capSpace: Math.max(8, Math.round(team.capSpace * 0.55 + random.integer(14, 82) * 0.45)),
+      salaryCap: PROFESSIONAL_SALARY_CAP,
+      payroll,
+      deadCap,
+      capSpace: Math.max(0, PROFESSIONAL_SALARY_CAP - payroll - deadCap),
       needs,
     };
   });
@@ -684,7 +691,7 @@ export function advanceProfessionalTrainingCamp(save: CareerSave, approach: Prof
   if (isFinal) {
     const rosterScore = averagePerformance * 0.56 + nextTrust * 0.25 + state.draftStock * 0.14 + team.needs[save.football.position] * 0.05;
     outcome = rosterScore >= 74 || nextRank <= 2 ? "active-roster" : rosterScore >= 62 ? "practice-squad" : "released";
-    status = outcome === "active-roster" ? "roster" : outcome === "practice-squad" ? "practice-squad" : "cut";
+    status = outcome === "active-roster" ? "roster" : outcome === "practice-squad" ? "practice-squad" : "free-agent";
   }
   const nextCamp: ProfessionalTrainingCamp = {
     ...camp,
@@ -695,7 +702,7 @@ export function advanceProfessionalTrainingCamp(save: CareerSave, approach: Prof
     ...(outcome ? { outcome } : {}),
   };
   const outcomeLabel = outcome === "active-roster" ? "активный состав" : outcome === "practice-squad" ? "тренировочный состав" : outcome === "released" ? "отчисление" : undefined;
-  return {
+  let result: CareerSave = {
     ...save,
     meta: { ...save.meta, ...(isFinal ? { phase: "professional-career" as const } : {}) },
     character: {
@@ -725,4 +732,19 @@ export function advanceProfessionalTrainingCamp(save: CareerSave, approach: Prof
       description: `После четырёх контрольных этапов игрок получил статус «${outcomeLabel}».`,
     }] : [])],
   };
+  if (!isFinal) return result;
+  if (status === "free-agent") {
+    result = {
+      ...result,
+      football: {
+        ...result.football,
+        professional: {
+          ...result.football.professional,
+          campInvites: createHeroFreeAgentOffers(result),
+          lastSummary: "Клуб отчислил игрока. Агент открыл рынок однолетних контрактов.",
+        },
+      },
+    };
+  }
+  return initializeProfessionalLeague(result);
 }

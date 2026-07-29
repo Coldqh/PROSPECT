@@ -602,6 +602,32 @@ describe("migrateCareerSave", () => {
   });
 
 
+  it("migrates version twenty-seven saves into the professional league schema", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { league: _league, heroCareer: _heroCareer, ...professionalWithoutLeague } = current.football.professional;
+    const legacyTeams = professionalWithoutLeague.teams.map(({ salaryCap: _salaryCap, payroll: _payroll, deadCap: _deadCap, rosterSize: _rosterSize, ...team }) => team);
+    const versionTwentySeven = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 27 as const },
+      football: {
+        ...current.football,
+        professional: {
+          ...professionalWithoutLeague,
+          version: 1 as const,
+          teams: legacyTeams,
+        },
+      },
+    };
+    const result = migrateCareerSave(versionTwentySeven);
+    expect(result.migratedFrom).toBe(27);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.professional.version).toBe(2);
+    expect(result.save.football.professional.teams).toHaveLength(16);
+    expect(result.save.football.professional.teams.every((team) => team.salaryCap > 0)).toBe(true);
+    expect(result.save.football.professional.league.schedule).toEqual([]);
+    expect(result.save.history.at(-1)?.title).toBe("Профессиональная лига запущена");
+  });
+
   it("migrates version twenty-six saves into the rebuilt match experience", () => {
     const current = migrateCareerSave(legacySave).save;
     const {
