@@ -16,6 +16,7 @@ import { createHeroFreeAgentOffers, initializeProfessionalLeague } from "../../s
 import type { FootballProfessionalState, ProfessionalTeam } from "../../sports/football/pro/types";
 import { activateCollegeHeroCareer } from "../../sports/football/college/heroCareer";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
+import { createCareerRegistry } from "../../sports/football/ecosystem/lifecycle";
 import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
@@ -212,16 +213,27 @@ interface LegacyProfessionalLeagueSave {
   history: HistoryEntry[];
 }
 
-type LegacyMatchWithoutHeroControl = Omit<CareerSave["football"]["match"], "heroControlMode">;
-type LegacyFootballWithoutHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithoutHeroControl };
+type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistry"> & { careerRegistry?: CareerSave["world"]["careerRegistry"] };
+type LegacyMatchWithHeroControl = CareerSave["football"]["match"] & { heroControlMode: "assisted" | "manual" | "spectator" };
+type LegacyFootballWithHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithHeroControl };
 
 interface LegacyHeroControlSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 29 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyFootballWithHeroControl;
+  relationships: CareerSave["relationships"];
+  world: LegacyWorldWithoutCareerRegistry;
+  history: HistoryEntry[];
+}
+
+interface LegacyPreControlSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 28 };
   character: CareerSave["character"];
   life: CareerSave["life"];
-  football: LegacyFootballWithoutHeroControl;
+  football: CareerSave["football"];
   relationships: CareerSave["relationships"];
-  world: CareerSave["world"];
+  world: LegacyWorldWithoutCareerRegistry;
   history: HistoryEntry[];
 }
 
@@ -438,20 +450,24 @@ function parseMigratedSave(input: {
   football: FootballCareerState;
   history: HistoryEntry[];
   relationships?: CareerSave["relationships"];
-  world?: CareerSave["world"];
+  world?: CareerSave["world"] | LegacyWorldWithoutCareerRegistry;
 }): CareerSave {
   const football = withProfessionalState(input.football, input.meta.worldSeed, input.meta.currentDate.year + 4);
+  const sourceWorld = input.world ?? createFootballEcosystem(
+    input.meta.worldSeed,
+    input.character,
+    football,
+    input.meta.currentDate,
+    input.life.completedDays,
+  );
+  const world = sourceWorld.careerRegistry?.records.length
+    ? sourceWorld
+    : { ...sourceWorld, careerRegistry: createCareerRegistry(sourceWorld.players, sourceWorld.teams, sourceWorld.seasonYear) };
   return careerSaveSchema.parse({
     ...input,
     football,
     relationships: input.relationships ?? createFootballRelationships(input.meta.worldSeed, input.character, football),
-    world: input.world ?? createFootballEcosystem(
-      input.meta.worldSeed,
-      input.character,
-      football,
-      input.meta.currentDate,
-      input.life.completedDays,
-    ),
+    world,
   });
 }
 
@@ -518,22 +534,37 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
 }
 
 
-function migrateVersionTwentyEight(input: LegacyHeroControlSave): CareerSave {
+function migrateVersionTwentyNine(input: LegacyHeroControlSave): CareerSave {
+  const { heroControlMode: _legacyMode, ...match } = input.football.match;
   return parseMigratedSave({
     ...input,
     meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
-    football: {
-      ...input.football,
-      match: { ...input.football.match, heroControlMode: "assisted" },
-    },
+    football: { ...input.football, match },
     history: [
       ...input.history,
       {
-        id: `migration-${input.meta.id}-v29`,
+        id: `migration-${input.meta.id}-v30`,
         occurredAt: input.meta.updatedAt,
         type: "save-migrated",
-        title: "Управление игроком обновлено",
-        description: "Сохранение получило автотраектории, ручной режим, полный автомат и новое окно итога снэпа.",
+        title: "Управление стало бесшовным",
+        description: "Режимы удалены: персонаж действует автоматически, а любое движение джойстика временно передаёт управление игроку.",
+      },
+    ],
+  });
+}
+
+function migrateVersionTwentyEight(input: LegacyPreControlSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v30`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Единая история игроков создана",
+        description: "Школьные, университетские и профессиональные этапы связаны постоянными идентификаторами и карьерным архивом.",
       },
     ],
   });
@@ -1262,7 +1293,8 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
-  if (schemaVersion === 28) return migratedResult(migrateVersionTwentyEight(input as LegacyHeroControlSave), 28);
+  if (schemaVersion === 29) return migratedResult(migrateVersionTwentyNine(input as LegacyHeroControlSave), 29);
+  if (schemaVersion === 28) return migratedResult(migrateVersionTwentyEight(input as LegacyPreControlSave), 28);
   if (schemaVersion === 27) return migratedResult(migrateVersionTwentySeven(input as LegacyProfessionalLeagueSave), 27);
   if (schemaVersion === 26) return migratedResult(migrateVersionTwentySix(input as LegacyMatchExperienceSave), 26);
   if (schemaVersion === 25) return migratedResult(migrateVersionTwentyFive(input as LegacyFivePositionCareerSave), 25);

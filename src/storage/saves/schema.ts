@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 29;
+export const CURRENT_SCHEMA_VERSION = 30;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -446,7 +446,6 @@ const footballMatchSchema = z.object({
   possession: z.enum(["hero", "opponent"]).default("hero"),
   openingKickoffReceiver: z.enum(["hero", "opponent"]).default("hero"),
   participationMode: z.enum(["auto", "key-moments", "every-snap"]).default("key-moments"),
-  heroControlMode: z.enum(["assisted", "manual", "spectator"]).default("assisted"),
   analysisMode: z.boolean().default(false),
   heroFatigue: z.number().min(0).max(100),
   coachGrade: z.number().min(0).max(100),
@@ -755,6 +754,12 @@ const professionalPositionNeedsSchema = z.object({
 
 const professionalRosterPlayerSchema = z.object({
   id: z.string().min(1),
+  sourcePlayerId: z.string().min(1).optional(),
+  collegeTeamId: z.string().min(1).optional(),
+  collegeName: z.string().min(1).optional(),
+  draftYear: z.number().int().min(2020).max(2200).optional(),
+  draftRound: z.number().int().min(1).max(7).nullable().optional(),
+  draftPick: z.number().int().min(1).nullable().optional(),
   name: z.string().min(2),
   teamId: z.string().min(1).optional(),
   position: careerFootballPositionSchema,
@@ -816,7 +821,7 @@ const professionalStateSchema = z.object({
     needs: professionalPositionNeedsSchema,
   })).min(16),
   prospects: z.array(z.object({
-    id: z.string().min(1), name: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), age: z.number().int().min(18).max(30),
+    id: z.string().min(1), sourcePlayerId: z.string().min(1).optional(), collegeTeamId: z.string().min(1).optional(), previousTeamIds: z.array(z.string().min(1)).default([]), seasonsPlayed: z.number().int().nonnegative().default(0), declaredEarly: z.boolean().default(false), name: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), age: z.number().int().min(18).max(30),
     overall: z.number().min(0).max(100), potential: z.number().min(0).max(100), production: z.number().min(0).max(100), athleticScore: z.number().min(0).max(100),
     medicalScore: z.number().min(0).max(100), interviewScore: z.number().min(0).max(100), draftGrade: z.number().min(0).max(100), projectedRound: z.number().int().min(1).max(7).nullable(), isHero: z.boolean(),
   })),
@@ -825,8 +830,8 @@ const professionalStateSchema = z.object({
     completedOn: gameDateSchema, focus: z.enum(["athletic", "technical", "interview"]), fortyYard: z.number().min(3).max(7), shuttle: z.number().min(3).max(7), vertical: z.number().min(10).max(60),
     benchReps: z.number().int().min(0).max(60), positionDrill: z.number().min(0).max(100), medical: z.number().min(0).max(100), interview: z.number().min(0).max(100), overallScore: z.number().min(0).max(100), stockDelta: z.number().min(-30).max(30), summary: z.string().min(2),
   }).optional(),
-  draftResults: z.array(z.object({ id: z.string().min(1), round: z.number().int().min(1).max(7), pickInRound: z.number().int().min(1), overallPick: z.number().int().min(1), teamId: z.string().min(1), prospectId: z.string().min(1), prospectName: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), grade: z.number().min(0).max(100), isHero: z.boolean() })),
-  heroSelection: z.object({ id: z.string().min(1), round: z.number().int().min(1).max(7), pickInRound: z.number().int().min(1), overallPick: z.number().int().min(1), teamId: z.string().min(1), prospectId: z.string().min(1), prospectName: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), grade: z.number().min(0).max(100), isHero: z.boolean() }).optional(),
+  draftResults: z.array(z.object({ id: z.string().min(1), sourcePlayerId: z.string().min(1).optional(), round: z.number().int().min(1).max(7), pickInRound: z.number().int().min(1), overallPick: z.number().int().min(1), teamId: z.string().min(1), prospectId: z.string().min(1), prospectName: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), grade: z.number().min(0).max(100), isHero: z.boolean() })),
+  heroSelection: z.object({ id: z.string().min(1), sourcePlayerId: z.string().min(1).optional(), round: z.number().int().min(1).max(7), pickInRound: z.number().int().min(1), overallPick: z.number().int().min(1), teamId: z.string().min(1), prospectId: z.string().min(1), prospectName: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), grade: z.number().min(0).max(100), isHero: z.boolean() }).optional(),
   campInvites: z.array(z.object({ teamId: z.string().min(1), teamName: z.string().min(2), shortName: z.string().min(2), signingBonus: z.number().int().nonnegative(), rosterOpportunity: z.number().min(0).max(100), positionCompetition: z.number().min(0).max(100), schemeFit: z.number().min(0).max(100), summary: z.string().min(2) })),
   contract: z.object({ teamId: z.string().min(1), teamName: z.string().min(2), years: z.number().int().min(1).max(7), totalValue: z.number().int().nonnegative(), guaranteed: z.number().int().nonnegative(), signingBonus: z.number().int().nonnegative(), salaryYearOne: z.number().int().nonnegative(), agentFee: z.number().int().nonnegative(), round: z.number().int().min(1).max(7).nullable(), overallPick: z.number().int().min(1).nullable() }).optional(),
   camp: z.object({
@@ -1569,6 +1574,42 @@ const ecosystemSocialSchema = z.object({
   digest: z.array(z.string().min(2)).max(6),
 });
 
+const ecosystemCareerEventSchema = z.object({
+  id: z.string().min(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  week: z.number().int().min(0).max(60),
+  kind: z.enum(["created", "enrolled", "transferred", "position-change", "graduated", "declared", "drafted", "signed", "released", "retired"]),
+  detail: z.string().min(2),
+  fromTeamId: z.string().min(1).optional(),
+  toTeamId: z.string().min(1).optional(),
+});
+
+const ecosystemCareerRegistrySchema = z.object({
+  version: z.literal(1),
+  records: z.array(z.object({
+    playerId: z.string().min(1),
+    name: z.string().min(2),
+    position: ecosystemRosterPositionSchema,
+    age: z.number().int().min(14).max(45),
+    overall: z.number().min(0).max(100),
+    potential: z.number().min(0).max(100),
+    currentStage: z.enum(["high-school", "college", "draft-pool", "professional", "free-agent", "retired", "football-exit"]),
+    currentTeamId: z.string().min(1).optional(),
+    highSchoolTeamIds: z.array(z.string().min(1)),
+    collegeTeamIds: z.array(z.string().min(1)),
+    professionalTeamIds: z.array(z.string().min(1)),
+    isHero: z.boolean(),
+    draftYear: z.number().int().min(2020).max(2200).optional(),
+    draftRound: z.number().int().min(1).max(7).optional(),
+    draftPick: z.number().int().min(1).optional(),
+    retiredYear: z.number().int().min(2020).max(2200).optional(),
+    events: z.array(ecosystemCareerEventSchema).max(48),
+  })).max(20000),
+  draftPoolIds: z.array(z.string().min(1)),
+  retiredIds: z.array(z.string().min(1)),
+  lastSyncedSeasonYear: z.number().int().min(2020).max(2200),
+}).default({ version: 1, records: [], draftPoolIds: [], retiredIds: [], lastSyncedSeasonYear: 2020 });
+
 const footballEcosystemSchema = z.object({
   moduleVersion: z.literal(11),
   constitution: worldConstitutionSchema,
@@ -1735,6 +1776,7 @@ const footballEcosystemSchema = z.object({
   movementMarket: ecosystemMovementMarketSchema,
   competition: ecosystemCompetitionSchema,
   social: ecosystemSocialSchema,
+  careerRegistry: ecosystemCareerRegistrySchema,
 });
 
 const careerMetaSchema = z.object({

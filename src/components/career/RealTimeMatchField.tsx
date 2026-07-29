@@ -22,13 +22,12 @@ import {
   type LivePlayEngineState,
   type MatchLivePlayOutcome,
 } from "../../sports/football/matches/realTimeEngine";
-import type { MatchEpisode, MatchHeroControlMode } from "../../sports/football/matches/types";
+import type { MatchEpisode } from "../../sports/football/matches/types";
 
 interface RealTimeMatchFieldProps {
   episode: MatchEpisode;
   heroPosition: FootballPosition;
   analysisMode: boolean;
-  heroControlMode: MatchHeroControlMode;
   disabled: boolean;
   seed: string;
   onComplete(outcome: MatchLivePlayOutcome): Promise<void>;
@@ -80,14 +79,9 @@ function roleHint(position: FootballPosition): string {
   return "Дождись точного окна и нажми кнопку удара.";
 }
 
-function controlModeLabel(mode: MatchHeroControlMode): string {
-  return mode === "manual" ? "РУЧНОЕ" : mode === "spectator" ? "АВТО" : "АССИСТЕНТ";
-}
-
-function controlHint(position: FootballPosition, mode: MatchHeroControlMode, active: boolean): string {
-  if (mode === "spectator") return "ИИ выполняет назначение, решения и движение. Ты смотришь розыгрыш и изучаешь итог.";
-  if (mode === "assisted" && !active) return "ИИ держит правильную траекторию и выполняет назначение. Управление включится после владения мячом.";
-  return roleHint(position);
+function controlHint(position: FootballPosition, active: boolean): string {
+  if (active) return `${roleHint(position)} Отпусти управление — игрок сразу продолжит назначение сам.`;
+  return `Игрок сам выполняет назначение. Коснись джойстика или нажми стрелку, чтобы вмешаться. ${roleHint(position)}`;
 }
 
 function resultTitle(outcome: MatchLivePlayOutcome): string {
@@ -269,7 +263,7 @@ function drawField(canvas: HTMLCanvasElement, engine: LivePlayEngineState, analy
 
 }
 
-export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroControlMode, disabled, seed, onComplete }: RealTimeMatchFieldProps) {
+export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabled, seed, onComplete }: RealTimeMatchFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const joystickRef = useRef<HTMLDivElement | null>(null);
   const activePointerRef = useRef<number | undefined>(undefined);
@@ -286,7 +280,7 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
     runCommitted: false,
     fieldYard: episode.fieldPosition,
     gameClockSeconds: episode.clockSeconds,
-    controlActive: heroControlMode === "manual" || heroPosition === "QB" || heroPosition === "K" || heroPosition === "P",
+    controlActive: false,
   });
 
   useEffect(() => {
@@ -301,17 +295,10 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
       runCommitted: false,
       fieldYard: episode.fieldPosition,
       gameClockSeconds: episode.clockSeconds,
-      controlActive: heroControlMode === "manual" || heroPosition === "QB" || heroPosition === "K" || heroPosition === "P",
+      controlActive: false,
     });
-  }, [episode.id, episode.fieldPosition, heroControlMode, heroPosition, seed]);
+  }, [episode.id, episode.fieldPosition, seed]);
 
-  useEffect(() => {
-    if (heroControlMode !== "spectator") return;
-    const timer = window.setTimeout(() => {
-      if (engineRef.current.phase === "pre-snap") issueLivePlayCommand(engineRef.current, { type: "snap" });
-    }, 700);
-    return () => window.clearTimeout(timer);
-  }, [episode.id, heroControlMode]);
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
@@ -336,10 +323,10 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
       const keys = keysRef.current;
       const keyboardX = (keys.has("d") || keys.has("arrowright") ? 1 : 0) - (keys.has("a") || keys.has("arrowleft") ? 1 : 0);
       const keyboardY = (keys.has("s") || keys.has("arrowdown") ? 1 : 0) - (keys.has("w") || keys.has("arrowup") ? 1 : 0);
-      const controlActive = liveHeroControlActive(engine, heroControlMode);
       const manualInput = keyboardX !== 0 || keyboardY !== 0 ? { moveX: keyboardX, moveY: keyboardY } : touchInputRef.current;
+      const controlActive = liveHeroControlActive(manualInput);
       const input = controlActive ? manualInput : EMPTY_INPUT;
-      const outcome = stepLivePlayEngine(engine, input, (now - previous) / 1000, heroControlMode);
+      const outcome = stepLivePlayEngine(engine, input, (now - previous) / 1000);
       previous = now;
       const canvas = canvasRef.current;
       if (canvas) drawField(canvas, engine, analysisMode);
@@ -363,18 +350,18 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [analysisMode, episode.id, heroControlMode]);
+  }, [analysisMode, episode.id]);
 
   const actions = useMemo(() => liveRoleActions(heroPosition), [heroPosition]);
   const receivers = liveReceiverTargets(engineRef.current);
-  const canThrow = heroPosition === "QB" && hud.controlActive && hud.phase === "live" && !hud.runCommitted && !hud.outcome;
+  const canThrow = heroPosition === "QB" && hud.phase === "live" && !hud.runCommitted && !hud.outcome;
 
   const command = useCallback((value: LivePlayCommand) => {
-    if (disabled || (heroControlMode === "spectator" && value.type !== "snap")) return;
+    if (disabled) return;
     issueLivePlayCommand(engineRef.current, value);
     const engine = engineRef.current;
     setHud((current) => ({ ...current, phase: engine.phase, runCommitted: engine.runCommitted }));
-  }, [disabled, heroControlMode]);
+  }, [disabled]);
 
   const clearJoystick = useCallback(() => {
     activePointerRef.current = undefined;
@@ -434,10 +421,10 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
   }, [disabled, episode.id, hud.outcome, onComplete]);
 
   return (
-    <section className={`live-football live-football--${heroControlMode}`} aria-label="Игровой розыгрыш в реальном времени">
+    <section className={`live-football${hud.controlActive ? " is-manual-override" : " is-autopilot"}`} aria-label="Игровой розыгрыш в реальном времени">
       <header className="live-football__header">
         <div><small>Q{episode.quarter} · {clockLabel(hud.gameClockSeconds)}</small><strong>{downLabel(episode.down)} & {episode.distance} · {fieldSpotLabel(hud.fieldYard)}</strong></div>
-        <span className={hud.pressure ? "is-danger" : ""}>{hud.pressure ? "ДАВЛЕНИЕ" : `${controlModeLabel(heroControlMode)} · ${hud.runCommitted ? "QB RUN" : episode.playCall.concept}`}</span>
+        <span className={hud.pressure ? "is-danger" : ""}>{hud.pressure ? "ДАВЛЕНИЕ" : `${hud.controlActive ? "РУЧНОЕ ВМЕШАТЕЛЬСТВО" : "АВТОМАРШРУТ"} · ${hud.runCommitted ? "QB RUN" : episode.playCall.concept}`}</span>
       </header>
       <div className="live-football__canvas-wrap">
         <canvas ref={canvasRef} className="live-football__canvas" onClick={canvasClick} />
@@ -454,13 +441,11 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
           </div>
         )}
       </div>
-      <p className="live-football__hint">{controlHint(heroPosition, heroControlMode, hud.controlActive)}</p>
+      <p className="live-football__hint">{controlHint(heroPosition, hud.controlActive)}</p>
 
       {hud.phase === "pre-snap" ? (
-        heroControlMode === "spectator"
-          ? <div className="live-football__autopilot"><span>AI</span><div><strong>Автоматический снэп</strong><small>Игрок выполняет розыгрыш самостоятельно</small></div></div>
-          : <button type="button" className="live-football__snap" disabled={disabled} onClick={() => command({ type: "snap" })}>СНЭП</button>
-      ) : !hud.outcome && hud.controlActive ? (
+        <button type="button" className="live-football__snap" disabled={disabled} onClick={() => command({ type: "snap" })}>СНЭП</button>
+      ) : !hud.outcome ? (
         <div className="live-football__controls">
           <div className="live-keyboard-guide" aria-label="Управление стрелками">
             <small>ПК · СТРЕЛКИ</small>
@@ -481,9 +466,11 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, heroCo
             {canThrow && <div className="live-receiver-buttons">{receivers.map((receiver) => <button type="button" key={receiver.id} onClick={() => command({ type: "throw", targetId: receiver.id })}><strong>{receiver.slot}</strong><span>{receiver.label}</span></button>)}</div>}
             <div className="live-role-actions__main">{actions.map((action) => <button type="button" key={action.id} disabled={disabled} onClick={() => command({ type: action.id } as LivePlayCommand)}>{action.label}</button>)}</div>
           </div>
+          <div className={`live-football__autopilot-state${hud.controlActive ? " is-manual" : ""}`}>
+            <span>{hud.controlActive ? "YOU" : "AI"}</span>
+            <div><strong>{hud.controlActive ? "Ты управляешь движением" : "Игрок выполняет назначение"}</strong><small>{hud.controlActive ? "Отпусти джойстик — автоматика продолжит из текущей точки" : "Коснись джойстика в любой момент"}</small></div>
+          </div>
         </div>
-      ) : !hud.outcome ? (
-        <div className="live-football__autopilot"><span>AI</span><div><strong>Назначение выполняется автоматически</strong><small>{heroControlMode === "assisted" ? "Управление включится после владения мячом" : "Полный автомат до свистка"}</small></div></div>
       ) : null}
     </section>
   );

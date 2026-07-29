@@ -1185,7 +1185,7 @@ function startControlledDrive(match: FootballMatchState, gameClockSeconds: numbe
   };
 }
 
-function startMatchCore(save: CareerSave, participationMode: MatchParticipationMode, heroControlMode: import("./types").MatchHeroControlMode, analysisMode: boolean): CareerSave {
+function startMatchCore(save: CareerSave, participationMode: MatchParticipationMode, analysisMode: boolean): CareerSave {
   const match = save.football.match;
   if (match.status !== "upcoming") return save;
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:kickoff`);
@@ -1194,7 +1194,6 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
     ...match,
     status: "in-progress",
     participationMode,
-    heroControlMode,
     analysisMode,
     heroScore: 0,
     opponentScore: 0,
@@ -1614,9 +1613,8 @@ export function startMatch(
   save: CareerSave,
   participationMode: MatchParticipationMode = "key-moments",
   analysisMode = false,
-  heroControlMode: import("./types").MatchHeroControlMode = "assisted",
 ): CareerSave {
-  let started = startMatchCore(save, participationMode, heroControlMode, analysisMode);
+  let started = startMatchCore(save, participationMode, analysisMode);
   if (participationMode === "auto") started = advanceAutomatic(started, false);
   if (participationMode === "key-moments") {
     started = advanceAutomatic(started, true);

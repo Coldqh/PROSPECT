@@ -1,15 +1,20 @@
 import type { GameDate } from "../../../core/calendar/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
+import { advanceFootballEcosystem } from "../ecosystem/simulateEcosystem";
+import { registerProfessionalDraftClass, syncProfessionalCareerRegistry } from "../ecosystem/lifecycle";
+import type { EcosystemPlayerCareerRecord } from "../ecosystem/types";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats, matchUnitForPosition } from "../matches/createMatchState";
 import type { FootballMatchState, MatchStatLine } from "../matches/types";
 import { PROFESSIONAL_SALARY_CAP } from "./createProfessionalState";
 import type {
   ProfessionalCampInvite,
+  ProfessionalDraftSelection,
   ProfessionalGame,
   ProfessionalHeroCareer,
   ProfessionalLeagueState,
+  ProfessionalProspect,
   ProfessionalRosterPlayer,
   ProfessionalTeam,
   ProfessionalTransaction,
@@ -37,6 +42,41 @@ function addDays(date: GameDate, days: number): GameDate {
   const value = new Date(Date.UTC(date.year, date.month - 1, date.day + days));
   return { year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate() };
 }
+
+function dateValue(date: GameDate): number {
+  return Date.UTC(date.year, date.month - 1, date.day);
+}
+
+function advanceBackgroundWorld(save: CareerSave, targetDate: GameDate): CareerSave {
+  const days = Math.max(0, Math.round((dateValue(targetDate) - dateValue(save.world.lastUpdatedOn)) / 86_400_000));
+  if (days === 0) return { ...save, meta: { ...save.meta, currentDate: targetDate } };
+  const elapsed = save.life.dayIndex + days;
+  return advanceFootballEcosystem({
+    ...save,
+    meta: { ...save.meta, currentDate: targetDate },
+    life: {
+      ...save.life,
+      completedDays: save.life.completedDays + days,
+      dayIndex: elapsed % 7,
+      weekNumber: save.life.weekNumber + Math.floor(elapsed / 7),
+    },
+  });
+}
+
+function syncProfessionalWorld(save: CareerSave): CareerSave {
+  const league = save.football.professional.league;
+  if (league.schedule.length === 0) return save;
+  const careerRegistry = syncProfessionalCareerRegistry(
+    save.world.careerRegistry,
+    league.roster,
+    league.freeAgents,
+    league.transactions,
+    league.seasonYear,
+    league.week,
+  );
+  return { ...save, world: { ...save.world, careerRegistry } };
+}
+
 
 function seasonStart(year: number): GameDate {
   const septemberFirst = new Date(Date.UTC(year, 8, 1));
@@ -75,6 +115,192 @@ function createPlayer(seed: string, teamId: string | undefined, position: Footba
   };
 }
 
+
+function rookieFromProspect(
+  prospect: ProfessionalProspect,
+  teamId: string | undefined,
+  seasonYear: number,
+  round: number | null,
+  overallPick: number | null,
+): ProfessionalRosterPlayer {
+  const random = new SeededRandom(`${prospect.id}:${seasonYear}:${teamId ?? "fa"}`);
+  const annualSalary = round
+    ? Math.max(760_000, Math.round((780_000 + Math.max(0, 8 - round) * 135_000 + Math.max(0, 120 - (overallPick ?? 120)) * 18_000) / 10_000) * 10_000)
+    : Math.max(760_000, Math.round((740_000 + Math.max(0, prospect.overall - 55) * 90_000) / 10_000) * 10_000);
+  return {
+    id: `pro-rookie:${seasonYear}:${prospect.sourcePlayerId ?? prospect.id}`,
+    sourcePlayerId: prospect.sourcePlayerId,
+    collegeTeamId: prospect.collegeTeamId,
+    collegeName: prospect.collegeName,
+    draftYear: seasonYear,
+    draftRound: round,
+    draftPick: overallPick,
+    name: prospect.name,
+    ...(teamId ? { teamId } : {}),
+    position: prospect.position,
+    age: prospect.age,
+    overall: clamp(prospect.overall * 0.78 + prospect.draftGrade * 0.22, 50, 96),
+    potential: clamp(Math.max(prospect.potential, prospect.overall + random.integer(2, 8))),
+    health: prospect.medicalScore,
+    form: clamp(54 + prospect.production * 0.2 + random.integer(-5, 6)),
+    depthRank: teamId ? 6 : 0,
+    yearsRemaining: teamId ? 4 : 0,
+    annualSalary,
+    guaranteedRemaining: teamId ? Math.round(annualSalary * (round && round <= 2 ? 1.8 : round && round <= 4 ? 0.9 : 0.35) / 10_000) * 10_000 : 0,
+    status: teamId ? "active" : "free-agent",
+    availability: "active",
+    injuryWeeks: 0,
+    isHero: false,
+  };
+}
+
+function injectDraftClass(
+  state: CareerSave["football"]["professional"],
+  seasonYear: number,
+  roster: ProfessionalRosterPlayer[],
+  freeAgents: ProfessionalRosterPlayer[],
+): { roster: ProfessionalRosterPlayer[]; freeAgents: ProfessionalRosterPlayer[]; transactions: ProfessionalTransaction[] } {
+  let nextRoster = [...roster];
+  let nextFreeAgents = [...freeAgents];
+  const transactions: ProfessionalTransaction[] = [];
+  const prospectById = new Map(state.prospects.map((prospect) => [prospect.id, prospect]));
+  for (const selection of state.draftResults.filter((pick) => !pick.isHero)) {
+    const prospect = prospectById.get(selection.prospectId);
+    if (!prospect) continue;
+    const rookie = rookieFromProspect(prospect, selection.teamId, seasonYear, selection.round, selection.overallPick);
+    const replacement = nextRoster
+      .filter((player) => player.teamId === selection.teamId && player.position === rookie.position && player.status === "active" && !player.isHero)
+      .sort((left, right) => left.overall - right.overall || right.age - left.age)[0];
+    if (replacement) {
+      nextRoster = nextRoster.filter((player) => player.id !== replacement.id);
+      nextFreeAgents.push({ ...replacement, teamId: undefined, status: "free-agent", depthRank: 0, yearsRemaining: 0 });
+    }
+    nextRoster.push(rookie);
+    transactions.push({
+      id: `pro-tx:${seasonYear}:draft:${selection.overallPick}:${rookie.id}`,
+      seasonYear,
+      week: 0,
+      kind: "signing",
+      playerId: rookie.id,
+      playerName: rookie.name,
+      position: rookie.position,
+      toTeamId: selection.teamId,
+      value: rookie.annualSalary,
+      summary: `${rookie.name} вошёл в состав после выбора №${selection.overallPick}.`,
+    });
+  }
+  const selectedIds = new Set(state.draftResults.map((pick) => pick.prospectId));
+  for (const prospect of state.prospects.filter((item) => !item.isHero && !selectedIds.has(item.id))) {
+    nextFreeAgents.push(rookieFromProspect(prospect, undefined, seasonYear, null, null));
+  }
+  return { roster: nextRoster, freeAgents: nextFreeAgents, transactions };
+}
+
+function prospectFromCareerRecord(record: EcosystemPlayerCareerRecord): ProfessionalProspect {
+  const production = clamp(record.overall * 0.68 + record.potential * 0.2 + 8);
+  const athleticScore = clamp(record.overall * 0.7 + record.potential * 0.3);
+  const medicalScore = clamp(78 + Math.max(-12, record.overall - 70) * 0.25);
+  const interviewScore = clamp(58 + record.potential * 0.28);
+  const draftGrade = clamp(record.overall * 0.48 + record.potential * 0.28 + production * 0.12 + athleticScore * 0.07 + medicalScore * 0.03 + interviewScore * 0.02);
+  return {
+    id: `prospect:${record.playerId}`,
+    sourcePlayerId: record.playerId,
+    collegeTeamId: record.collegeTeamIds.at(-1),
+    previousTeamIds: [...record.highSchoolTeamIds, ...record.collegeTeamIds],
+    seasonsPlayed: Math.max(1, record.events.filter((item) => item.kind === "enrolled").length),
+    declaredEarly: false,
+    name: record.name,
+    position: record.position,
+    collegeName: record.collegeTeamIds.at(-1)?.replace(/^college-/, "").toUpperCase() ?? "College",
+    age: Math.max(20, record.age),
+    overall: record.overall,
+    potential: record.potential,
+    production,
+    athleticScore,
+    medicalScore,
+    interviewScore,
+    draftGrade,
+    projectedRound: draftGrade >= 88 ? 1 : draftGrade >= 81 ? 2 : draftGrade >= 75 ? 3 : draftGrade >= 69 ? 4 : draftGrade >= 64 ? 5 : draftGrade >= 59 ? 6 : draftGrade >= 54 ? 7 : null,
+    isHero: record.isHero,
+  };
+}
+
+function runLifecycleRookieDraft(
+  save: CareerSave,
+  seasonYear: number,
+  teams: ProfessionalTeam[],
+  roster: ProfessionalRosterPlayer[],
+  freeAgents: ProfessionalRosterPlayer[],
+): {
+  roster: ProfessionalRosterPlayer[];
+  freeAgents: ProfessionalRosterPlayer[];
+  transactions: ProfessionalTransaction[];
+  selections: ProfessionalDraftSelection[];
+  careerRegistry: CareerSave["world"]["careerRegistry"];
+} {
+  const pool = save.world.careerRegistry.records
+    .filter((record) => record.currentStage === "draft-pool" && !record.isHero)
+    .map(prospectFromCareerRecord)
+    .sort((left, right) => right.draftGrade - left.draftGrade || left.id.localeCompare(right.id));
+  if (pool.length === 0) {
+    return { roster, freeAgents, transactions: [], selections: [], careerRegistry: save.world.careerRegistry };
+  }
+  const order = [...teams].sort((left, right) => left.wins - right.wins || left.rosterStrength - right.rosterStrength || left.id.localeCompare(right.id));
+  let nextRoster = [...roster];
+  const nextFreeAgents = [...freeAgents];
+  const selections: ProfessionalDraftSelection[] = [];
+  const transactions: ProfessionalTransaction[] = [];
+  const remaining = [...pool];
+  for (let round = 1; round <= 7 && remaining.length > 0; round += 1) {
+    for (let index = 0; index < order.length && remaining.length > 0; index += 1) {
+      const team = order[index]!;
+      const prospect = [...remaining]
+        .sort((left, right) => (right.draftGrade + team.needs[right.position] * 0.17) - (left.draftGrade + team.needs[left.position] * 0.17) || left.id.localeCompare(right.id))[0]!;
+      remaining.splice(remaining.findIndex((item) => item.id === prospect.id), 1);
+      const overallPick = (round - 1) * order.length + index + 1;
+      const selection: ProfessionalDraftSelection = {
+        id: `${seasonYear}:round-${round}:pick-${index + 1}:${prospect.id}`,
+        sourcePlayerId: prospect.sourcePlayerId,
+        round,
+        pickInRound: index + 1,
+        overallPick,
+        teamId: team.id,
+        prospectId: prospect.id,
+        prospectName: prospect.name,
+        position: prospect.position,
+        collegeName: prospect.collegeName,
+        grade: prospect.draftGrade,
+        isHero: false,
+      };
+      selections.push(selection);
+      const rookie = rookieFromProspect(prospect, team.id, seasonYear, round, overallPick);
+      const replacement = nextRoster
+        .filter((player) => player.teamId === team.id && player.position === rookie.position && player.status === "active" && !player.isHero)
+        .sort((left, right) => left.overall - right.overall || right.age - left.age)[0];
+      if (replacement) {
+        nextRoster = nextRoster.filter((player) => player.id !== replacement.id);
+        nextFreeAgents.push({ ...replacement, teamId: undefined, status: "free-agent", depthRank: 0, yearsRemaining: 0 });
+      }
+      nextRoster.push(rookie);
+      transactions.push({
+        id: `pro-tx:${seasonYear}:draft:${overallPick}:${rookie.id}`,
+        seasonYear,
+        week: 0,
+        kind: "signing",
+        playerId: rookie.id,
+        playerName: rookie.name,
+        position: rookie.position,
+        toTeamId: team.id,
+        value: rookie.annualSalary,
+        summary: `${team.shortName} выбрали ${prospect.name} под №${overallPick}.`,
+      });
+    }
+  }
+  for (const prospect of remaining) nextFreeAgents.push(rookieFromProspect(prospect, undefined, seasonYear, null, null));
+  const careerRegistry = registerProfessionalDraftClass(save.world.careerRegistry, pool, selections, nextRoster, seasonYear, 0);
+  return { roster: nextRoster, freeAgents: nextFreeAgents, transactions, selections, careerRegistry };
+}
+
 function fitPayroll(players: ProfessionalRosterPlayer[], ceiling = PROFESSIONAL_SALARY_CAP * 0.82): ProfessionalRosterPlayer[] {
   const payroll = players.reduce((sum, player) => sum + player.annualSalary, 0);
   if (payroll <= ceiling) return players;
@@ -98,22 +324,6 @@ function generateLeagueRoster(seed: string, teams: ProfessionalTeam[]): Professi
 function generateFreeAgents(seed: string, seasonYear: number): ProfessionalRosterPlayer[] {
   const positions = CAREER_FOOTBALL_POSITIONS.flatMap((position) => [position, position, position, position]);
   return positions.map((position, index) => createPlayer(`${seed}:free-agency:${seasonYear}`, undefined, position, index, true, `fa:${seasonYear}`));
-}
-
-function generateRookieFreeAgents(seed: string, seasonYear: number): ProfessionalRosterPlayer[] {
-  return CAREER_FOOTBALL_POSITIONS.flatMap((position) => Array.from({ length: 12 }, (_, index) => {
-    const random = new SeededRandom(seed).fork(`pro-rookie:${seasonYear}:${position}:${index}`);
-    const player = createPlayer(`${seed}:rookies:${seasonYear}`, undefined, position, index, true, `rookie:${seasonYear}`);
-    const overall = random.integer(55, 79);
-    return {
-      ...player,
-      age: random.integer(21, 23),
-      overall,
-      potential: clamp(overall + random.integer(4, 16)),
-      form: random.integer(48, 72),
-      annualSalary: Math.max(760_000, Math.round((720_000 + Math.max(0, overall - 55) * 115_000) / 10_000) * 10_000),
-    };
-  }));
 }
 
 function roundRobinSchedule(teamIds: string[], year: number): ProfessionalGame[] {
@@ -223,8 +433,11 @@ function runNpcFreeAgency(seed: string, seasonYear: number, teams: ProfessionalT
 
 function heroRosterPlayer(save: CareerSave, teamId: string, status: "active" | "practice-squad", depthRank: number): ProfessionalRosterPlayer {
   const contract = save.football.professional.contract;
+  const heroSourceId = save.football.professional.heroSelection?.sourcePlayerId
+    ?? save.football.professional.prospects.find((prospect) => prospect.isHero)?.sourcePlayerId;
   return {
     id: "pro-player:hero",
+    ...(heroSourceId ? { sourcePlayerId: heroSourceId } : {}),
     name: save.character.identity.fullName,
     teamId,
     position: save.football.position,
@@ -566,7 +779,6 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     possession: matchUnitForPosition(save.football.position) === "defense" ? "opponent" : "hero",
     openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
     participationMode: "key-moments",
-    heroControlMode: "assisted",
     analysisMode: false,
     heroFatigue: random.integer(5, 14),
     coachGrade: Math.max(44, Math.min(74, Math.round((career.coachTrust ?? 55) * 0.38 + 35))),
@@ -596,12 +808,15 @@ export function initializeProfessionalLeague(save: CareerSave): CareerSave {
   const seasonYear = state.draftYear;
   let roster = generateLeagueRoster(save.meta.worldSeed, state.teams);
   let freeAgents = generateFreeAgents(save.meta.worldSeed, seasonYear);
+  const rookies = injectDraftClass(state, seasonYear, roster, freeAgents);
+  roster = rookies.roster;
+  freeAgents = rookies.freeAgents;
   let teams = recalculateTeams(state.teams.map((team) => ({ ...team, wins: 0, losses: 0 })), roster);
   const market = runNpcFreeAgency(save.meta.worldSeed, seasonYear, teams, roster, freeAgents);
   teams = market.teams;
   roster = market.roster;
   freeAgents = market.freeAgents;
-  let transactions = [...market.transactions];
+  let transactions = [...rookies.transactions, ...market.transactions];
 
   const teamId = state.status === "roster" || state.status === "practice-squad" ? state.contract?.teamId : undefined;
   if (teamId) {
@@ -656,7 +871,7 @@ export function initializeProfessionalLeague(save: CareerSave): CareerSave {
   const heroGame = findHeroGame(league, teamId, 1);
   const nextLeague = { ...league, ...(heroGame && state.status === "roster" ? { activeGameId: heroGame.id } : {}) };
   const nextMatch = heroGame && state.status === "roster" ? createProfessionalMatchState({ ...save, football: { ...save.football, professional: { ...state, league: nextLeague, heroCareer } } }, heroGame) : save.football.match;
-  return {
+  const initialized: CareerSave = {
     ...save,
     meta: { ...save.meta, currentDate: schedule[0]?.date ?? save.meta.currentDate },
     football: {
@@ -673,6 +888,7 @@ export function initializeProfessionalLeague(save: CareerSave): CareerSave {
       },
     },
   };
+  return syncProfessionalWorld(advanceBackgroundWorld(initialized, schedule[0]?.date ?? save.meta.currentDate));
 }
 
 export function createHeroFreeAgentOffers(save: CareerSave): ProfessionalCampInvite[] {
@@ -953,7 +1169,7 @@ function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: Professional
     ? createProfessionalMatchState({ ...save, football: { ...save.football, professional } }, nextHeroGame)
     : save.football.match;
   const inactiveNote = nextRole === "inactive" ? " Игрок недоступен для следующего матча." : "";
-  return {
+  const advanced: CareerSave = {
     ...save,
     meta: { ...save.meta, currentDate: nextHeroGame?.date ?? nextSchedule.find((game) => game.week === nextWeek)?.date ?? save.meta.currentDate },
     football: {
@@ -967,6 +1183,8 @@ function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: Professional
       },
     },
   };
+  const targetDate = nextHeroGame?.date ?? nextSchedule.find((game) => game.week === nextWeek)?.date ?? save.meta.currentDate;
+  return syncProfessionalWorld(advanceBackgroundWorld(advanced, targetDate));
 }
 
 export function isProfessionalMatchAwaitingResolution(save: CareerSave): boolean {
@@ -1175,8 +1393,12 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
     const reserve = Math.max(0, 53 - activeCount) * 760_000 + 2_000_000;
     return fitPayroll(teamPlayers, Math.max(20_000_000, PROFESSIONAL_SALARY_CAP - team.deadCap - reserve));
   });
-  freeAgents = [...freeAgents, ...generateRookieFreeAgents(save.meta.worldSeed, seasonYear)];
   let teams = recalculateTeams(offseasonTeams, roster);
+  const rookieDraft = runLifecycleRookieDraft(save, seasonYear, teams, roster, freeAgents);
+  roster = rookieDraft.roster;
+  freeAgents = rookieDraft.freeAgents;
+  transactions = [...transactions, ...rookieDraft.transactions];
+  teams = recalculateTeams(teams, roster);
   const market = runNpcFreeAgency(save.meta.worldSeed, seasonYear, teams, roster, freeAgents);
   teams = market.teams;
   roster = market.roster;
@@ -1228,6 +1450,7 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
   };
   let next: CareerSave = {
     ...save,
+    world: { ...save.world, careerRegistry: rookieDraft.careerRegistry },
     meta: { ...save.meta, currentDate: schedule[0]?.date ?? save.meta.currentDate },
     character: {
       ...save.character,
@@ -1253,7 +1476,7 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
     const match = createProfessionalMatchState(next, heroGame);
     next = { ...next, meta: { ...next.meta, currentDate: heroGame.date }, football: { ...next.football, match } };
   }
-  return next;
+  return syncProfessionalWorld(advanceBackgroundWorld(next, heroGame?.date ?? schedule[0]?.date ?? save.meta.currentDate));
 }
 
 export function professionalStandings(teams: ProfessionalTeam[]): ProfessionalTeam[] {

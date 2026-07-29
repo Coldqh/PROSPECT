@@ -112,6 +112,57 @@ export type EcosystemTransactionKind =
 
 export type EcosystemPositionNeeds = Record<FootballRosterPosition, number>;
 
+export type EcosystemCareerStage = "high-school" | "college" | "draft-pool" | "professional" | "free-agent" | "retired" | "football-exit";
+export type EcosystemCareerEventKind =
+  | "created"
+  | "enrolled"
+  | "transferred"
+  | "position-change"
+  | "graduated"
+  | "declared"
+  | "drafted"
+  | "signed"
+  | "released"
+  | "retired";
+
+export interface EcosystemPlayerCareerEvent {
+  id: string;
+  seasonYear: number;
+  week: number;
+  kind: EcosystemCareerEventKind;
+  detail: string;
+  fromTeamId?: string | undefined;
+  toTeamId?: string | undefined;
+}
+
+export interface EcosystemPlayerCareerRecord {
+  playerId: string;
+  name: string;
+  position: FootballRosterPosition;
+  age: number;
+  overall: number;
+  potential: number;
+  currentStage: EcosystemCareerStage;
+  currentTeamId?: string | undefined;
+  highSchoolTeamIds: string[];
+  collegeTeamIds: string[];
+  professionalTeamIds: string[];
+  isHero: boolean;
+  draftYear?: number | undefined;
+  draftRound?: number | undefined;
+  draftPick?: number | undefined;
+  retiredYear?: number | undefined;
+  events: EcosystemPlayerCareerEvent[];
+}
+
+export interface EcosystemCareerRegistry {
+  version: 1;
+  records: EcosystemPlayerCareerRecord[];
+  draftPoolIds: string[];
+  retiredIds: string[];
+  lastSyncedSeasonYear: number;
+}
+
 
 export interface EcosystemTalentProfile {
   regionId: string;
@@ -706,5 +757,6 @@ export interface FootballEcosystemState {
   movementMarket: EcosystemUnifiedMovementMarket;
   competition: EcosystemCompetitionState;
   social: EcosystemSocialState;
+  careerRegistry: EcosystemCareerRegistry;
 }
 

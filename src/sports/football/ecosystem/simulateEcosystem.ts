@@ -22,6 +22,7 @@ import type {
 } from "./types";
 import { addGameDays, advanceAcademicWeek, createPlayerEligibility, isPlayerAvailable, refreshTeamCompliance, resolveWorldCycle, rollEligibilityIntoNextSeason } from "./constitution";
 import { createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
+import { syncCareerRegistry } from "./lifecycle";
 import {
   availableNilCapacity,
   availableRecruitingBudget,
@@ -909,6 +910,11 @@ function processOffseason(
   let players: EcosystemPlayer[] = [];
   for (const player of world.players) {
     if (player.isHero) {
+      if (player.level === "college" && (save.football.stage === "professional-draft" || save.football.stage === "professional-career") && save.football.professional.declared) {
+        const detail = `${player.name} покинул университетскую программу и вошёл в профессиональный пул.`;
+        transactions.push({ id: `graduation:${seasonYear}:${player.id}`, kind: "graduation", seasonYear, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${player.name} завершил колледж`, detail, playerId: player.id, fromTeamId: player.teamId, relatedToHero: true });
+        continue;
+      }
       if (player.level === "college") {
         const nextEligibility = rollEligibilityIntoNextSeason(player, seasonYear + 1, random.fork(`eligibility:${player.id}`), world.constitution);
         const consumedSeason = player.eligibility.model === "age-based-five-year"
@@ -1570,7 +1576,15 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   );
   const stories = [...world.stories, ...generatedStories].slice(-90);
   const transactions = [...world.transactions, ...generatedTransactions].slice(-800);
-  world = { ...world, stories, transactions, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
+  const careerRegistry = syncCareerRegistry(
+    world.careerRegistry,
+    world.players,
+    world.teams,
+    transactions,
+    world.seasonYear,
+    Math.max(1, world.seasonWeek),
+  );
+  world = { ...world, stories, transactions, careerRegistry, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
   const important = generatedStories.filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
 
   return {

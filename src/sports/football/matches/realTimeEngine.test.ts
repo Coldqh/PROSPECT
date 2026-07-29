@@ -261,35 +261,25 @@ describe("real-time football engine", () => {
     expect(livePassInterceptionChance(55, 0, 99, 0)).toBeGreaterThanOrEqual(0.8);
   });
 
-  it("supports assisted, manual and spectator hero control", () => {
-    const assisted = createLivePlayEngine(episode("WR"), "WR", "assisted-route");
-    const assistedHero = assisted.players.find((player) => player.isHero)!;
-    const assistedStart = { x: assistedHero.x, y: assistedHero.y };
-    issueLivePlayCommand(assisted, { type: "snap" });
-    for (let frame = 0; frame < 60; frame += 1) stepLivePlayEngine(assisted, { moveX: 0, moveY: 0 }, 1 / 60, "assisted");
-    expect(Math.hypot(assistedHero.x - assistedStart.x, assistedHero.y - assistedStart.y)).toBeGreaterThan(2);
-    expect(liveHeroControlActive(assisted, "assisted")).toBe(false);
-    assisted.players.forEach((player) => { player.hasBall = player.id === assistedHero.id; });
-    assisted.ball.state = "carried";
-    assisted.ball.carrierId = assistedHero.id;
-    expect(liveHeroControlActive(assisted, "assisted")).toBe(true);
+  it("hands control to the player only while movement input is active", () => {
+    const state = createLivePlayEngine(episode("WR"), "WR", "seamless-control");
+    const hero = state.players.find((player) => player.isHero)!;
+    const start = { x: hero.x, y: hero.y };
+    issueLivePlayCommand(state, { type: "snap" });
 
-    const manual = createLivePlayEngine(episode("WR"), "WR", "manual-route");
-    const manualHero = manual.players.find((player) => player.isHero)!;
-    const manualStart = { x: manualHero.x, y: manualHero.y };
-    issueLivePlayCommand(manual, { type: "snap" });
-    for (let frame = 0; frame < 60; frame += 1) stepLivePlayEngine(manual, { moveX: 0, moveY: 0 }, 1 / 60, "manual");
-    expect(Math.hypot(manualHero.x - manualStart.x, manualHero.y - manualStart.y)).toBeLessThan(0.6);
-    expect(liveHeroControlActive(manual, "manual")).toBe(true);
+    for (let frame = 0; frame < 45; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    expect(Math.hypot(hero.x - start.x, hero.y - start.y)).toBeGreaterThan(1);
+    expect(liveHeroControlActive({ moveX: 0, moveY: 0 })).toBe(false);
 
-    const spectator = createLivePlayEngine(episode("QB"), "QB", "spectator-play");
-    issueLivePlayCommand(spectator, { type: "snap" });
-    for (let frame = 0; frame < 900 && !spectator.outcome; frame += 1) {
-      stepLivePlayEngine(spectator, { moveX: 1, moveY: -1 }, 1 / 60, "spectator");
-    }
-    expect(liveHeroControlActive(spectator, "spectator")).toBe(false);
-    expect(spectator.events.some((entry) => entry.type === "throw")).toBe(true);
-    expect(spectator.outcome).toBeDefined();
+    const beforeOverride = { x: hero.x, y: hero.y };
+    for (let frame = 0; frame < 24; frame += 1) stepLivePlayEngine(state, { moveX: -1, moveY: 0 }, 1 / 60);
+    expect(liveHeroControlActive({ moveX: -1, moveY: 0 })).toBe(true);
+    expect(hero.x).toBeLessThan(beforeOverride.x);
+
+    const releasePoint = { x: hero.x, y: hero.y };
+    for (let frame = 0; frame < 45; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    expect(liveHeroControlActive({ moveX: 0, moveY: 0 })).toBe(false);
+    expect(Math.hypot(hero.x - releasePoint.x, hero.y - releasePoint.y)).toBeGreaterThan(0.8);
   });
 
   it("keeps role controls deliberately small", () => {

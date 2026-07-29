@@ -30,7 +30,7 @@ interface CollegeCareerDashboardProps {
   onUpdateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   onResolveRelationshipEvent(optionId: string): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
-  onStartMatch(mode: import("../../sports/football/matches/types").MatchParticipationMode, analysisMode: boolean, heroControlMode: import("../../sports/football/matches/types").MatchHeroControlMode): Promise<void>;
+  onStartMatch(mode: import("../../sports/football/matches/types").MatchParticipationMode, analysisMode: boolean): Promise<void>;
   onResolveMatchDecision(optionId: string): Promise<void>;
   onFinalizeMatch(): Promise<void>;
   onOpenProfessionalDraft(): Promise<void>;

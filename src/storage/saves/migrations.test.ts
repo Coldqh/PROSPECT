@@ -603,32 +603,34 @@ describe("migrateCareerSave", () => {
 
 
 
-  it("migrates version twenty-eight saves into the hero control schema", () => {
+  it("migrates version twenty-nine saves into seamless control and career registry", () => {
     const current = migrateCareerSave(legacySave).save;
-    const { heroControlMode: _heroControlMode, ...legacyMatch } = current.football.match;
-    const legacyRoster = current.football.professional.league.roster.map(({ availability: _availability, injuryWeeks: _injuryWeeks, ...player }) => player);
-    const legacyFreeAgents = current.football.professional.league.freeAgents.map(({ availability: _availability, injuryWeeks: _injuryWeeks, ...player }) => player);
-    const heroCareer = current.football.professional.heroCareer;
-    const legacyHeroCareer = heroCareer ? (({ availability: _availability, weeklyPlan: _weeklyPlan, ...career }) => career)(heroCareer) : undefined;
-    const versionTwentyEight = {
+    const { careerRegistry: _careerRegistry, ...legacyWorld } = current.world;
+    const versionTwentyNine = {
       ...current,
-      meta: { ...current.meta, schemaVersion: 28 as const },
+      meta: { ...current.meta, schemaVersion: 29 as const },
+      world: legacyWorld,
       football: {
         ...current.football,
-        match: legacyMatch,
-        professional: {
-          ...current.football.professional,
-          league: { ...current.football.professional.league, roster: legacyRoster, freeAgents: legacyFreeAgents },
-          heroCareer: legacyHeroCareer,
-        },
+        match: { ...current.football.match, heroControlMode: "manual" as const },
       },
     };
+    const result = migrateCareerSave(versionTwentyNine);
+    expect(result.migratedFrom).toBe(29);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("heroControlMode" in result.save.football.match).toBe(false);
+    expect(result.save.world.careerRegistry.records.length).toBe(result.save.world.players.length);
+    expect(result.save.history.at(-1)?.title).toBe("Управление стало бесшовным");
+  });
+
+  it("migrates version twenty-eight saves into the unified career registry", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { careerRegistry: _careerRegistry, ...legacyWorld } = current.world;
+    const versionTwentyEight = { ...current, meta: { ...current.meta, schemaVersion: 28 as const }, world: legacyWorld };
     const result = migrateCareerSave(versionTwentyEight);
     expect(result.migratedFrom).toBe(28);
-    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.football.match.heroControlMode).toBe("assisted");
-    expect(result.save.football.professional.league.roster.every((player) => player.availability === "active" && player.injuryWeeks === 0)).toBe(true);
-    expect(result.save.history.at(-1)?.title).toBe("Управление игроком обновлено");
+    expect(result.save.world.careerRegistry.records.some((record) => record.isHero)).toBe(true);
+    expect(result.save.history.at(-1)?.title).toBe("Единая история игроков создана");
   });
 
   it("migrates version twenty-seven saves into the professional league schema", () => {

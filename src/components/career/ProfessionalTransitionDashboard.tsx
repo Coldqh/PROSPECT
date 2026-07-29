@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../../sports/football/pro/types";
-import type { MatchHeroControlMode, MatchParticipationMode } from "../../sports/football/matches/types";
+import type { MatchParticipationMode } from "../../sports/football/matches/types";
 import { professionalStandings } from "../../sports/football/pro/league";
 import { MatchDashboard } from "./MatchDashboard";
 import { Icon } from "../ui/Icon";
@@ -16,7 +16,7 @@ interface ProfessionalTransitionDashboardProps {
   onRunDraft(): Promise<void>;
   onAcceptCampInvite(teamId: string): Promise<void>;
   onAdvanceCamp(approach: ProfessionalCampApproach): Promise<void>;
-  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode): Promise<void>;
+  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
   onResolveMatchDecision(optionId: string): Promise<void>;
   onFinalizeProfessionalMatch(): Promise<void>;
   onSetProfessionalWeekFocus(focus: ProfessionalWeekFocus): Promise<void>;

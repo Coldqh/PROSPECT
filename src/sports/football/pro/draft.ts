@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { CareerSave } from "../../../storage/saves/schema";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
+import { registerProfessionalDraftClass } from "../ecosystem/lifecycle";
 import type { MatchStatLine } from "../matches/types";
 import { PROFESSIONAL_SALARY_CAP } from "./createProfessionalState";
 import { createHeroFreeAgentOffers, initializeProfessionalLeague } from "./league";
@@ -19,10 +20,6 @@ import type {
   ProfessionalTrainingCamp,
 } from "./types";
 
-const FIRST_NAMES = ["Andre", "Caleb", "Micah", "Jordan", "Terrence", "Isaiah", "Roman", "Jalen", "Noah", "Damon", "Xavier", "Elijah"] as const;
-const LAST_NAMES = ["Mercer", "Banks", "Holloway", "Bennett", "Cross", "Booker", "Hampton", "Maddox", "Jefferson", "Sutton", "Vaughn", "Mills"] as const;
-const COLLEGES = ["Redwood State", "Lake Erie", "Central Plains", "Atlantic Tech", "Gulf Coast", "Capital University", "Mountain State", "Pacific Union"] as const;
-const POSITIONS: readonly FootballPosition[] = CAREER_FOOTBALL_POSITIONS;
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
@@ -157,12 +154,7 @@ function createDraftOrder(teams: ProfessionalTeam[], year: number, seed: string)
   return slots;
 }
 
-function npcProspectFromWorld(save: CareerSave, index: number): ProfessionalProspect | undefined {
-  const candidates = save.world.players
-    .filter((player) => !player.isHero && player.level === "college" && (player.classYear === "Senior" || player.eligibilityYears <= 1 || player.age >= 22))
-    .sort((left, right) => right.overall - left.overall || right.potential - left.potential);
-  const player = candidates[index];
-  if (!player) return undefined;
+function worldProspect(save: CareerSave, player: CareerSave["world"]["players"][number]): ProfessionalProspect {
   const team = save.world.teams.find((item) => item.id === player.teamId);
   const production = clamp(player.overall * 0.55 + player.form * 0.25 + (player.status === "starter" ? 14 : player.status === "rotation" ? 7 : 0));
   const athletic = clamp(player.overall * 0.65 + player.potential * 0.2 + player.form * 0.15);
@@ -171,6 +163,11 @@ function npcProspectFromWorld(save: CareerSave, index: number): ProfessionalPros
   const grade = clamp(player.overall * 0.36 + player.potential * 0.21 + production * 0.2 + athletic * 0.12 + medical * 0.06 + interview * 0.05);
   return {
     id: `prospect:${player.id}`,
+    sourcePlayerId: player.id,
+    collegeTeamId: player.teamId,
+    previousTeamIds: [...player.previousTeamIds],
+    seasonsPlayed: player.seasonsPlayed,
+    declaredEarly: player.classYear !== "Senior" && player.eligibilityYears > 1,
     name: player.name,
     position: player.position,
     collegeName: team?.shortName ?? "College",
@@ -187,38 +184,16 @@ function npcProspectFromWorld(save: CareerSave, index: number): ProfessionalPros
   };
 }
 
-function generatedProspect(save: CareerSave, index: number): ProfessionalProspect {
-  const random = new SeededRandom(save.meta.worldSeed).fork(`generated-pro-prospect:${save.world.seasonYear}:${index}`);
-  const position = random.pick(POSITIONS);
-  const overall = random.integer(58, 88);
-  const potential = clamp(overall + random.integer(3, 15));
-  const production = random.integer(49, 94);
-  const athleticScore = random.integer(53, 96);
-  const medicalScore = random.integer(58, 98);
-  const interviewScore = random.integer(48, 94);
-  const draftGrade = clamp(overall * 0.33 + potential * 0.2 + production * 0.19 + athleticScore * 0.14 + medicalScore * 0.07 + interviewScore * 0.07);
-  return {
-    id: `generated-prospect:${save.world.seasonYear}:${index}`,
-    name: `${random.pick(FIRST_NAMES)} ${random.pick(LAST_NAMES)}`,
-    position,
-    collegeName: random.pick(COLLEGES),
-    age: random.integer(21, 24),
-    overall,
-    potential,
-    production,
-    athleticScore,
-    medicalScore,
-    interviewScore,
-    draftGrade,
-    projectedRound: projectedRound(draftGrade),
-    isHero: false,
-  };
-}
-
 function heroProspect(save: CareerSave, stock: number): ProfessionalProspect {
   const career = save.football.college.heroCareer;
+  const worldHero = save.world.players.find((player) => player.isHero);
   return {
     id: "hero",
+    sourcePlayerId: worldHero?.id ?? "hero",
+    collegeTeamId: career?.teamId ?? save.football.college.signedProgramId,
+    previousTeamIds: worldHero?.previousTeamIds ?? [save.football.school.id],
+    seasonsPlayed: career?.seasonHistory.length ?? worldHero?.seasonsPlayed ?? 0,
+    declaredEarly: Boolean(career && career.eligibilityYears > 0),
     name: save.character.identity.fullName,
     position: save.football.position,
     collegeName: save.football.college.program?.shortName ?? "College",
@@ -236,14 +211,24 @@ function heroProspect(save: CareerSave, stock: number): ProfessionalProspect {
 }
 
 function buildDraftClass(save: CareerSave, stock: number): ProfessionalProspect[] {
-  const prospects: ProfessionalProspect[] = [];
-  for (let index = 0; index < 70; index += 1) {
-    const fromWorld = npcProspectFromWorld(save, index);
-    prospects.push(fromWorld ?? generatedProspect(save, index));
+  const collegePlayers = save.world.players.filter((player) => !player.isHero && player.level === "college");
+  const automatic = collegePlayers.filter((player) => player.classYear === "Senior" || player.eligibilityYears <= 1 || player.age >= 22);
+  const earlyDeclarations = collegePlayers
+    .filter((player) => !automatic.some((candidate) => candidate.id === player.id) && player.age >= 20 && player.overall >= 72)
+    .sort((left, right) => right.overall - left.overall || right.potential - left.potential);
+  const pool = [...automatic, ...earlyDeclarations]
+    .map((player) => worldProspect(save, player))
+    .sort((left, right) => right.draftGrade - left.draftGrade || left.id.localeCompare(right.id));
+  const required = 134;
+  if (pool.length < required) {
+    const fallback = collegePlayers
+      .filter((player) => !pool.some((prospect) => prospect.sourcePlayerId === player.id))
+      .sort((left, right) => right.overall - left.overall || right.potential - left.potential)
+      .map((player) => worldProspect(save, player));
+    pool.push(...fallback.slice(0, required - pool.length));
   }
-  for (let index = prospects.length; index < 135; index += 1) prospects.push(generatedProspect(save, index));
-  prospects.push(heroProspect(save, stock));
-  return prospects.sort((left, right) => right.draftGrade - left.draftGrade || left.id.localeCompare(right.id));
+  return [...pool.slice(0, required), heroProspect(save, stock)]
+    .sort((left, right) => right.draftGrade - left.draftGrade || left.id.localeCompare(right.id));
 }
 
 function updateHeroProspect(state: FootballProfessionalState, updater: (hero: ProfessionalProspect) => ProfessionalProspect): FootballProfessionalState {
@@ -535,6 +520,7 @@ export function runProfessionalDraft(save: CareerSave): CareerSave {
     team.rosterStrength = clamp(team.rosterStrength + Math.max(0, prospect.overall - team.rosterStrength) * 0.025);
     results.push({
       id: `${slot.id}:${prospect.id}`,
+      sourcePlayerId: prospect.sourcePlayerId,
       round: slot.round,
       pickInRound: slot.pickInRound,
       overallPick: slot.overallPick,
@@ -548,6 +534,14 @@ export function runProfessionalDraft(save: CareerSave): CareerSave {
     });
   }
   const heroSelection = results.find((result) => result.isHero);
+  const declaredSourceIds = new Set(state.prospects.flatMap((prospect) => prospect.sourcePlayerId ? [prospect.sourcePlayerId] : []));
+  const careerRegistry = registerProfessionalDraftClass(save.world.careerRegistry, state.prospects, results, [], state.draftYear);
+  const worldAfterDraft = {
+    ...save.world,
+    players: save.world.players.filter((player) => !declaredSourceIds.has(player.id)),
+    teams: save.world.teams.map((team) => ({ ...team, rosterIds: team.rosterIds.filter((playerId) => !declaredSourceIds.has(playerId)) })),
+    careerRegistry,
+  };
   if (heroSelection) {
     const team = state.teams.find((item) => item.id === heroSelection.teamId);
     if (!team) throw new Error("Drafted team is missing");
@@ -557,6 +551,7 @@ export function runProfessionalDraft(save: CareerSave): CareerSave {
     const invite = campInviteFor(save, team, 0);
     return {
       ...save,
+      world: worldAfterDraft,
       football: {
         ...save.football,
         professional: {
@@ -585,6 +580,7 @@ export function runProfessionalDraft(save: CareerSave): CareerSave {
     .map((team, index) => campInviteFor(save, team, index));
   return {
     ...save,
+    world: worldAfterDraft,
     football: {
       ...save.football,
       professional: {

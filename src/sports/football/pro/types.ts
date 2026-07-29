@@ -59,6 +59,11 @@ export interface ProfessionalAgent {
 
 export interface ProfessionalProspect {
   id: string;
+  sourcePlayerId?: string | undefined;
+  collegeTeamId?: string | undefined;
+  previousTeamIds: string[];
+  seasonsPlayed: number;
+  declaredEarly: boolean;
   name: string;
   position: FootballPosition;
   collegeName: string;
@@ -86,6 +91,7 @@ export interface ProfessionalDraftSlot {
 
 export interface ProfessionalDraftSelection {
   id: string;
+  sourcePlayerId?: string | undefined;
   round: number;
   pickInRound: number;
   overallPick: number;
@@ -161,6 +167,12 @@ export interface ProfessionalTrainingCamp {
 
 export interface ProfessionalRosterPlayer {
   id: string;
+  sourcePlayerId?: string | undefined;
+  collegeTeamId?: string | undefined;
+  collegeName?: string | undefined;
+  draftYear?: number | undefined;
+  draftRound?: number | null | undefined;
+  draftPick?: number | null | undefined;
   name: string;
   teamId?: string | undefined;
   position: FootballPosition;

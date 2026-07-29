@@ -21,6 +21,7 @@ import { createUnifiedMovementMarket } from "./movementMarket";
 import { careerArchetypeRole, createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 import { createCompetitionState } from "./competition";
 import { createSocialEcosystem } from "./social";
+import { createCareerRegistry } from "./lifecycle";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -479,5 +480,6 @@ export function createFootballEcosystem(
     movementMarket: createUnifiedMovementMarket(teams, players, cycle.seasonYear),
     competition: createCompetitionState(cycle.seasonYear, conferenceSetup.conferences, teams, new SeededRandom(`${worldSeed}:competition:${cycle.seasonYear}`)),
     social: createSocialEcosystem(teams, players, coaches, cycle.seasonYear, new SeededRandom(`${worldSeed}:social:${cycle.seasonYear}`), completedDays),
+    careerRegistry: createCareerRegistry(players, teams, cycle.seasonYear),
   };
 }

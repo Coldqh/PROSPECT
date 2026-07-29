@@ -147,7 +147,7 @@ export interface LegacyFootballEcosystemStateV1 {
 const CLASS_INDEX = { Freshman: 0, Sophomore: 1, Junior: 2, Senior: 3 } as const;
 
 type PreRosterMarket = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
-type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition" | "social"> & {
+type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition" | "social" | "careerRegistry"> & {
   teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">>;
   players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">>;
   market: PreRosterMarket;

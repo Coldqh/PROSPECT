@@ -171,6 +171,8 @@ describe("professional draft ecosystem", () => {
     expect(opened.football.professional.teams).toHaveLength(16);
     expect(opened.football.professional.draftOrder).toHaveLength(112);
     expect(opened.football.professional.prospects.some((prospect) => prospect.isHero)).toBe(true);
+    const worldIds = new Set(opened.world.players.map((player) => player.id));
+    expect(opened.football.professional.prospects.filter((prospect) => !prospect.isHero).every((prospect) => prospect.sourcePlayerId && worldIds.has(prospect.sourcePlayerId))).toBe(true);
     expect(opened.football.professional.status).toBe("decision");
   });
 
@@ -186,6 +188,8 @@ describe("professional draft ecosystem", () => {
     expect(["drafted", "undrafted"]).toContain(save.football.professional.status);
     expect(save.football.professional.campInvites.length).toBeGreaterThan(0);
     expect(new Set(save.football.professional.draftResults.map((pick) => pick.prospectId)).size).toBe(112);
+    expect(save.football.professional.draftResults.every((pick) => Boolean(pick.sourcePlayerId))).toBe(true);
+    expect(save.world.careerRegistry.records.some((record) => record.currentStage === "professional" && record.draftYear === save.football.professional.draftYear)).toBe(true);
   });
 
   it("updates club needs as the autonomous draft fills rosters", () => {
@@ -253,6 +257,8 @@ describe("professional draft ecosystem", () => {
     expect(state.teams.every((team) => team.payroll + team.deadCap <= team.salaryCap)).toBe(true);
     expect(state.league.freeAgents.length).toBeGreaterThan(0);
     expect(state.league.transactions.length).toBeGreaterThan(0);
+    const draftedNpcIds = new Set(state.draftResults.filter((pick) => !pick.isHero).map((pick) => pick.sourcePlayerId));
+    expect(state.league.roster.some((player) => player.sourcePlayerId && draftedNpcIds.has(player.sourcePlayerId))).toBe(true);
   });
 
   it("turns weekly preparation into readiness, health and depth-chart consequences", () => {

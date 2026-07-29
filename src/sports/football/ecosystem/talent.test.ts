@@ -135,6 +135,7 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
     movementMarket: createUnifiedMovementMarket([team, college], [senior], 2026),
     competition: createCompetitionState(2026, [], [team, college], new SeededRandom("talent-test:competition")),
     social: createSocialEcosystem([team, college], [senior], [], 2026, new SeededRandom("talent-test:social")),
+    careerRegistry: { version: 1, records: [], draftPoolIds: [], retiredIds: [], lastSyncedSeasonYear: 2026 },
   };
 }
 

@@ -54,7 +54,7 @@
 .world-v27-head h1 { margin: 4px 0 0; font-size: clamp(27px, 5vw, 40px); letter-spacing: -.04em; }
 .world-v27-head > strong { color: var(--muted); font-size: var(--type-number-size); font-weight: 650; }
 .world-v27-tabs {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 8px 0 16px;
   padding: 0;
   display: flex;
@@ -262,4 +262,64 @@
 @media (max-width: 720px) {
   .world-v27-player > section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .world-v27-feed > button { grid-template-columns: 72px minmax(0, 1fr) 18px; }
+}
+
+/* 0.41 persistent player careers */
+.world-v27-careers { display: grid; gap: 12px; }
+.world-v27-career-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.world-v27-career-summary span {
+  min-width: 0;
+  padding: 10px 8px;
+  display: grid;
+  gap: 4px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.world-v27-career-summary small { color: var(--muted); font-size: var(--type-caption-size); }
+.world-v27-career-summary strong { font-size: 20px; }
+.world-v27-career-list { display: grid; }
+.world-v27-career-list > button {
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.world-v27-career-list > button.is-hero { box-shadow: inset 2px 0 0 var(--accent); padding-left: 10px; }
+.world-v27-career-list > button > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--accent);
+  font-size: var(--type-caption-size);
+  font-weight: 900;
+}
+.world-v27-career-list strong,
+.world-v27-career-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-v27-career-list small { margin-top: 3px; color: var(--muted); font-size: var(--type-caption-size); }
+.world-v27-career-list em { color: var(--muted); font-style: normal; font-weight: 900; text-align: right; }
+.world-v27-career-sheet { display: grid; gap: 14px; }
+.world-v27-career-sheet > section { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.world-v27-career-sheet > section span { padding: 9px; display: grid; gap: 4px; border-radius: 8px; background: var(--surface); }
+.world-v27-career-sheet small { color: var(--muted); font-size: var(--type-caption-size); }
+.world-v27-career-path { display: grid; gap: 0; max-height: 46vh; overflow: auto; }
+.world-v27-career-path article { padding: 10px 0; display: grid; gap: 3px; border-bottom: 1px solid var(--line); }
+.world-v27-career-path strong { font-size: var(--type-body-size); line-height: 1.35; }
+@media (max-width: 420px) {
+  .world-v27-career-summary,
+  .world-v27-career-sheet > section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

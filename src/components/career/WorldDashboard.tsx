@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
-import type { EcosystemPlayer, EcosystemStory, EcosystemTeam, FootballEcosystemState } from "../../sports/football/ecosystem/types";
+import type { EcosystemPlayer, EcosystemPlayerCareerRecord, EcosystemStory, EcosystemTeam, FootballEcosystemState } from "../../sports/football/ecosystem/types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 import { Icon } from "../ui/Icon";
 
-export type WorldPrimaryView = "feed" | "rankings";
+export type WorldPrimaryView = "feed" | "rankings" | "careers";
 
 type WorldDashboardSave = Pick<CareerSave, "world" | "football">;
 
@@ -69,6 +69,18 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
   }[kind];
 }
 
+function careerStageLabel(stage: EcosystemPlayerCareerRecord["currentStage"]): string {
+  return {
+    "high-school": "Школа",
+    college: "Колледж",
+    "draft-pool": "Драфт",
+    professional: "Профессионал",
+    "free-agent": "Свободный агент",
+    retired: "Завершил карьеру",
+    "football-exit": "Покинул футбол",
+  }[stage];
+}
+
 function teamForStory(story: EcosystemStory, teams: EcosystemTeam[]): EcosystemTeam | undefined {
   return story.teamIds.length > 0 ? teams.find((team) => team.id === story.teamIds[0]) : undefined;
 }
@@ -79,6 +91,7 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
   const [query, setQuery] = useState("");
   const [selectedStory, setSelectedStory] = useState<EcosystemStory>();
   const [selectedPlayer, setSelectedPlayer] = useState<EcosystemPlayer>();
+  const [selectedCareer, setSelectedCareer] = useState<EcosystemPlayerCareerRecord>();
   const selectedView = forcedView ?? internalView;
 
   const stories = useMemo(
@@ -91,6 +104,12 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
     () => [...world.competition.rankings].sort((left, right) => left.rank - right.rank).slice(0, 25),
     [world.competition.rankings],
   );
+  const careers = useMemo(
+    () => [...world.careerRegistry.records]
+      .sort((left, right) => Number(right.isHero) - Number(left.isHero) || right.events.at(-1)?.seasonYear! - left.events.at(-1)?.seasonYear! || right.overall - left.overall)
+      .slice(0, 60),
+    [world.careerRegistry.records],
+  );
 
   const normalizedQuery = query.trim().toLowerCase();
   const searchTeams = normalizedQuery
@@ -102,6 +121,12 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
   const searchStories = normalizedQuery
     ? stories.filter((story) => `${story.title} ${story.detail}`.toLowerCase().includes(normalizedQuery)).slice(0, 8)
     : [];
+  const activePlayerIds = new Set(world.players.map((player) => player.id));
+  const searchCareers = normalizedQuery
+    ? world.careerRegistry.records
+      .filter((record) => !activePlayerIds.has(record.playerId) && `${record.name} ${record.position} ${careerStageLabel(record.currentStage)}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, 8)
+    : [];
 
   const selectedStoryTeam = selectedStory ? teamForStory(selectedStory, world.teams) : undefined;
 
@@ -112,7 +137,7 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
   return (
     <div className="world-dashboard world-dashboard--v27">
       <header className="world-v27-head">
-        <div><small>{phaseLabel(world.phase)} · W{world.seasonWeek}</small><h1>{selectedView === "feed" ? "Лента" : "Рейтинг"}</h1></div>
+        <div><small>{phaseLabel(world.phase)} · W{world.seasonWeek}</small><h1>{selectedView === "feed" ? "Лента" : selectedView === "rankings" ? "Рейтинг" : "Карьеры"}</h1></div>
         <strong>{world.seasonYear}</strong>
       </header>
 
@@ -120,12 +145,13 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
         <nav className="world-v27-tabs" aria-label="Мир">
           <button type="button" className={selectedView === "feed" ? "is-active" : ""} onClick={() => setInternalView("feed")}>Лента</button>
           <button type="button" className={selectedView === "rankings" ? "is-active" : ""} onClick={() => setInternalView("rankings")}>Рейтинг</button>
+          <button type="button" className={selectedView === "careers" ? "is-active" : ""} onClick={() => setInternalView("careers")}>Карьеры</button>
         </nav>
       )}
 
       <label className="world-v27-search">
         <Icon name="search" size={18} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Команда, игрок, событие" aria-label="Поиск" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Команда, игрок, карьера, событие" aria-label="Поиск" />
         {query && <button type="button" aria-label="Очистить" onClick={() => setQuery("")}><Icon name="close" size={15} /></button>}
       </label>
 
@@ -141,12 +167,17 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
               <span>{player.position}</span><div><strong>{player.name}</strong><small>{player.classYear} · {world.teams.find((team) => team.id === player.teamId)?.shortName ?? "FA"}</small></div><em>{Math.round(player.overall)}</em>
             </button>
           ))}
+          {searchCareers.map((record) => (
+            <button type="button" key={record.playerId} onClick={() => setSelectedCareer(record)}>
+              <span>{record.position}</span><div><strong>{record.name}</strong><small>{careerStageLabel(record.currentStage)} · архив</small></div><em>{Math.round(record.overall)}</em>
+            </button>
+          ))}
           {searchStories.map((story) => (
             <button type="button" key={story.id} onClick={() => setSelectedStory(story)}>
               <span><Icon name="pulse" size={16} /></span><div><strong>{story.title}</strong><small>{storyKindLabel(story.kind)} · W{story.week}</small></div><em>{story.importance}</em>
             </button>
           ))}
-          {searchTeams.length + searchPlayers.length + searchStories.length === 0 && <div className="data-empty">Нет совпадений</div>}
+          {searchTeams.length + searchPlayers.length + searchCareers.length + searchStories.length === 0 && <div className="data-empty">Нет совпадений</div>}
         </section>
       ) : selectedView === "feed" ? (
         <section className="world-v27-feed">
@@ -162,7 +193,7 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
           })}
           {stories.length === 0 && <div className="data-empty">Нет событий</div>}
         </section>
-      ) : (
+      ) : selectedView === "rankings" ? (
         <section className="world-v27-ranking">
           {rankings.map((ranking) => {
             const team = world.teams.find((item) => item.id === ranking.teamId);
@@ -178,6 +209,25 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
           })}
           {rankings.length === 0 && <div className="data-empty">Рейтинг не сформирован</div>}
         </section>
+      ) : (
+        <section className="world-v27-careers">
+          <div className="world-v27-career-summary">
+            <span><small>Школа</small><strong>{careers.filter((record) => record.currentStage === "high-school").length}</strong></span>
+            <span><small>Колледж</small><strong>{careers.filter((record) => record.currentStage === "college").length}</strong></span>
+            <span><small>Драфт</small><strong>{world.careerRegistry.draftPoolIds.length}</strong></span>
+            <span><small>PRO</small><strong>{careers.filter((record) => record.currentStage === "professional").length}</strong></span>
+          </div>
+          <div className="world-v27-career-list">
+            {careers.map((record) => (
+              <button type="button" key={record.playerId} className={record.isHero ? "is-hero" : ""} onClick={() => setSelectedCareer(record)}>
+                <span>{record.position}</span>
+                <div><strong>{record.name}</strong><small>{careerStageLabel(record.currentStage)} · {record.events.length} событий</small></div>
+                <em>{Math.round(record.overall)}</em>
+              </button>
+            ))}
+          </div>
+          {careers.length === 0 && <div className="data-empty">Карьерный архив пуст</div>}
+        </section>
       )}
 
       <BottomSheet open={Boolean(selectedStory)} onClose={() => setSelectedStory(undefined)} eyebrow={selectedStory ? `${storyKindLabel(selectedStory.kind)} · W${selectedStory.week}` : "СОБЫТИЕ"} title={selectedStory?.title ?? "Событие"}>
@@ -186,6 +236,24 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
             <p>{selectedStory.detail}</p>
             <div><span><small>Важность</small><strong>{selectedStory.importance}</strong></span><span><small>Сезон</small><strong>{world.seasonYear}</strong></span></div>
             {selectedStoryTeam && onOpenTeam && <button type="button" className="button button--primary" onClick={() => { setSelectedStory(undefined); openTeam(selectedStoryTeam.id); }}>{selectedStoryTeam.name}<Icon name="arrow-right" /></button>}
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={Boolean(selectedCareer)} onClose={() => setSelectedCareer(undefined)} eyebrow={selectedCareer ? `${selectedCareer.position} · ${careerStageLabel(selectedCareer.currentStage)}` : "КАРЬЕРА"} title={selectedCareer?.name ?? "Карьера игрока"}>
+        {selectedCareer && (
+          <div className="world-v27-career-sheet">
+            <section>
+              <span><small>Возраст</small><strong>{selectedCareer.age}</strong></span>
+              <span><small>OVR</small><strong>{Math.round(selectedCareer.overall)}</strong></span>
+              <span><small>Потенциал</small><strong>{Math.round(selectedCareer.potential)}</strong></span>
+              <span><small>Драфт</small><strong>{selectedCareer.draftPick ? `#${selectedCareer.draftPick}` : "—"}</strong></span>
+            </section>
+            <div className="world-v27-career-path">
+              {selectedCareer.events.slice().reverse().map((item) => (
+                <article key={item.id}><small>{item.seasonYear} · W{item.week}</small><strong>{item.detail}</strong></article>
+              ))}
+            </div>
           </div>
         )}
       </BottomSheet>

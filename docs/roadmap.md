@@ -28,7 +28,8 @@
 - [x] Professional draft, contracts and pro football ecosystem
 - [x] Autonomous professional league, salary cap, free agency and interactive pro seasons
 - [x] Living professional week, injuries, dynamic depth chart and trade deadline
-- [x] Assisted, manual and spectator control with snap-result overlay
+- [x] Seamless autopilot takeover with snap-result overlay
+- [x] Persistent player identity from high school through professional retirement
 
 ## v0.11 — High school to college
 
@@ -283,9 +284,19 @@
 - readiness, coach trust, health and depth rank react to preparation;
 - active, questionable, out and injured-reserve availability;
 - autonomous replacement signings, return-from-IR cuts and week-eight trades;
-- assisted routes until possession, immediate manual control or full spectator automation;
+- seamless automatic assignments with instant joystick takeover and automatic resume on release;
 - explicit snap-result dialog before the next play;
 - lower interception rates in both statistical and physical pass resolution;
 - redesigned football loading screen;
 - deterministic migration from schema v28 to v29.
+## v0.41 — Persistent player lifecycle and seamless control
+
+- automatic assignment movement is always active until the player provides movement input;
+- releasing the joystick returns control to AI from the current position;
+- persistent career registry preserves one identity through school, college, transfer, draft, pro teams and retirement;
+- real college graduates form every professional draft class;
+- drafted players enter the selecting club roster and undrafted players enter free agency;
+- school and college seasons continue in the background during the hero professional career;
+- World career archive exposes stage, team history, draft data and career events;
+- deterministic migration from schema v29 to v30.
 
