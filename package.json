@@ -1,14 +1,14 @@
 {
   "name": "prospect",
   "private": true,
-  "version": "0.42.1",
+  "version": "0.42.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run check:professional-league && npm run check:match-control && npm run check:professional-career && npm run check:player-lifecycle && npm run check:performance-grading && tsc -b && vite build",
     "preview": "vite preview",
     "test": "npm run check:boundaries && npm run check:ui && npm run check:ecosystem-visibility && npm run check:full-rosters && npm run check:playable-positions && npm run check:match-experience && npm run check:professional-league && npm run check:match-control && npm run check:professional-career && npm run check:player-lifecycle && npm run check:performance-grading && npm run test:architecture && npm run test:unit && npm run test:pro && npm run test:stability",
-    "test:unit": "vitest run --exclude src/sports/football/pro/draft.test.ts --exclude src/sports/football/ecosystem/stability.test.ts --exclude src/sports/football/ecosystem/stabilityDeterminism.test.ts",
+    "test:unit": "vitest run --exclude src/sports/football/pro/draft.test.ts --exclude src/sports/football/pro/camp.test.ts --exclude src/sports/football/pro/league.test.ts --exclude src/sports/football/ecosystem/stability.test.ts --exclude src/sports/football/ecosystem/stabilityDeterminism.test.ts",
     "test:stability": "vitest run src/sports/football/ecosystem/stability.test.ts --maxWorkers=1 --no-file-parallelism && vitest run src/sports/football/ecosystem/stabilityDeterminism.test.ts --maxWorkers=1 --no-file-parallelism",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
@@ -24,7 +24,7 @@
     "check:match-control": "node scripts/check-match-control.mjs",
     "check:professional-career": "node scripts/check-professional-career.mjs",
     "check:player-lifecycle": "node scripts/check-player-lifecycle.mjs",
-    "test:pro": "vitest run src/sports/football/pro/draft.test.ts --maxWorkers=1 --no-file-parallelism --testTimeout=30000",
+    "test:pro": "vitest run src/sports/football/pro/draft.test.ts --pool=forks --environment=node --maxWorkers=1 --no-file-parallelism --testTimeout=30000 --hookTimeout=45000 && vitest run src/sports/football/pro/camp.test.ts --pool=forks --environment=node --maxWorkers=1 --no-file-parallelism --testTimeout=30000 --hookTimeout=45000 && vitest run src/sports/football/pro/league.test.ts --pool=forks --environment=node --maxWorkers=1 --no-file-parallelism --testTimeout=30000 --hookTimeout=45000",
     "check:performance-grading": "node scripts/check-performance-grading.mjs"
   },
   "dependencies": {

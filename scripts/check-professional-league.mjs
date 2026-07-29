@@ -9,7 +9,11 @@ const files = {
   dashboard: readFileSync("src/components/career/ProfessionalTransitionDashboard.tsx", "utf8"),
   schema: readFileSync("src/storage/saves/schema.ts", "utf8"),
   migrations: readFileSync("src/storage/saves/migrations.ts", "utf8"),
-  tests: readFileSync("src/sports/football/pro/draft.test.ts", "utf8"),
+  draftTests: readFileSync("src/sports/football/pro/draft.test.ts", "utf8"),
+  campTests: readFileSync("src/sports/football/pro/camp.test.ts", "utf8"),
+  leagueTests: readFileSync("src/sports/football/pro/league.test.ts", "utf8"),
+  testFixtures: readFileSync("src/sports/football/pro/professionalTestFixtures.ts", "utf8"),
+  package: readFileSync("package.json", "utf8"),
 };
 
 const required = [
@@ -35,9 +39,14 @@ const required = [
   ["dashboard", "MatchDashboard"],
   ["schema", "CURRENT_SCHEMA_VERSION = 31"],
   ["migrations", "migrateVersionTwentySeven"],
-  ["tests", "53-player clubs"],
-  ["tests", "real-time match kernel"],
-  ["tests", "completedSeasonYear + 1"],
+  ["campTests", "53-player clubs"],
+  ["leagueTests", "real-time match kernel"],
+  ["leagueTests", "completedSeasonYear + 1"],
+  ["testFixtures", "cloneCareer"],
+  ["testFixtures", "activateProfessionalCareer"],
+  ["package", "src/sports/football/pro/camp.test.ts"],
+  ["package", "src/sports/football/pro/league.test.ts"],
+  ["package", "--environment=node"],
 ];
 
 const failures = required
