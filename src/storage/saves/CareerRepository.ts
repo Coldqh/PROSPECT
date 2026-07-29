@@ -10,7 +10,7 @@ import { createInitialLifeState } from "../../core/life/createInitialLifeState";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../../core/life/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import { resolveMatchDecision, startMatch } from "../../sports/football/matches/simulateMatch";
-import type { MatchParticipationMode } from "../../sports/football/matches/types";
+import type { MatchHeroControlMode, MatchParticipationMode } from "../../sports/football/matches/types";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { resolveRelationshipEvent } from "../../sports/football/relationships/relationshipEvents";
@@ -20,7 +20,7 @@ import type { RecruitingActionId } from "../../sports/football/recruiting/types"
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../../sports/football/college/types";
 import { reportToCollege, setCollegeOnboardingPriority, signCollegeAgreement } from "../../sports/football/college/transition";
 import { finalizeCollegeMatch, isCollegeMatchAwaitingResolution, resolveCollegeHeroDecision } from "../../sports/football/college/heroCareer";
-import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../../sports/football/pro/types";
+import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../../sports/football/pro/types";
 import {
   acceptProfessionalCampInvite,
   advanceProfessionalTrainingCamp,
@@ -34,6 +34,7 @@ import {
   acceptProfessionalFreeAgentOffer,
   advanceProfessionalOffseason,
   advanceProfessionalWeek,
+  setProfessionalWeekFocus,
   finalizeProfessionalMatch,
   isProfessionalMatchAwaitingResolution,
 } from "../../sports/football/pro/league";
@@ -194,20 +195,22 @@ export class CareerRepository {
   }
 
 
-  async startMatch(careerId: string, mode: MatchParticipationMode, analysisMode: boolean): Promise<CareerSave> {
+  async startMatch(careerId: string, mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode): Promise<CareerSave> {
     const current = await this.load(careerId);
     if (current.meta.phase === "college-season") {
       if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
-      return this.save(startMatch(current, mode, analysisMode));
+      return this.save(startMatch(current, mode, analysisMode, heroControlMode));
     }
     if (current.meta.phase === "professional-career") {
-      if (!isProfessionalMatchAwaitingResolution(current)) throw new Error("No professional match is ready");
-      return this.save(startMatch(current, mode, analysisMode));
+      const weeklyPlan = current.football.professional.heroCareer?.weeklyPlan;
+      const prepared = weeklyPlan && !weeklyPlan.resolved ? setProfessionalWeekFocus(current, weeklyPlan.focus) : current;
+      if (!isProfessionalMatchAwaitingResolution(prepared)) throw new Error("No professional match is ready");
+      return this.save(startMatch(prepared, mode, analysisMode, heroControlMode));
     }
     if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
     if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
     if (toGameDateKey(current.meta.currentDate) !== toGameDateKey(current.football.match.scheduledDate)) throw new Error("Match is not scheduled for today");
-    return this.save(startMatch(current, mode, analysisMode));
+    return this.save(startMatch(current, mode, analysisMode, heroControlMode));
   }
 
   async resolveMatchDecision(careerId: string, optionId: string): Promise<CareerSave> {
@@ -301,6 +304,11 @@ export class CareerRepository {
   async finalizeProfessionalMatch(careerId: string): Promise<CareerSave> {
     const current = await this.load(careerId);
     return this.save(finalizeProfessionalMatch(current));
+  }
+
+  async setProfessionalWeekFocus(careerId: string, focus: ProfessionalWeekFocus): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    return this.save(setProfessionalWeekFocus(current, focus));
   }
 
   async advanceProfessionalWeek(careerId: string): Promise<CareerSave> {

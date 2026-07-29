@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { formatGameDate, toGameDateKey } from "../../core/calendar/types";
 import { encodeLivePlayOutcome, type MatchLivePlayOutcome } from "../../sports/football/matches/realTimeEngine";
-import type { MatchDriveOutcome, MatchEpisode, MatchParticipationMode, MatchUnit } from "../../sports/football/matches/types";
+import type { MatchDriveOutcome, MatchEpisode, MatchHeroControlMode, MatchParticipationMode, MatchUnit } from "../../sports/football/matches/types";
 import type { CareerSave } from "../../storage/saves/schema";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
@@ -12,7 +12,7 @@ interface MatchDashboardProps {
   save: CareerSave;
   mutating: boolean;
   actionError?: string | undefined;
-  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
+  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode): Promise<void>;
   onResolveDecision(optionId: string): Promise<void>;
   onFinalizeMatch?: (() => Promise<void>) | undefined;
 }
@@ -53,6 +53,18 @@ function modeDescription(mode: MatchParticipationMode): string {
     auto: "Штаб и игрок проводят весь матч без остановок. Ты получаешь полный итог и статистику.",
     "key-moments": "Матч идёт сам и останавливается на третьих даунах, red zone, риске потери и прямом участии.",
     "every-snap": "Ты выбираешь исполнение каждого своего снэпа. Остальные владения считаются автоматически.",
+  }[mode];
+}
+
+function controlModeLabel(mode: MatchHeroControlMode): string {
+  return { assisted: "Ассистированное", manual: "Полностью вручную", spectator: "Полный автомат" }[mode];
+}
+
+function controlModeDescription(mode: MatchHeroControlMode): string {
+  return {
+    assisted: "ИИ выполняет маршрут и назначение. После получения мяча управление переходит тебе.",
+    manual: "Ты управляешь игроком сразу после снэпа и сам выполняешь всё назначение.",
+    spectator: "Персонаж самостоятельно двигается, принимает решения и завершает розыгрыш.",
   }[mode];
 }
 
@@ -138,6 +150,7 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mode, setMode] = useState<MatchParticipationMode>("key-moments");
   const [analysisMode, setAnalysisMode] = useState(true);
+  const [heroControlMode, setHeroControlMode] = useState<MatchHeroControlMode>("assisted");
   const match = save.football.match;
   const collegeCareer = save.meta.phase === "college-season" ? save.football.college.heroCareer : undefined;
   const professionalCareer = save.meta.phase === "professional-career" ? save.football.professional.heroCareer : undefined;
@@ -167,14 +180,19 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
 
     {match.status === "upcoming" && <div className="compact-view match-upcoming">
       <section className="opponent-card"><div className="opponent-card__mark"><Icon name={match.heroUnit === "defense" ? "shield" : "football"} size={28} /></div><div><small>СОПЕРНИК · {match.opponentRecord}</small><h3>{match.opponentName}</h3><p>{match.opponentThreat}</p></div></section>
-      <section className="match-mode-panel"><header><div><small>УЧАСТИЕ В МАТЧЕ</small><strong>{modeLabel(mode)}</strong></div><span>{save.football.position}</span></header><div className="match-mode-grid">{(["auto", "key-moments", "every-snap"] as const).map((item) => <button type="button" key={item} className={mode === item ? "is-active" : ""} onClick={() => setMode(item)}><strong>{modeLabel(item)}</strong><span>{modeDescription(item)}</span></button>)}</div><button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}><Icon name="brain" /><span><strong>Analysis Mode</strong><small>Показывает честный прогноз, риск, matchup и уверенность чтения.</small></span><em>{analysisMode ? "ON" : "OFF"}</em></button></section>
-      {isMatchDay ? <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onStartMatch(mode, analysisMode)}><span><small>{modeLabel(mode)} · Analysis {analysisMode ? "ON" : "OFF"}</small><strong>{mutating ? "Симуляция…" : "Начать матч"}</strong></span><Icon name="arrow-right" /></button> : <div className="match-lock-card"><Icon name="calendar" /><div><small>Матч назначен</small><strong>{formatGameDate(match.scheduledDate)}</strong></div></div>}
+      <section className="match-mode-panel">
+        <header><div><small>УЧАСТИЕ В МАТЧЕ</small><strong>{modeLabel(mode)}</strong></div><span>{save.football.position}</span></header>
+        <div className="match-mode-grid">{(["auto", "key-moments", "every-snap"] as const).map((item) => <button type="button" key={item} className={mode === item ? "is-active" : ""} onClick={() => setMode(item)}><strong>{modeLabel(item)}</strong><span>{modeDescription(item)}</span></button>)}</div>
+        {mode !== "auto" && <div className="match-control-mode"><header><small>УПРАВЛЕНИЕ ПЕРСОНАЖЕМ</small><strong>{controlModeLabel(heroControlMode)}</strong></header><div>{(["assisted", "manual", "spectator"] as const).map((item) => <button type="button" key={item} className={heroControlMode === item ? "is-active" : ""} onClick={() => setHeroControlMode(item)}><strong>{controlModeLabel(item)}</strong><span>{controlModeDescription(item)}</span></button>)}</div></div>}
+        <button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}><Icon name="brain" /><span><strong>Analysis Mode</strong><small>Показывает честный прогноз, риск, matchup и уверенность чтения.</small></span><em>{analysisMode ? "ON" : "OFF"}</em></button>
+      </section>
+      {isMatchDay ? <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onStartMatch(mode, analysisMode, heroControlMode)}><span><small>{modeLabel(mode)} · {mode === "auto" ? "Полная симуляция" : controlModeLabel(heroControlMode)} · Analysis {analysisMode ? "ON" : "OFF"}</small><strong>{mutating ? "Симуляция…" : "Начать матч"}</strong></span><Icon name="arrow-right" /></button> : <div className="match-lock-card"><Icon name="calendar" /><div><small>Матч назначен</small><strong>{formatGameDate(match.scheduledDate)}</strong></div></div>}
     </div>}
 
     {match.status === "in-progress" && episode && <div className="compact-view match-live-view elite-match-live">
-      <section className="elite-match-player-strip"><span className="elite-match-player-strip__avatar">{initials(save.character.identity.fullName)}</span><div><small>#{save.football.jerseyNumber} · {save.football.position}</small><strong>{save.character.identity.fullName}</strong><span>{modeLabel(match.participationMode)}</span></div><article><small>Оценка</small><strong>{Math.round(match.coachGrade)}</strong></article><article><small>Энергия</small><strong>{Math.round(100 - match.heroFatigue)}%</strong></article></section>
+      <section className="elite-match-player-strip"><span className="elite-match-player-strip__avatar">{initials(save.character.identity.fullName)}</span><div><small>#{save.football.jerseyNumber} · {save.football.position}</small><strong>{save.character.identity.fullName}</strong><span>{modeLabel(match.participationMode)} · {controlModeLabel(match.heroControlMode)}</span></div><article><small>Оценка</small><strong>{Math.round(match.coachGrade)}</strong></article><article><small>Энергия</small><strong>{Math.round(100 - match.heroFatigue)}%</strong></article></section>
       <section className="elite-match-situation"><header><div><small>ДРАЙВ {match.driveNumber}</small><h3>{episode.title}</h3></div><strong>{episode.down} & {episode.distance}</strong></header><div className="elite-match-facts"><span><small>Мяч</small><strong>{episode.fieldPosition} yd</strong></span><span><small>Время</small><strong>Q{episode.quarter} {clockLabel(episode.clockSeconds)}</strong></span><span><small>Роль</small><strong>{involvementLabel(episode.heroInvolvement)}</strong></span></div></section>
-      <section className="match-called-play match-called-play--kernel"><div className="match-call-duel"><article><small>АТАКА · {offenseCall?.personnel}</small><strong>{offenseCall?.formation}</strong><span>{offenseCall?.concept}</span></article><b>VS</b><article><small>ЗАЩИТА · {defenseCall?.personnel}</small><strong>{defenseCall?.formation}</strong><span>{defenseCall?.concept}</span></article></div><RealTimeMatchField episode={episode} heroPosition={save.football.position} analysisMode={match.analysisMode} disabled={mutating} seed={`${save.meta.worldSeed}:${match.gameId}:${episode.id}:real-time`} onComplete={resolveLivePlay} /><div className="match-called-play__meta"><span><small>Твой слот</small><strong>{episode.heroSlot}</strong></span><span><small>Задание</small><strong>{episode.heroRole}</strong></span></div>{heroAssignment && <div className="match-personnel-matchup"><article><small>ТЫ</small><strong>{heroAssignment.playerName ?? save.character.identity.fullName}</strong><span>{heroAssignment.position} · OVR {Math.round(heroAssignment.overall ?? save.football.ratings.overall)}</span></article><b>VS</b><article><small>МАТЧАП</small><strong>{heroMatchup?.playerName ?? heroAssignment.matchupSlot ?? "Схема"}</strong><span>{heroMatchup ? `${heroMatchup.position} · OVR ${Math.round(heroMatchup.overall ?? 0)}` : episode.opponentCall.concept}</span></article></div>}</section>
+      <section className="match-called-play match-called-play--kernel"><div className="match-call-duel"><article><small>АТАКА · {offenseCall?.personnel}</small><strong>{offenseCall?.formation}</strong><span>{offenseCall?.concept}</span></article><b>VS</b><article><small>ЗАЩИТА · {defenseCall?.personnel}</small><strong>{defenseCall?.formation}</strong><span>{defenseCall?.concept}</span></article></div><RealTimeMatchField episode={episode} heroPosition={save.football.position} analysisMode={match.analysisMode} heroControlMode={match.heroControlMode} disabled={mutating} seed={`${save.meta.worldSeed}:${match.gameId}:${episode.id}:real-time`} onComplete={resolveLivePlay} /><div className="match-called-play__meta"><span><small>Твой слот</small><strong>{episode.heroSlot}</strong></span><span><small>Задание</small><strong>{episode.heroRole}</strong></span></div>{heroAssignment && <div className="match-personnel-matchup"><article><small>ТЫ</small><strong>{heroAssignment.playerName ?? save.character.identity.fullName}</strong><span>{heroAssignment.position} · OVR {Math.round(heroAssignment.overall ?? save.football.ratings.overall)}</span></article><b>VS</b><article><small>МАТЧАП</small><strong>{heroMatchup?.playerName ?? heroAssignment.matchupSlot ?? "Схема"}</strong><span>{heroMatchup ? `${heroMatchup.position} · OVR ${Math.round(heroMatchup.overall ?? 0)}` : episode.opponentCall.concept}</span></article></div>}</section>
 
       {match.analysisMode && <section className="match-analysis-panel"><header><span><Icon name="brain" /></span><div><small>ANALYSIS MODE</small><strong>{episode.opponentCall.formation} · {episode.opponentCall.concept}</strong></div><em>{episode.opponentCall.playType === "blitz" ? "BLITZ" : episode.opponentCall.tags[0] ?? "READ"}</em></header><div><span><small>Фронт</small><strong>{episode.opponentCall.personnel}</strong></span><span><small>Сильная сторона</small><strong>{episode.opponentCall.strength}</strong></span><span><small>Ключ</small><strong>{episode.heroRole}</strong></span></div></section>}
 

@@ -5,7 +5,7 @@ import { createFootballRelationships } from "../relationships/createFootballRela
 import { createFootballEcosystem } from "../ecosystem/createEcosystem";
 import { CAREER_FOOTBALL_POSITIONS, type FootballCareerSetup, type FootballPosition } from "../career/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "../../../storage/saves/schema";
-import { resolveMatchDecision, startMatch } from "./simulateMatch";
+import { resolveMatchDecision, simulatedPassInterceptionChance, startMatch } from "./simulateMatch";
 
 const setupByPosition: Record<FootballPosition, { archetypeId: string; jerseyNumber: number }> = {
   QB: { archetypeId: "field-general", jerseyNumber: 12 },
@@ -100,6 +100,14 @@ function finish(save: CareerSave): CareerSave {
   }
   return current;
 }
+
+describe("interception balance", () => {
+  it("caps simulated interception probability at a realistic snap rate", () => {
+    expect(simulatedPassInterceptionChance(5, 50, false)).toBeLessThan(.02);
+    expect(simulatedPassInterceptionChance(-10, 75, true)).toBeLessThan(.05);
+    expect(simulatedPassInterceptionChance(-100, 100, true)).toBe(.072);
+  });
+});
 
 describe("football match simulation", () => {
   it("creates a staff-called 22-player snap for every playable position", () => {

@@ -602,6 +602,35 @@ describe("migrateCareerSave", () => {
   });
 
 
+
+  it("migrates version twenty-eight saves into the hero control schema", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { heroControlMode: _heroControlMode, ...legacyMatch } = current.football.match;
+    const legacyRoster = current.football.professional.league.roster.map(({ availability: _availability, injuryWeeks: _injuryWeeks, ...player }) => player);
+    const legacyFreeAgents = current.football.professional.league.freeAgents.map(({ availability: _availability, injuryWeeks: _injuryWeeks, ...player }) => player);
+    const heroCareer = current.football.professional.heroCareer;
+    const legacyHeroCareer = heroCareer ? (({ availability: _availability, weeklyPlan: _weeklyPlan, ...career }) => career)(heroCareer) : undefined;
+    const versionTwentyEight = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 28 as const },
+      football: {
+        ...current.football,
+        match: legacyMatch,
+        professional: {
+          ...current.football.professional,
+          league: { ...current.football.professional.league, roster: legacyRoster, freeAgents: legacyFreeAgents },
+          heroCareer: legacyHeroCareer,
+        },
+      },
+    };
+    const result = migrateCareerSave(versionTwentyEight);
+    expect(result.migratedFrom).toBe(28);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.match.heroControlMode).toBe("assisted");
+    expect(result.save.football.professional.league.roster.every((player) => player.availability === "active" && player.injuryWeeks === 0)).toBe(true);
+    expect(result.save.history.at(-1)?.title).toBe("Управление игроком обновлено");
+  });
+
   it("migrates version twenty-seven saves into the professional league schema", () => {
     const current = migrateCareerSave(legacySave).save;
     const { league: _league, heroCareer: _heroCareer, ...professionalWithoutLeague } = current.football.professional;

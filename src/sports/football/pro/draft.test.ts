@@ -22,6 +22,7 @@ import {
   initializeProfessionalLeague,
   isProfessionalMatchAwaitingResolution,
   professionalStandings,
+  setProfessionalWeekFocus,
 } from "./league";
 import { startMatch } from "../matches/simulateMatch";
 
@@ -252,6 +253,20 @@ describe("professional draft ecosystem", () => {
     expect(state.teams.every((team) => team.payroll + team.deadCap <= team.salaryCap)).toBe(true);
     expect(state.league.freeAgents.length).toBeGreaterThan(0);
     expect(state.league.transactions.length).toBeGreaterThan(0);
+  });
+
+  it("turns weekly preparation into readiness, health and depth-chart consequences", () => {
+    const initial = activeProfessionalCareer("professional-week-plan");
+    const before = initial.football.professional.heroCareer;
+    if (!before) throw new Error("No professional hero career");
+    const prepared = setProfessionalWeekFocus(initial, "competition");
+    const after = prepared.football.professional.heroCareer;
+    expect(after?.weeklyPlan.resolved).toBe(true);
+    expect(after?.weeklyPlan.focus).toBe("competition");
+    expect(after?.coachTrust).not.toBe(before.coachTrust);
+    expect(after?.depthRank).toBeGreaterThanOrEqual(1);
+    expect(["active", "questionable", "out", "injured-reserve"]).toContain(after?.availability);
+    expect(() => setProfessionalWeekFocus(prepared, "recovery")).toThrow();
   });
 
   it("runs the hero professional game through the real-time match kernel", () => {

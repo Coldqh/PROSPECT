@@ -270,3 +270,101 @@
   .live-football__header > span.is-danger { animation: none; }
   .live-joystick > span { transition: none; }
 }
+
+/* 0.40 assisted control and snap-result overlay */
+.live-football__autopilot {
+  min-height: 66px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+.live-football__autopilot > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--accent);
+  font-size: var(--type-caption-size);
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.live-football__autopilot > div { min-width: 0; display: grid; gap: 2px; }
+.live-football__autopilot strong,
+.live-football__autopilot small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-football__autopilot small { color: var(--text-secondary); }
+
+.live-snap-result-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 5, 8, .72);
+  backdrop-filter: blur(3px);
+}
+.live-snap-result-dialog {
+  width: min(100%, 390px);
+  padding: 18px;
+  display: grid;
+  gap: 11px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  background: rgba(10, 14, 20, .98);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .52);
+  animation: live-result-enter .2s ease-out both;
+}
+.live-snap-result-dialog > small {
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.live-snap-result-dialog > strong {
+  color: #fff;
+  font-size: clamp(24px, 7vw, 38px);
+  line-height: 1;
+  letter-spacing: -.03em;
+}
+.live-snap-result-dialog.is-turnover > strong { color: #ff6d7d; }
+.live-snap-result-dialog > div,
+.live-snap-result-dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.live-snap-result-dialog > div span {
+  color: #fff;
+  font-weight: 800;
+}
+.live-snap-result-dialog > p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.live-snap-result-dialog > footer {
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+  font-size: var(--type-caption-size);
+}
+.live-snap-result-dialog > button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 900;
+}
+
+@keyframes live-result-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

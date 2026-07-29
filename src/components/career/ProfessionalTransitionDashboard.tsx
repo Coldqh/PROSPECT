@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
-import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../../sports/football/pro/types";
-import type { MatchParticipationMode } from "../../sports/football/matches/types";
+import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../../sports/football/pro/types";
+import type { MatchHeroControlMode, MatchParticipationMode } from "../../sports/football/matches/types";
 import { professionalStandings } from "../../sports/football/pro/league";
 import { MatchDashboard } from "./MatchDashboard";
 import { Icon } from "../ui/Icon";
@@ -16,9 +16,10 @@ interface ProfessionalTransitionDashboardProps {
   onRunDraft(): Promise<void>;
   onAcceptCampInvite(teamId: string): Promise<void>;
   onAdvanceCamp(approach: ProfessionalCampApproach): Promise<void>;
-  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
+  onStartMatch(mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode): Promise<void>;
   onResolveMatchDecision(optionId: string): Promise<void>;
   onFinalizeProfessionalMatch(): Promise<void>;
+  onSetProfessionalWeekFocus(focus: ProfessionalWeekFocus): Promise<void>;
   onAdvanceProfessionalWeek(): Promise<void>;
   onAdvanceProfessionalOffseason(): Promise<void>;
   onAcceptFreeAgentOffer(teamId: string): Promise<void>;
@@ -55,6 +56,19 @@ function gradeClass(value: number): string {
   return value >= 82 ? "is-elite" : value >= 68 ? "is-solid" : "is-risk";
 }
 
+function professionalFocusLabel(focus: ProfessionalWeekFocus): string {
+  return { playbook: "Плейбук", technique: "Техника", recovery: "Восстановление", competition: "Конкуренция" }[focus];
+}
+
+function professionalFocusDetail(focus: ProfessionalWeekFocus): string {
+  return {
+    playbook: "Trust и назначение",
+    technique: "OVR и форма",
+    recovery: "Здоровье и допуск",
+    competition: "Depth chart и риск",
+  }[focus];
+}
+
 export function ProfessionalTransitionDashboard({
   save,
   mutating,
@@ -68,6 +82,7 @@ export function ProfessionalTransitionDashboard({
   onStartMatch,
   onResolveMatchDecision,
   onFinalizeProfessionalMatch,
+  onSetProfessionalWeekFocus,
   onAdvanceProfessionalWeek,
   onAdvanceProfessionalOffseason,
   onAcceptFreeAgentOffer,
@@ -93,6 +108,10 @@ export function ProfessionalTransitionDashboard({
   const positionRoom = league.roster
     .filter((player) => player.teamId === heroCareer?.teamId && player.position === save.football.position)
     .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall);
+  const inactivePlayers = league.roster
+    .filter((player) => player.teamId === heroCareer?.teamId && player.availability !== "active")
+    .sort((left, right) => right.injuryWeeks - left.injuryWeeks)
+    .slice(0, 8);
 
   if (showMatch) {
     return (
@@ -261,10 +280,17 @@ export function ProfessionalTransitionDashboard({
 
           <div className="professional-season-grid">
             <article><small>Клуб</small><strong>{heroTeam ? `${heroTeam.city} ${heroTeam.name}` : "Нет контракта"}</strong><span>{heroCareer?.role ?? "free-agent"}</span></article>
-            <article><small>Depth</small><strong>#{heroCareer?.depthRank ?? "—"}</strong><span>{save.football.position}</span></article>
+            <article><small>Depth</small><strong>#{heroCareer?.depthRank ?? "—"}</strong><span>{heroCareer?.availability ?? "active"}</span></article>
             <article><small>Trust</small><strong>{Math.round(heroCareer?.coachTrust ?? 0)}</strong><span>{heroCareer?.gamesPlayed ?? 0} игр</span></article>
             <article><small>Cap space</small><strong>{heroTeam ? money(heroTeam.capSpace) : "—"}</strong><span>{heroTeam ? `${heroTeam.rosterSize}/53` : "рынок"}</span></article>
           </div>
+
+          {heroCareer?.weeklyPlan && league.phase !== "complete" && (
+            <div className={`professional-week-plan${heroCareer.weeklyPlan.resolved ? " is-resolved" : ""}`}>
+              <header><div><small>ПОДГОТОВКА НЕДЕЛИ</small><strong>{heroCareer.weeklyPlan.resolved ? professionalFocusLabel(heroCareer.weeklyPlan.focus) : "Выбери приоритет"}</strong></div><span>W{league.week}</span></header>
+              {!heroCareer.weeklyPlan.resolved ? <div>{(["playbook", "technique", "recovery", "competition"] as const).map((focus) => <button type="button" key={focus} disabled={mutating} onClick={() => void onSetProfessionalWeekFocus(focus)}><strong>{professionalFocusLabel(focus)}</strong><small>{professionalFocusDetail(focus)}</small></button>)}</div> : <section><p>{heroCareer.weeklyPlan.summary}</p><footer><span>FORM {heroCareer.weeklyPlan.readinessDelta >= 0 ? "+" : ""}{heroCareer.weeklyPlan.readinessDelta}</span><span>TRUST {heroCareer.weeklyPlan.coachTrustDelta >= 0 ? "+" : ""}{heroCareer.weeklyPlan.coachTrustDelta}</span><span>HP {heroCareer.weeklyPlan.healthDelta >= 0 ? "+" : ""}{heroCareer.weeklyPlan.healthDelta}</span></footer></section>}
+            </div>
+          )}
 
           {activeGame && heroTeam && opponent && (
             <div className="professional-next-game">
@@ -283,9 +309,11 @@ export function ProfessionalTransitionDashboard({
           {positionRoom.length > 0 && (
             <div className="professional-position-room">
               <header><small>POSITION ROOM</small><strong>{save.football.position}</strong></header>
-              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · {player.age} лет</small></div><em>{Math.round(player.overall)}</em></article>)}
+              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · {player.availability} · {player.age} лет</small></div><em>{Math.round(player.overall)}</em></article>)}
             </div>
           )}
+
+          {inactivePlayers.length > 0 && <div className="professional-inactive-list"><header><small>МЕДИЦИНСКИЙ ОТЧЁТ</small><strong>Недоступные игроки</strong></header>{inactivePlayers.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>{player.position}</span><div><strong>{player.name}</strong><small>{player.availability} · {player.injuryWeeks} нед.</small></div><em>{Math.round(player.health)} HP</em></article>)}</div>}
 
           <div className="professional-standings">
             {(["AFC", "NFC"] as const).map((conference) => <section key={conference}><header><small>{conference}</small><strong>W–L</strong></header>{standings.filter((team) => team.conference === conference).slice(0, 8).map((team, index) => <article key={team.id} className={team.id === heroTeam?.id ? "is-hero" : ""}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.wins}–{team.losses}</em></article>)}</section>)}

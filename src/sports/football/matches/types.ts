@@ -5,6 +5,7 @@ export type MatchUnit = "offense" | "defense" | "special";
 export type MatchTeamSide = "hero" | "opponent";
 export type MatchStatus = "upcoming" | "in-progress" | "complete";
 export type MatchParticipationMode = "auto" | "key-moments" | "every-snap";
+export type MatchHeroControlMode = "assisted" | "manual" | "spectator";
 export type DecisionRisk = "safe" | "balanced" | "aggressive";
 export type MatchOutcomeGrade = "A" | "B" | "C" | "D";
 export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage" | "field-goal" | "punt";
@@ -261,6 +262,7 @@ export interface FootballMatchState {
   possession: MatchTeamSide;
   openingKickoffReceiver: MatchTeamSide;
   participationMode: MatchParticipationMode;
+  heroControlMode: MatchHeroControlMode;
   analysisMode: boolean;
   heroFatigue: number;
   coachGrade: number;

@@ -651,6 +651,19 @@ function simulateSpecialTeamsSnap(
   };
 }
 
+export function simulatedPassInterceptionChance(teamEdge: number, aggression: number, pressured: boolean): number {
+  return Math.max(
+    .003,
+    Math.min(
+      .072,
+      .006
+        + Math.max(0, -teamEdge) * .00115
+        + aggression * .00018
+        + (pressured ? .012 : 0),
+    ),
+  );
+}
+
 function simulateSnap(
   save: CareerSave,
   match: FootballMatchState,
@@ -727,7 +740,7 @@ function simulateSnap(
     return { snapResult: "run", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: yards < 0 ? "Фронт защиты выигрывает точку атаки." : `Вынос приносит ${yards} ярдов.` };
   }
 
-  const interceptionChance = Math.max(.008, Math.min(.19, .018 + Math.max(0, -teamEdge) * .003 + offenseCall.aggression * .00055 + (pressured ? .025 : 0)));
+  const interceptionChance = simulatedPassInterceptionChance(teamEdge, offenseCall.aggression, pressured);
   if (random.chance(interceptionChance)) {
     const pickSix = random.chance(.08 + Math.max(0, -teamEdge) * .002);
     return {
@@ -1172,7 +1185,7 @@ function startControlledDrive(match: FootballMatchState, gameClockSeconds: numbe
   };
 }
 
-function startMatchCore(save: CareerSave, participationMode: MatchParticipationMode, analysisMode: boolean): CareerSave {
+function startMatchCore(save: CareerSave, participationMode: MatchParticipationMode, heroControlMode: import("./types").MatchHeroControlMode, analysisMode: boolean): CareerSave {
   const match = save.football.match;
   if (match.status !== "upcoming") return save;
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:kickoff`);
@@ -1181,6 +1194,7 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
     ...match,
     status: "in-progress",
     participationMode,
+    heroControlMode,
     analysisMode,
     heroScore: 0,
     opponentScore: 0,
@@ -1600,8 +1614,9 @@ export function startMatch(
   save: CareerSave,
   participationMode: MatchParticipationMode = "key-moments",
   analysisMode = false,
+  heroControlMode: import("./types").MatchHeroControlMode = "assisted",
 ): CareerSave {
-  let started = startMatchCore(save, participationMode, analysisMode);
+  let started = startMatchCore(save, participationMode, heroControlMode, analysisMode);
   if (participationMode === "auto") started = advanceAutomatic(started, false);
   if (participationMode === "key-moments") {
     started = advanceAutomatic(started, true);

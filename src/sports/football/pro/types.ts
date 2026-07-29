@@ -22,7 +22,9 @@ export type ProfessionalEvaluationFocus = "athletic" | "technical" | "interview"
 export type ProfessionalRosterOutcome = "active-roster" | "practice-squad" | "released";
 export type ProfessionalSeasonPhase = "preseason" | "regular-season" | "playoffs" | "complete";
 export type ProfessionalContractStatus = "active" | "practice-squad" | "free-agent" | "injured-reserve";
-export type ProfessionalTransactionKind = "signing" | "release" | "waiver-claim" | "injury" | "promotion" | "cap-move";
+export type ProfessionalAvailability = "active" | "questionable" | "out" | "injured-reserve";
+export type ProfessionalWeekFocus = "playbook" | "technique" | "recovery" | "competition";
+export type ProfessionalTransactionKind = "signing" | "release" | "waiver-claim" | "injury" | "promotion" | "trade" | "cap-move";
 
 export interface ProfessionalTeam {
   id: string;
@@ -172,6 +174,8 @@ export interface ProfessionalRosterPlayer {
   annualSalary: number;
   guaranteedRemaining: number;
   status: ProfessionalContractStatus;
+  availability: ProfessionalAvailability;
+  injuryWeeks: number;
   isHero: boolean;
 }
 
@@ -215,17 +219,33 @@ export interface ProfessionalHeroGameLog {
   stats: MatchStatLine;
 }
 
+
+export interface ProfessionalWeeklyPlan {
+  seasonYear: number;
+  week: number;
+  focus: ProfessionalWeekFocus;
+  resolved: boolean;
+  readinessDelta: number;
+  coachTrustDelta: number;
+  healthDelta: number;
+  depthDelta: number;
+  injuryRisk: number;
+  summary: string;
+}
+
 export interface ProfessionalHeroCareer {
   teamId?: string | undefined;
   seasonYear: number;
   week: number;
-  role: "starter" | "rotation" | "special-teams" | "practice-squad" | "free-agent";
+  role: "starter" | "rotation" | "special-teams" | "inactive" | "practice-squad" | "free-agent";
   depthRank: number;
   coachTrust: number;
   gamesPlayed: number;
   starts: number;
   snaps: number;
   gameLog: ProfessionalHeroGameLog[];
+  availability: ProfessionalAvailability;
+  weeklyPlan: ProfessionalWeeklyPlan;
 }
 
 export interface ProfessionalLeagueState {

@@ -212,6 +212,19 @@ interface LegacyProfessionalLeagueSave {
   history: HistoryEntry[];
 }
 
+type LegacyMatchWithoutHeroControl = Omit<CareerSave["football"]["match"], "heroControlMode">;
+type LegacyFootballWithoutHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithoutHeroControl };
+
+interface LegacyHeroControlSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 28 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: LegacyFootballWithoutHeroControl;
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
+  history: HistoryEntry[];
+}
+
 interface LegacyMatchExperienceSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 26 };
   character: CareerSave["character"];
@@ -502,6 +515,28 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
     teams,
     league: createEmptyProfessionalLeague(state.draftYear),
   };
+}
+
+
+function migrateVersionTwentyEight(input: LegacyHeroControlSave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football: {
+      ...input.football,
+      match: { ...input.football.match, heroControlMode: "assisted" },
+    },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v29`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Управление игроком обновлено",
+        description: "Сохранение получило автотраектории, ручной режим, полный автомат и новое окно итога снэпа.",
+      },
+    ],
+  });
 }
 
 function migrateVersionTwentySeven(input: LegacyProfessionalLeagueSave): CareerSave {
@@ -1227,6 +1262,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 28) return migratedResult(migrateVersionTwentyEight(input as LegacyHeroControlSave), 28);
   if (schemaVersion === 27) return migratedResult(migrateVersionTwentySeven(input as LegacyProfessionalLeagueSave), 27);
   if (schemaVersion === 26) return migratedResult(migrateVersionTwentySix(input as LegacyMatchExperienceSave), 26);
   if (schemaVersion === 25) return migratedResult(migrateVersionTwentyFive(input as LegacyFivePositionCareerSave), 25);

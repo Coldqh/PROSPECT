@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TrainingIntensity, WeeklyPlanTemplateId } from "../core/life/types";
 import type { TrainingFocusId } from "../sports/football/training/types";
-import type { MatchParticipationMode } from "../sports/football/matches/types";
+import type { MatchHeroControlMode, MatchParticipationMode } from "../sports/football/matches/types";
 import type { RecruitingActionId } from "../sports/football/recruiting/types";
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../sports/football/college/types";
-import type { ProfessionalCampApproach, ProfessionalEvaluationFocus } from "../sports/football/pro/types";
+import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../sports/football/pro/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -17,7 +17,7 @@ interface CareerSaveState {
   updateWeeklyPlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
   updateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   advanceDay(): Promise<void>;
-  startMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
+  startMatch(mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode): Promise<void>;
   resolveMatchDecision(optionId: string): Promise<void>;
   finalizeCollegeMatch(): Promise<void>;
   resolveRelationshipEvent(optionId: string): Promise<void>;
@@ -36,6 +36,7 @@ interface CareerSaveState {
   acceptProfessionalCampInvite(teamId: string): Promise<void>;
   advanceProfessionalTrainingCamp(approach: ProfessionalCampApproach): Promise<void>;
   finalizeProfessionalMatch(): Promise<void>;
+  setProfessionalWeekFocus(focus: ProfessionalWeekFocus): Promise<void>;
   advanceProfessionalWeek(): Promise<void>;
   advanceProfessionalOffseason(): Promise<void>;
   acceptProfessionalFreeAgentOffer(teamId: string): Promise<void>;
@@ -124,12 +125,12 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
   }, [careerId, mutating]);
 
 
-  const startMatch = useCallback(async (mode: MatchParticipationMode, analysisMode: boolean) => {
+  const startMatch = useCallback(async (mode: MatchParticipationMode, analysisMode: boolean, heroControlMode: MatchHeroControlMode) => {
     if (!careerId || mutating) return;
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.startMatch(careerId, mode, analysisMode));
+      setSave(await careerRepository.startMatch(careerId, mode, analysisMode, heroControlMode));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось начать матч.");
@@ -390,6 +391,20 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     }
   }, [careerId, mutating]);
 
+  const setProfessionalWeekFocus = useCallback(async (focus: ProfessionalWeekFocus) => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      setSave(await careerRepository.setProfessionalWeekFocus(careerId, focus));
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось подготовить профессиональную неделю.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
   const advanceProfessionalWeek = useCallback(async () => {
     if (!careerId || mutating) return;
     setMutating(true);
@@ -459,6 +474,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     acceptProfessionalCampInvite,
     advanceProfessionalTrainingCamp,
     finalizeProfessionalMatch,
+    setProfessionalWeekFocus,
     advanceProfessionalWeek,
     advanceProfessionalOffseason,
     acceptProfessionalFreeAgentOffer,

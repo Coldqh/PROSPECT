@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 28;
+export const CURRENT_SCHEMA_VERSION = 29;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -446,6 +446,7 @@ const footballMatchSchema = z.object({
   possession: z.enum(["hero", "opponent"]).default("hero"),
   openingKickoffReceiver: z.enum(["hero", "opponent"]).default("hero"),
   participationMode: z.enum(["auto", "key-moments", "every-snap"]).default("key-moments"),
+  heroControlMode: z.enum(["assisted", "manual", "spectator"]).default("assisted"),
   analysisMode: z.boolean().default(false),
   heroFatigue: z.number().min(0).max(100),
   coachGrade: z.number().min(0).max(100),
@@ -767,6 +768,8 @@ const professionalRosterPlayerSchema = z.object({
   annualSalary: z.number().int().nonnegative(),
   guaranteedRemaining: z.number().int().nonnegative(),
   status: z.enum(["active", "practice-squad", "free-agent", "injured-reserve"]),
+  availability: z.enum(["active", "questionable", "out", "injured-reserve"]).default("active"),
+  injuryWeeks: z.number().int().min(0).max(52).default(0),
   isHero: z.boolean(),
 });
 
@@ -834,13 +837,18 @@ const professionalStateSchema = z.object({
   league: z.object({
     seasonYear: z.number().int().min(2020).max(2200), phase: z.enum(["preseason", "regular-season", "playoffs", "complete"]), week: z.number().int().min(0).max(30), totalWeeks: z.number().int().min(1).max(30),
     schedule: z.array(professionalGameSchema), roster: z.array(professionalRosterPlayerSchema), freeAgents: z.array(professionalRosterPlayerSchema),
-    transactions: z.array(z.object({ id: z.string().min(1), seasonYear: z.number().int(), week: z.number().int().nonnegative(), kind: z.enum(["signing", "release", "waiver-claim", "injury", "promotion", "cap-move"]), playerId: z.string().min(1), playerName: z.string().min(2), position: careerFootballPositionSchema, fromTeamId: z.string().min(1).optional(), toTeamId: z.string().min(1).optional(), value: z.number().int().nonnegative(), summary: z.string().min(2) })),
+    transactions: z.array(z.object({ id: z.string().min(1), seasonYear: z.number().int(), week: z.number().int().nonnegative(), kind: z.enum(["signing", "release", "waiver-claim", "injury", "promotion", "trade", "cap-move"]), playerId: z.string().min(1), playerName: z.string().min(2), position: careerFootballPositionSchema, fromTeamId: z.string().min(1).optional(), toTeamId: z.string().min(1).optional(), value: z.number().int().nonnegative(), summary: z.string().min(2) })),
     playoffTeamIds: z.array(z.string().min(1)), championTeamId: z.string().min(1).optional(), activeGameId: z.string().min(1).optional(),
   }),
   heroCareer: z.object({
-    teamId: z.string().min(1).optional(), seasonYear: z.number().int().min(2020).max(2200), week: z.number().int().min(1).max(30), role: z.enum(["starter", "rotation", "special-teams", "practice-squad", "free-agent"]),
+    teamId: z.string().min(1).optional(), seasonYear: z.number().int().min(2020).max(2200), week: z.number().int().min(1).max(30), role: z.enum(["starter", "rotation", "special-teams", "inactive", "practice-squad", "free-agent"]),
     depthRank: z.number().int().min(1), coachTrust: z.number().min(0).max(100), gamesPlayed: z.number().int().nonnegative(), starts: z.number().int().nonnegative(), snaps: z.number().int().nonnegative(),
     gameLog: z.array(z.object({ seasonYear: z.number().int().min(2020).max(2200), gameId: z.string().min(1), week: z.number().int().min(1), opponentId: z.string().min(1), won: z.boolean(), teamScore: z.number().int().nonnegative(), opponentScore: z.number().int().nonnegative(), grade: z.enum(["A", "B", "C", "D"]), snaps: z.number().int().nonnegative(), stats: professionalMatchStatsSchema })),
+    availability: z.enum(["active", "questionable", "out", "injured-reserve"]).default("active"),
+    weeklyPlan: z.object({
+      seasonYear: z.number().int().min(2020).max(2200), week: z.number().int().min(1).max(30), focus: z.enum(["playbook", "technique", "recovery", "competition"]), resolved: z.boolean(),
+      readinessDelta: z.number(), coachTrustDelta: z.number(), healthDelta: z.number(), depthDelta: z.number(), injuryRisk: z.number().min(0).max(100), summary: z.string().min(2),
+    }).default({ seasonYear: 2030, week: 1, focus: "playbook", resolved: false, readinessDelta: 0, coachTrustDelta: 0, healthDelta: 0, depthDelta: 0, injuryRisk: 0, summary: "План недели ещё не выбран." }),
   }).optional(),
   lastSummary: z.string().min(2),
 });

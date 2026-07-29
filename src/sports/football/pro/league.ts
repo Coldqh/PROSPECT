@@ -13,6 +13,8 @@ import type {
   ProfessionalRosterPlayer,
   ProfessionalTeam,
   ProfessionalTransaction,
+  ProfessionalWeekFocus,
+  ProfessionalWeeklyPlan,
 } from "./types";
 
 const FIRST_NAMES = ["Marcus", "Devin", "Cole", "Darius", "Tre", "Nate", "Malik", "Grant", "Jamal", "Ty", "Victor", "Owen", "Rashad", "Luke", "Cam", "Evan"] as const;
@@ -67,6 +69,8 @@ function createPlayer(seed: string, teamId: string | undefined, position: Footba
     annualSalary,
     guaranteedRemaining: freeAgent ? 0 : Math.round(annualSalary * random.integer(20, 75) / 100 / 10_000) * 10_000,
     status: freeAgent ? "free-agent" : "active",
+    availability: "active",
+    injuryWeeks: 0,
     isHero: false,
   };
 }
@@ -170,7 +174,7 @@ function recalculateTeams(teams: ProfessionalTeam[], roster: ProfessionalRosterP
   });
 }
 
-function runNpcFreeAgency(seed: string, seasonYear: number, teams: ProfessionalTeam[], roster: ProfessionalRosterPlayer[], freeAgents: ProfessionalRosterPlayer[]): {
+function runNpcFreeAgency(seed: string, seasonYear: number, teams: ProfessionalTeam[], roster: ProfessionalRosterPlayer[], freeAgents: ProfessionalRosterPlayer[], week = 0): {
   teams: ProfessionalTeam[];
   roster: ProfessionalRosterPlayer[];
   freeAgents: ProfessionalRosterPlayer[];
@@ -200,9 +204,9 @@ function runNpcFreeAgency(seed: string, seasonYear: number, teams: ProfessionalT
       nextRoster.push(signed);
       available.splice(available.findIndex((player) => player.id === target.id), 1);
       transactions.push({
-        id: `pro-tx:${seasonYear}:fa:${team.id}:${target.id}`,
+        id: `pro-tx:${seasonYear}:w${week}:fa:${team.id}:${target.id}`,
         seasonYear,
-        week: 0,
+        week,
         kind: "signing",
         playerId: target.id,
         playerName: target.name,
@@ -234,16 +238,34 @@ function heroRosterPlayer(save: CareerSave, teamId: string, status: "active" | "
     annualSalary: contract?.salaryYearOne ?? 795_000,
     guaranteedRemaining: contract?.guaranteed ?? 0,
     status,
+    availability: "active",
+    injuryWeeks: 0,
     isHero: true,
   };
 }
 
-function roleFor(status: CareerSave["football"]["professional"]["status"], depthRank: number): ProfessionalHeroCareer["role"] {
+function roleFor(status: CareerSave["football"]["professional"]["status"], depthRank: number, availability: ProfessionalRosterPlayer["availability"] = "active"): ProfessionalHeroCareer["role"] {
+  if (availability === "out" || availability === "injured-reserve") return "inactive";
   if (status === "practice-squad") return "practice-squad";
   if (status === "free-agent" || status === "cut") return "free-agent";
   if (depthRank <= 1) return "starter";
   if (depthRank <= 2) return "rotation";
   return "special-teams";
+}
+
+function defaultProfessionalWeekPlan(seasonYear: number, week: number): ProfessionalWeeklyPlan {
+  return {
+    seasonYear,
+    week,
+    focus: "playbook",
+    resolved: false,
+    readinessDelta: 0,
+    coachTrustDelta: 0,
+    healthDelta: 0,
+    depthDelta: 0,
+    injuryRisk: 0,
+    summary: "План недели ещё не выбран.",
+  };
 }
 
 function createHeroCareer(save: CareerSave, teamId: string | undefined): ProfessionalHeroCareer {
@@ -260,6 +282,250 @@ function createHeroCareer(save: CareerSave, teamId: string | undefined): Profess
     starts: 0,
     snaps: 0,
     gameLog: [],
+    availability: "active",
+    weeklyPlan: defaultProfessionalWeekPlan(save.football.professional.draftYear, 1),
+  };
+}
+
+function playerDepthScore(player: ProfessionalRosterPlayer, heroCoachTrust = 0): number {
+  const availabilityPenalty = player.availability === "active" ? 0 : player.availability === "questionable" ? 7 : 40;
+  const heroBonus = player.isHero ? heroCoachTrust * 0.12 : 0;
+  return player.overall * 0.72 + player.form * 0.18 + player.health * 0.1 + heroBonus - availabilityPenalty;
+}
+
+function rebuildProfessionalDepthCharts(roster: ProfessionalRosterPlayer[], heroCoachTrust = 0): ProfessionalRosterPlayer[] {
+  const ranks = new Map<string, number>();
+  const teamIds = [...new Set(roster.flatMap((player) => player.teamId ? [player.teamId] : []))];
+  for (const teamId of teamIds) {
+    for (const position of CAREER_FOOTBALL_POSITIONS) {
+      const room = roster
+        .filter((player) => player.teamId === teamId && player.position === position && player.status !== "practice-squad")
+        .sort((left, right) => playerDepthScore(right, heroCoachTrust) - playerDepthScore(left, heroCoachTrust) || left.id.localeCompare(right.id));
+      room.forEach((player, index) => ranks.set(player.id, index + 1));
+    }
+  }
+  return roster.map((player) => ({ ...player, depthRank: ranks.get(player.id) ?? player.depthRank }));
+}
+
+function focusEffects(focus: ProfessionalWeekFocus, random: SeededRandom): Omit<ProfessionalWeeklyPlan, "seasonYear" | "week" | "focus" | "resolved" | "summary"> & { overallDelta: number } {
+  if (focus === "technique") return { readinessDelta: random.integer(2, 5), coachTrustDelta: random.integer(0, 3), healthDelta: random.integer(-2, 0), depthDelta: random.integer(1, 4), injuryRisk: 8, overallDelta: random.integer(2, 6) / 10 };
+  if (focus === "recovery") return { readinessDelta: random.integer(1, 3), coachTrustDelta: random.integer(-1, 1), healthDelta: random.integer(5, 9), depthDelta: random.integer(-1, 1), injuryRisk: 1, overallDelta: 0 };
+  if (focus === "competition") return { readinessDelta: random.integer(4, 8), coachTrustDelta: random.integer(2, 6), healthDelta: random.integer(-4, -1), depthDelta: random.integer(2, 6), injuryRisk: 14, overallDelta: random.integer(1, 4) / 10 };
+  return { readinessDelta: random.integer(3, 6), coachTrustDelta: random.integer(2, 5), healthDelta: random.integer(-1, 1), depthDelta: random.integer(0, 2), injuryRisk: 3, overallDelta: random.integer(0, 2) / 10 };
+}
+
+function focusSummary(focus: ProfessionalWeekFocus): string {
+  if (focus === "technique") return "Неделя ушла в позиционную технику и исправление деталей.";
+  if (focus === "recovery") return "Нагрузка снижена: лечение, сон и восстановление тела.";
+  if (focus === "competition") return "Игрок атаковал depth chart и забрал максимум соревновательных повторений.";
+  return "Игрок разобрал плейбук, установки и ключи соперника.";
+}
+
+export function setProfessionalWeekFocus(save: CareerSave, focus: ProfessionalWeekFocus): CareerSave {
+  const state = save.football.professional;
+  const career = state.heroCareer;
+  const league = state.league;
+  if (save.meta.phase !== "professional-career" || !career?.teamId) throw new Error("Professional weekly planning is unavailable");
+  if (career.weeklyPlan.resolved && career.weeklyPlan.seasonYear === league.seasonYear && career.weeklyPlan.week === league.week) throw new Error("This professional week is already prepared");
+
+  const random = new SeededRandom(save.meta.worldSeed).fork(`professional-week-focus:${league.seasonYear}:${league.week}:${focus}`);
+  const effects = focusEffects(focus, random);
+  const currentHero = league.roster.find((player) => player.isHero);
+  if (!currentHero) throw new Error("Hero professional roster player is missing");
+  const health = clamp(currentHero.health + effects.healthDelta);
+  const injuryChance = Math.min(.34, effects.injuryRisk / 100 + Math.max(0, 68 - health) * .004);
+  const injured = currentHero.status === "active" && random.chance(injuryChance);
+  const injuryWeeks = injured ? random.integer(1, focus === "competition" ? 5 : 3) : currentHero.injuryWeeks;
+  const availability = injured ? (injuryWeeks >= 5 ? "injured-reserve" as const : injuryWeeks >= 2 ? "out" as const : "questionable" as const) : currentHero.availability;
+  const status = availability === "injured-reserve" ? "injured-reserve" as const : currentHero.status;
+  const coachTrust = clamp(career.coachTrust + effects.coachTrustDelta);
+  const overall = clamp(currentHero.overall + effects.overallDelta, 0, 99);
+  let roster = league.roster.map((player) => player.isHero ? {
+    ...player,
+    overall,
+    health,
+    form: clamp(player.form + effects.readinessDelta + effects.depthDelta * .35),
+    availability,
+    injuryWeeks,
+    status,
+  } : player);
+  roster = rebuildProfessionalDepthCharts(roster, coachTrust);
+  const hero = roster.find((player) => player.isHero)!;
+  const role = roleFor(state.status, hero.depthRank, hero.availability);
+  let transactions = league.transactions;
+  if (injured) {
+    transactions = [...transactions, {
+      id: `pro-tx:${league.seasonYear}:w${league.week}:hero-injury`,
+      seasonYear: league.seasonYear,
+      week: league.week,
+      kind: "injury" as const,
+      playerId: hero.id,
+      playerName: hero.name,
+      position: hero.position,
+      fromTeamId: hero.teamId,
+      value: injuryWeeks,
+      summary: `${hero.position} ${hero.name} получил повреждение. Прогноз: ${injuryWeeks} нед.`,
+    }];
+  }
+  const weeklyPlan: ProfessionalWeeklyPlan = {
+    seasonYear: league.seasonYear,
+    week: league.week,
+    focus,
+    resolved: true,
+    readinessDelta: effects.readinessDelta,
+    coachTrustDelta: effects.coachTrustDelta,
+    healthDelta: effects.healthDelta,
+    depthDelta: effects.depthDelta,
+    injuryRisk: effects.injuryRisk,
+    summary: injured ? `${focusSummary(focus)} Неделя закончилась повреждением.` : focusSummary(focus),
+  };
+  const eligible = state.status === "roster" && role !== "inactive";
+  const activeGame = eligible ? findHeroGame({ ...league, roster }, career.teamId, league.week) : undefined;
+  const nextLeague: ProfessionalLeagueState = { ...league, roster, transactions, activeGameId: activeGame?.id };
+  let next: CareerSave = {
+    ...save,
+    character: { ...save.character, condition: { ...save.character.condition, health } },
+    football: {
+      ...save.football,
+      ratings: { ...save.football.ratings, overall },
+      professional: {
+        ...state,
+        league: nextLeague,
+        heroCareer: { ...career, coachTrust, depthRank: hero.depthRank, role, availability: hero.availability, weeklyPlan },
+        lastSummary: weeklyPlan.summary,
+      },
+    },
+  };
+  if (activeGame && save.football.match.status === "upcoming") {
+    next = { ...next, football: { ...next.football, match: createProfessionalMatchState(next, activeGame) } };
+  }
+  return next;
+}
+
+function advanceProfessionalMedical(
+  seed: string,
+  seasonYear: number,
+  currentWeek: number,
+  roster: ProfessionalRosterPlayer[],
+  transactions: ProfessionalTransaction[],
+): { roster: ProfessionalRosterPlayer[]; transactions: ProfessionalTransaction[] } {
+  const random = new SeededRandom(seed).fork(`professional-medical:${seasonYear}:${currentWeek}`);
+  const nextTransactions = [...transactions];
+  const nextRoster = roster.map((player) => {
+    if (player.injuryWeeks > 0) {
+      const injuryWeeks = Math.max(0, player.injuryWeeks - 1);
+      const availability = injuryWeeks === 0 ? "active" as const : injuryWeeks === 1 ? "questionable" as const : injuryWeeks >= 5 ? "injured-reserve" as const : "out" as const;
+      const status = player.status === "injured-reserve" && injuryWeeks === 0 ? "active" as const : availability === "injured-reserve" ? "injured-reserve" as const : player.status;
+      return { ...player, injuryWeeks, availability, status, health: clamp(player.health + random.integer(2, 6)) };
+    }
+    if (player.isHero || player.status !== "active") return player;
+    const injuryChance = .0035 + Math.max(0, 78 - player.health) * .00025;
+    if (!random.chance(injuryChance)) return { ...player, health: clamp(player.health + random.integer(-2, 2)) };
+    const injuryWeeks = random.integer(1, 7);
+    const availability = injuryWeeks === 1 ? "questionable" as const : injuryWeeks >= 5 ? "injured-reserve" as const : "out" as const;
+    nextTransactions.push({
+      id: `pro-tx:${seasonYear}:w${currentWeek}:injury:${player.id}`,
+      seasonYear,
+      week: currentWeek,
+      kind: "injury",
+      playerId: player.id,
+      playerName: player.name,
+      position: player.position,
+      fromTeamId: player.teamId,
+      value: injuryWeeks,
+      summary: `${player.position} ${player.name} выбыл на ${injuryWeeks} нед.`,
+    });
+    return { ...player, injuryWeeks, availability, status: availability === "injured-reserve" ? "injured-reserve" as const : player.status, health: clamp(player.health - random.integer(4, 14)) };
+  });
+  return { roster: rebuildProfessionalDepthCharts(nextRoster), transactions: nextTransactions.slice(-600) };
+}
+
+function balanceProfessionalActiveRosters(
+  seed: string,
+  seasonYear: number,
+  currentWeek: number,
+  teams: ProfessionalTeam[],
+  roster: ProfessionalRosterPlayer[],
+  freeAgents: ProfessionalRosterPlayer[],
+  transactions: ProfessionalTransaction[],
+): { teams: ProfessionalTeam[]; roster: ProfessionalRosterPlayer[]; freeAgents: ProfessionalRosterPlayer[]; transactions: ProfessionalTransaction[] } {
+  let nextRoster = [...roster];
+  let nextFreeAgents = [...freeAgents];
+  let nextTransactions = [...transactions];
+
+  for (const team of teams) {
+    const active = nextRoster
+      .filter((player) => player.teamId === team.id && player.status === "active")
+      .sort((left, right) => playerDepthScore(left) - playerDepthScore(right) || right.annualSalary - left.annualSalary || left.id.localeCompare(right.id));
+    let excess = Math.max(0, active.length - 53);
+    for (const player of active) {
+      if (excess <= 0) break;
+      if (player.isHero) continue;
+      nextRoster = nextRoster.filter((candidate) => candidate.id !== player.id);
+      nextFreeAgents.push({ ...player, teamId: undefined, status: "free-agent", availability: "active", injuryWeeks: 0, depthRank: 0, yearsRemaining: 0, guaranteedRemaining: 0 });
+      nextTransactions.push({
+        id: `pro-tx:${seasonYear}:w${currentWeek}:roster-balance:${player.id}`,
+        seasonYear,
+        week: currentWeek,
+        kind: "release",
+        playerId: player.id,
+        playerName: player.name,
+        position: player.position,
+        fromTeamId: team.id,
+        value: player.annualSalary,
+        summary: `${team.shortName} освободили ${player.position} ${player.name} после возвращения игрока из списка травмированных.`,
+      });
+      excess -= 1;
+    }
+  }
+
+  const market = runNpcFreeAgency(seed, seasonYear, recalculateTeams(teams, nextRoster), nextRoster, nextFreeAgents, currentWeek);
+  return {
+    teams: market.teams,
+    roster: market.roster,
+    freeAgents: market.freeAgents,
+    transactions: [...nextTransactions, ...market.transactions].slice(-600),
+  };
+}
+
+function runProfessionalTradeDeadline(
+  seed: string,
+  seasonYear: number,
+  currentWeek: number,
+  teams: ProfessionalTeam[],
+  roster: ProfessionalRosterPlayer[],
+  transactions: ProfessionalTransaction[],
+): { teams: ProfessionalTeam[]; roster: ProfessionalRosterPlayer[]; transactions: ProfessionalTransaction[] } {
+  if (currentWeek !== 8) return { teams, roster, transactions };
+  const random = new SeededRandom(seed).fork(`professional-trade-deadline:${seasonYear}`);
+  const buyers = [...teams].sort((left, right) => Math.max(...Object.values(right.needs)) - Math.max(...Object.values(left.needs)));
+  const buyer = buyers[0];
+  if (!buyer) return { teams, roster, transactions };
+  const position = [...CAREER_FOOTBALL_POSITIONS].sort((left, right) => buyer.needs[right] - buyer.needs[left])[0];
+  if (!position) return { teams, roster, transactions };
+  const candidates = roster.filter((player) => !player.isHero && player.teamId && player.teamId !== buyer.id && player.position === position && player.status === "active" && player.depthRank >= 2 && player.availability === "active" && player.annualSalary <= buyer.capSpace);
+  if (candidates.length === 0) return { teams, roster, transactions };
+  const target = random.pick(candidates);
+  if (!target.teamId) return { teams, roster, transactions };
+  const seller = teams.find((team) => team.id === target.teamId);
+  const moved = rebuildProfessionalDepthCharts(roster.map((player) => player.id === target.id ? { ...player, teamId: buyer.id } : player));
+  const nextTeams = recalculateTeams(teams, moved);
+  return {
+    teams: nextTeams,
+    roster: moved,
+    transactions: [...transactions, {
+      id: `pro-tx:${seasonYear}:w${currentWeek}:trade:${target.id}`,
+      seasonYear,
+      week: currentWeek,
+      kind: "trade" as const,
+      playerId: target.id,
+      playerName: target.name,
+      position: target.position,
+      fromTeamId: seller?.id,
+      toTeamId: buyer.id,
+      value: target.annualSalary,
+      summary: `${seller?.shortName ?? "Клуб"} обменяли ${target.position} ${target.name} в ${buyer.shortName}.`,
+    }].slice(-600),
   };
 }
 
@@ -300,6 +566,7 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     possession: matchUnitForPosition(save.football.position) === "defense" ? "opponent" : "hero",
     openingKickoffReceiver: random.chance(0.5) ? "hero" : "opponent",
     participationMode: "key-moments",
+    heroControlMode: "assisted",
     analysisMode: false,
     heroFatigue: random.integer(5, 14),
     coachGrade: Math.max(44, Math.min(74, Math.round((career.coachTrust ?? 55) * 0.38 + 35))),
@@ -622,7 +889,7 @@ function buildPlayoffWeek(league: ProfessionalLeagueState, teams: ProfessionalTe
   return [];
 }
 
-function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: ProfessionalGame[], teams: ProfessionalTeam[]): CareerSave {
+function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: ProfessionalGame[], resultTeams: ProfessionalTeam[]): CareerSave {
   const state = save.football.professional;
   const league = state.league;
   const heroCareer = state.heroCareer;
@@ -634,7 +901,7 @@ function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: Professional
   let playoffTeamIds = league.playoffTeamIds;
 
   if (currentWeek >= 15 && currentWeek < 18) {
-    const newGames = buildPlayoffWeek({ ...league, schedule: nextSchedule }, teams);
+    const newGames = buildPlayoffWeek({ ...league, schedule: nextSchedule }, resultTeams);
     if (newGames.length > 0) {
       nextSchedule = [...nextSchedule, ...newGames];
       phase = "playoffs";
@@ -648,19 +915,44 @@ function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: Professional
     nextWeek = 18;
   }
 
+  const medical = advanceProfessionalMedical(save.meta.worldSeed, league.seasonYear, currentWeek, league.roster, league.transactions);
+  const deadline = runProfessionalTradeDeadline(save.meta.worldSeed, league.seasonYear, currentWeek, resultTeams, medical.roster, medical.transactions);
+  const balanced = balanceProfessionalActiveRosters(save.meta.worldSeed, league.seasonYear, currentWeek, deadline.teams, deadline.roster, league.freeAgents, deadline.transactions);
+  const roster = rebuildProfessionalDepthCharts(balanced.roster, heroCareer?.coachTrust ?? 0);
+  const teams = recalculateTeams(balanced.teams, roster);
+  const heroPlayer = roster.find((player) => player.isHero);
+  const nextAvailability = heroPlayer?.availability ?? heroCareer?.availability ?? "active";
+  const nextDepthRank = heroPlayer?.depthRank ?? heroCareer?.depthRank ?? 1;
+  const nextRole = heroCareer ? roleFor(state.status, nextDepthRank, nextAvailability) : undefined;
+  const nextHeroCareer = heroCareer ? {
+    ...heroCareer,
+    week: nextWeek,
+    depthRank: nextDepthRank,
+    availability: nextAvailability,
+    ...(nextRole ? { role: nextRole } : {}),
+    weeklyPlan: defaultProfessionalWeekPlan(league.seasonYear, nextWeek),
+  } : undefined;
+
   const nextLeagueBase: ProfessionalLeagueState = {
     ...league,
     schedule: nextSchedule,
+    roster,
+    freeAgents: balanced.freeAgents,
+    transactions: balanced.transactions,
     week: nextWeek,
     totalWeeks: phase === "playoffs" || phase === "complete" ? 18 : league.totalWeeks,
     phase,
     playoffTeamIds,
     ...(championTeamId ? { championTeamId } : {}),
   };
-  const nextHeroGame = phase !== "complete" ? findHeroGame(nextLeagueBase, heroCareer?.teamId, nextWeek) : undefined;
-  const heroActive = state.status === "roster" && Boolean(nextHeroGame);
-  const nextLeague = { ...nextLeagueBase, activeGameId: heroActive ? nextHeroGame!.id : undefined };
-  const nextMatch = heroActive ? createProfessionalMatchState({ ...save, football: { ...save.football, professional: { ...state, teams, league: nextLeague } } }, nextHeroGame!) : save.football.match;
+  const eligible = state.status === "roster" && nextRole !== "inactive";
+  const nextHeroGame = phase !== "complete" && eligible ? findHeroGame(nextLeagueBase, nextHeroCareer?.teamId, nextWeek) : undefined;
+  const nextLeague = { ...nextLeagueBase, activeGameId: nextHeroGame?.id };
+  const professional = { ...state, teams, league: nextLeague, heroCareer: nextHeroCareer };
+  const nextMatch = nextHeroGame
+    ? createProfessionalMatchState({ ...save, football: { ...save.football, professional } }, nextHeroGame)
+    : save.football.match;
+  const inactiveNote = nextRole === "inactive" ? " Игрок недоступен для следующего матча." : "";
   return {
     ...save,
     meta: { ...save.meta, currentDate: nextHeroGame?.date ?? nextSchedule.find((game) => game.week === nextWeek)?.date ?? save.meta.currentDate },
@@ -668,13 +960,10 @@ function advanceLeagueAfterWeek(save: CareerSave, resolvedSchedule: Professional
       ...save.football,
       match: nextMatch,
       professional: {
-        ...state,
-        teams,
-        league: nextLeague,
-        heroCareer: heroCareer ? { ...heroCareer, week: nextWeek } : undefined,
+        ...professional,
         lastSummary: phase === "complete"
           ? `${teams.find((team) => team.id === championTeamId)?.city ?? "Лига"} завершили сезон чемпионами.`
-          : `Неделя ${currentWeek} завершена. Следующая — ${nextWeek}.`,
+          : `Неделя ${currentWeek} завершена. Следующая — ${nextWeek}.${inactiveNote}`,
       },
     },
   };
@@ -684,11 +973,14 @@ export function isProfessionalMatchAwaitingResolution(save: CareerSave): boolean
   const state = save.football.professional;
   return save.meta.phase === "professional-career"
     && state.status === "roster"
+    && state.heroCareer?.role !== "inactive"
     && Boolean(state.league.activeGameId)
     && state.league.activeGameId === save.football.match.gameId;
 }
 
 export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
+  const unresolvedPlan = save.football.professional.heroCareer?.weeklyPlan;
+  if (unresolvedPlan && !unresolvedPlan.resolved) return finalizeProfessionalMatch(setProfessionalWeekFocus(save, unresolvedPlan.focus));
   const state = save.football.professional;
   const match = save.football.match;
   if (!isProfessionalMatchAwaitingResolution(save) || match.status !== "complete" || !match.finalResult) throw new Error("Professional match is not ready to finalize");
@@ -736,6 +1028,8 @@ export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
 }
 
 export function advanceProfessionalWeek(save: CareerSave): CareerSave {
+  const unresolvedPlan = save.football.professional.heroCareer?.weeklyPlan;
+  if (unresolvedPlan && !unresolvedPlan.resolved && save.football.professional.heroCareer?.teamId) return advanceProfessionalWeek(setProfessionalWeekFocus(save, unresolvedPlan.focus));
   const state = save.football.professional;
   if (save.meta.phase !== "professional-career" || state.league.phase === "complete") throw new Error("Professional season cannot advance");
   if (isProfessionalMatchAwaitingResolution(save)) throw new Error("The hero game must be played first");
@@ -894,13 +1188,16 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
     : "free-agent" as const;
   const heroTeamId = heroRemainsSigned ? previousHero?.teamId : undefined;
   const previousCareer = state.heroCareer;
+  const nextAvailability = previousHero?.availability ?? "active";
   const heroCareer: ProfessionalHeroCareer = {
     ...(previousCareer ?? createHeroCareer(save, heroTeamId)),
     teamId: heroTeamId,
     seasonYear,
     week: 1,
-    role: heroStatus === "roster" ? roleFor("roster", previousCareer?.depthRank ?? previousHero?.depthRank ?? 3) : heroStatus === "practice-squad" ? "practice-squad" : "free-agent",
+    role: heroStatus === "roster" ? roleFor("roster", previousCareer?.depthRank ?? previousHero?.depthRank ?? 3, nextAvailability) : heroStatus === "practice-squad" ? "practice-squad" : "free-agent",
     depthRank: previousCareer?.depthRank ?? previousHero?.depthRank ?? 1,
+    availability: nextAvailability,
+    weeklyPlan: defaultProfessionalWeekPlan(seasonYear, 1),
   };
   const schedule = roundRobinSchedule(teams.map((team) => team.id), seasonYear);
   const baseLeague: ProfessionalLeagueState = {

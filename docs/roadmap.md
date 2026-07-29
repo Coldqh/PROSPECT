@@ -27,6 +27,8 @@
 - [x] Interactive college match layer and full multi-year athlete progression
 - [x] Professional draft, contracts and pro football ecosystem
 - [x] Autonomous professional league, salary cap, free agency and interactive pro seasons
+- [x] Living professional week, injuries, dynamic depth chart and trade deadline
+- [x] Assisted, manual and spectator control with snap-result overlay
 
 ## v0.11 — High school to college
 
@@ -274,3 +276,16 @@
 - practice-squad development can lead to promotion with a corresponding active-roster release;
 - released heroes receive concrete one-year free-agent offers instead of reaching a dead end;
 - deterministic migration from schema v27 to v28.
+
+## v0.40 — Living pro career and player control
+
+- weekly professional preparation with playbook, technique, recovery and competition focuses;
+- readiness, coach trust, health and depth rank react to preparation;
+- active, questionable, out and injured-reserve availability;
+- autonomous replacement signings, return-from-IR cuts and week-eight trades;
+- assisted routes until possession, immediate manual control or full spectator automation;
+- explicit snap-result dialog before the next play;
+- lower interception rates in both statistical and physical pass resolution;
+- redesigned football loading screen;
+- deterministic migration from schema v28 to v29.
+

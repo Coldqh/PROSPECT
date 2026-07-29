@@ -2,6 +2,7 @@ import type { FootballPosition } from "../career/types";
 import type {
   MatchAdvancedStatLine,
   MatchEpisode,
+  MatchHeroControlMode,
   MatchPoint,
   MatchSnapResult,
   MatchStatLine,
@@ -595,6 +596,18 @@ function finishPlay(
   return outcome;
 }
 
+export function livePassInterceptionChance(defenderOverall: number, playBallBonus: number, throwQuality: number, leverage: number): number {
+  return clamp(
+    2.5
+      + Math.max(0, defenderOverall - 70) * 0.24
+      + playBallBonus
+      - throwQuality * 0.025
+      + Math.max(0, leverage) * 1.8,
+    0.8,
+    21,
+  );
+}
+
 function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | undefined {
   const progress = clamp(state.ball.flightElapsed / Math.max(0.01, state.ball.flightDuration), 0, 1);
   const target = state.ball.targetId ? state.players.find((player) => player.id === state.ball.targetId) : undefined;
@@ -609,8 +622,15 @@ function resolveBallFlight(state: LivePlayEngineState): MatchLivePlayOutcome | u
 
   if (catchableHeight && defender && defenderDistance <= 1.45 && defenderDistance + 0.18 < receiverDistance) {
     const canIntercept = ["CB", "S", "LB"].includes(defender.position);
-    const playBallBonus = defender.actionMode === "intercept" ? 18 : defender.actionMode === "break" ? 8 : 0;
-    const interceptionChance = clamp(10 + (defender.overall - 60) * 0.65 + playBallBonus - state.ball.throwQuality * 0.08 + Math.max(0, receiverDistance - defenderDistance) * 7, 4, 68);
+    const playBallBonus = defender.actionMode === "intercept" ? 7 : defender.actionMode === "break" ? 3 : 0;
+    // A defender reaching the catch point should usually create a breakup, not an interception.
+    // The previous curve could exceed 60% on ordinary contested throws and flooded every game with turnovers.
+    const interceptionChance = livePassInterceptionChance(
+      defender.overall,
+      playBallBonus,
+      state.ball.throwQuality,
+      Math.max(0, receiverDistance - defenderDistance),
+    );
     if (canIntercept && random(state) * 100 <= interceptionChance) {
       setCarrier(state, defender);
       state.turnoverCommitted = true;
@@ -686,6 +706,19 @@ function tackleCarrier(state: LivePlayEngineState, defender: LivePlayerState, ca
   );
 }
 
+function heroHasManualControl(state: LivePlayEngineState, player: LivePlayerState, mode: MatchHeroControlMode): boolean {
+  if (!player.isHero) return false;
+  if (mode === "manual") return true;
+  if (mode === "spectator") return false;
+  if (player.hasBall) return true;
+  return state.heroPosition === "QB" || state.heroPosition === "K" || state.heroPosition === "P";
+}
+
+export function liveHeroControlActive(state: LivePlayEngineState, mode: MatchHeroControlMode): boolean {
+  const hero = state.players.find((player) => player.isHero);
+  return Boolean(hero && heroHasManualControl(state, hero, mode));
+}
+
 function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState, dt: number): void {
   if (player.hasBall) return;
   const target = player.route[player.routeIndex];
@@ -706,13 +739,13 @@ function offensiveRouteStep(state: LivePlayEngineState, player: LivePlayerState,
   if (distance(player, target) < 1.2) player.routeIndex += 1;
 }
 
-function blockerStep(state: LivePlayEngineState, blocker: LivePlayerState, dt: number): void {
+function blockerStep(state: LivePlayEngineState, blocker: LivePlayerState, dt: number, automatedHero = false): void {
   const matched = playerBySlot(state, blocker.matchupSlot, "defense");
   const target = matched && !matched.down ? matched : nearestPlayer(state, blocker, (candidate) => candidate.unit === "defense" && ["rush", "contain", "run-fit"].includes(candidate.kind));
   if (!target) return;
   const contact = distance(blocker, target);
   if (contact > 2.5) {
-    if (!blocker.isHero) moveToward(blocker, target, playerSpeed(blocker) * 0.75, dt);
+    if (!blocker.isHero || automatedHero) moveToward(blocker, target, playerSpeed(blocker) * 0.75, dt);
     return;
   }
   const powerBonus = blocker.actionMode === "power" ? 13 : blocker.actionMode === "anchor" ? 9 : 0;
@@ -728,10 +761,10 @@ function blockerStep(state: LivePlayEngineState, blocker: LivePlayerState, dt: n
   }
 }
 
-function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number): void {
+function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number, controlMode: MatchHeroControlMode): void {
   if (player.down || player.hasBall) return;
   const carrier = currentCarrier(state);
-  if (player.isHero) {
+  if (player.isHero && heroHasManualControl(state, player, controlMode)) {
     const boost = player.actionMode === "speed" ? 1.2 : player.actionMode === "break" || player.actionMode === "tackle" || player.actionMode === "intercept" ? 1.13 : 1;
     moveByInput(player, input, playerSpeed(player) * boost, dt);
     if (player.kind === "man-coverage" && player.matchupSlot) {
@@ -776,9 +809,9 @@ function defenderStep(state: LivePlayEngineState, player: LivePlayerState, input
   moveToward(player, target, playerSpeed(player) * (["rush", "contain"].includes(player.kind) ? 1.02 : 0.92), dt);
 }
 
-function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number): void {
+function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, input: LiveControlInput, dt: number, controlMode: MatchHeroControlMode): void {
   if (state.ball.state === "snap") return;
-  if (player.isHero) {
+  if (player.isHero && heroHasManualControl(state, player, controlMode)) {
     const boost = player.actionMode === "burst" ? 1.12 : 1;
     moveByInput(player, input, playerSpeed(player) * boost, dt);
     if (player.y < state.lineOfScrimmage - 0.35) state.runCommitted = true;
@@ -803,8 +836,8 @@ function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, in
   if (state.elapsed > 4.2 && pressureDistance < 5) state.runCommitted = true;
 }
 
-function carrierStep(state: LivePlayEngineState, carrier: LivePlayerState, input: LiveControlInput, dt: number): void {
-  if (carrier.isHero) {
+function carrierStep(state: LivePlayEngineState, carrier: LivePlayerState, input: LiveControlInput, dt: number, controlMode: MatchHeroControlMode): void {
+  if (carrier.isHero && heroHasManualControl(state, carrier, controlMode)) {
     const boost = carrier.actionMode === "burst" ? 1.2 : carrier.actionMode === "cut" ? 1.1 : carrier.actionMode === "secure" ? 0.9 : 1;
     moveByInput(carrier, input, playerSpeed(carrier) * boost, dt);
   } else {
@@ -844,7 +877,7 @@ function separatePlayers(state: LivePlayEngineState): void {
   }
 }
 
-function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: number): MatchLivePlayOutcome | undefined {
+function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: number, controlMode: MatchHeroControlMode): MatchLivePlayOutcome | undefined {
   const qb = quarterback(state);
   if (state.elapsed <= 0.22 && qb) {
     state.ball.x = qb.x;
@@ -854,6 +887,10 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
 
   if (state.episode.unit === "special") {
     const hero = state.players.find((player) => player.isHero);
+    if (hero && controlMode === "spectator" && state.elapsed > 1.05 && !hero.actionMode) {
+      hero.actionMode = "power";
+      hero.actionBoostUntil = state.elapsed + 0.5;
+    }
     if (hero && state.elapsed > 0.65 && state.ball.state !== "flight" && hero.actionMode === "power") {
       const quality = clamp(62 + hero.overall * 0.3 - Math.abs(1.25 - state.elapsed) * 30, 18, 98);
       const made = state.heroPosition === "K" ? quality >= 50 + state.episode.distance * 0.45 : true;
@@ -882,12 +919,14 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
       moveToward(player, carrierBeforeMovement, playerSpeed(player) * 0.98, dt);
       continue;
     }
-    if (player.id === state.quarterbackId) quarterbackStep(state, player, input, dt);
+    if (player.id === state.quarterbackId) quarterbackStep(state, player, input, dt, controlMode);
     else if (["run-block", "pass-protection", "kick-protection"].includes(player.kind)) {
-      if (player.isHero) moveByInput(player, input, playerSpeed(player) * 0.75, dt);
-      blockerStep(state, player, dt);
+      const manualHero = player.isHero && heroHasManualControl(state, player, controlMode);
+      if (manualHero) moveByInput(player, input, playerSpeed(player) * 0.75, dt);
+      blockerStep(state, player, dt, player.isHero && !manualHero);
     } else if (player.kind === "route" || player.kind === "carry" || player.kind === "handoff") {
-      if (player.isHero) {
+      const manualHero = player.isHero && heroHasManualControl(state, player, controlMode);
+      if (manualHero) {
         const boost = player.actionMode === "burst" ? 1.18 : player.actionMode === "cut" ? 1.1 : 1;
         moveByInput(player, input, playerSpeed(player) * boost, dt);
       } else offensiveRouteStep(state, player, dt);
@@ -905,8 +944,8 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
 
   const carrier = currentCarrier(state);
   if (carrier) {
-    if (carrier.id === state.quarterbackId && !state.turnoverCommitted) quarterbackStep(state, carrier, input, dt);
-    else carrierStep(state, carrier, input, dt);
+    if (carrier.id === state.quarterbackId && !state.turnoverCommitted) quarterbackStep(state, carrier, input, dt, controlMode);
+    else carrierStep(state, carrier, input, dt, controlMode);
     if (state.ball.state === "carried") {
       state.ball.x = carrier.x;
       state.ball.y = carrier.y;
@@ -914,7 +953,7 @@ function liveStep(state: LivePlayEngineState, input: LiveControlInput, dt: numbe
     }
   }
 
-  for (const player of defensePlayers) defenderStep(state, player, input, dt);
+  for (const player of defensePlayers) defenderStep(state, player, input, dt, controlMode);
   separatePlayers(state);
 
   const activeCarrier = currentCarrier(state);
@@ -1096,14 +1135,14 @@ export function issueLivePlayCommand(state: LivePlayEngineState, command: LivePl
   state.heroTouchedPlay = true;
 }
 
-export function stepLivePlayEngine(state: LivePlayEngineState, input: LiveControlInput, deltaSeconds: number): MatchLivePlayOutcome | undefined {
+export function stepLivePlayEngine(state: LivePlayEngineState, input: LiveControlInput, deltaSeconds: number, controlMode: MatchHeroControlMode = "manual"): MatchLivePlayOutcome | undefined {
   if (state.phase === "pre-snap" || state.phase === "whistle") return state.outcome;
   const dt = clamp(deltaSeconds, 0, 0.05);
   state.elapsed += dt;
   for (const player of state.players) {
     if (player.actionMode && state.elapsed > player.actionBoostUntil) delete player.actionMode;
   }
-  return liveStep(state, input, dt);
+  return liveStep(state, input, dt, controlMode);
 }
 
 export function liveReceiverTargets(state: LivePlayEngineState): LivePlayerState[] {
