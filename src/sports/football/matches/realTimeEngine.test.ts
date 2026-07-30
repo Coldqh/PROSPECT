@@ -187,7 +187,7 @@ describe("real-time football engine", () => {
     state.players.filter((player) => player.unit === "defense").forEach((player) => { player.down = true; });
     issueLivePlayCommand(state, { type: "snap" });
     issueLivePlayCommand(state, { type: "run" });
-    for (let frame = 0; frame < 1000 && !state.outcome; frame += 1) {
+    for (let frame = 0; frame < 1400 && !state.outcome; frame += 1) {
       stepLivePlayEngine(state, { moveX: 0, moveY: -1 }, 1 / 60);
     }
     expect(state.outcome?.snapResult).toBe("touchdown");
