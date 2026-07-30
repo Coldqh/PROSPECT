@@ -62,8 +62,12 @@ export function SocialLifeDashboard({ save, mutating = false, onResolveRelations
 
   async function resolveEvent(optionId: string) {
     if (!onResolveRelationshipEvent || mutating) return;
-    await onResolveRelationshipEvent(optionId);
-    setEventOpen(false);
+    try {
+      await onResolveRelationshipEvent(optionId);
+      setEventOpen(false);
+    } catch {
+      // Keep the event open so the player can retry.
+    }
   }
 
   return (

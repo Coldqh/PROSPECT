@@ -176,6 +176,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить разговор.");
+      throw caught;
     } finally {
       setMutating(false);
     }

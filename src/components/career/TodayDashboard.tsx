@@ -324,7 +324,7 @@ export function TodayDashboard({
               <div className="relationship-event-context">{event.context.map((item) => <p key={item}>{item}</p>)}</div>
               <div className="relationship-event-options">
                 {event.options.map((eventOption) => (
-                  <button type="button" key={eventOption.id} disabled={mutating} onClick={() => void onResolveRelationshipEvent(eventOption.id).then(() => setSheet(null))}>
+                  <button type="button" key={eventOption.id} disabled={mutating} onClick={() => void onResolveRelationshipEvent(eventOption.id).then(() => setSheet(null)).catch(() => undefined)}>
                     <strong>{eventOption.label}</strong><span>{eventOption.detail}</span>
                   </button>
                 ))}

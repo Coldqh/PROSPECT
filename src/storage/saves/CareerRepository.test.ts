@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CareerRepository } from "./CareerRepository";
 import { getDatabase } from "../indexedDb/database";
+import { advanceRelationshipWorld } from "../../sports/football/relationships/relationshipEvents";
 
 describe("CareerRepository", () => {
   it("creates, lists, loads, exports and removes a career", async () => {
@@ -39,7 +40,35 @@ describe("CareerRepository", () => {
     expect(loaded.football.worldSeed).toBe(created.meta.worldSeed);
     expect(loaded.character.origin.city).toBe("Houston");
 
-    let current = loaded;
+    const conversationCandidate = {
+      ...loaded,
+      life: { ...loaded.life, completedDays: 1, dayIndex: 1 },
+      relationships: {
+        ...loaded.relationships,
+        lastGeneratedCompletedDay: -1,
+        queuedEvents: [{
+          id: "repository-conversation",
+          type: "teammate-film" as const,
+          dueCompletedDay: 1,
+          primaryNpcId: "repository-conversation-npc",
+        }],
+      },
+    };
+    const withConversation = await repository.save({
+      ...conversationCandidate,
+      relationships: advanceRelationshipWorld(conversationCandidate),
+    });
+    const pendingConversation = withConversation.relationships.pendingEvent;
+    expect(pendingConversation).toBeTruthy();
+    if (!pendingConversation) throw new Error("Expected a pending relationship event");
+    const resolvedConversation = await repository.resolveRelationshipEvent(
+      created.meta.id,
+      pendingConversation.options[0]!.id,
+    );
+    expect(resolvedConversation.relationships.pendingEvent).toBeUndefined();
+    expect((await repository.load(created.meta.id)).relationships.pendingEvent).toBeUndefined();
+
+    let current = resolvedConversation;
     for (let index = 0; index < 8; index += 1) current = await repository.save(current);
     const database = await getDatabase();
     const snapshots = await database.getAllFromIndex("careerSnapshots", "by-careerId", created.meta.id);

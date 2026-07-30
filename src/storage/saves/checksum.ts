@@ -14,6 +14,11 @@ class Fnv1aHash {
 }
 
 function hashStableValue(value: unknown, hash: Fnv1aHash): void {
+  if (value === undefined) {
+    hash.write("undefined");
+    return;
+  }
+
   if (value === null || typeof value !== "object") {
     hash.write(JSON.stringify(value));
     return;

@@ -11,4 +11,9 @@ describe("createChecksum", () => {
       createChecksum({ player: { fatigue: 11 } }),
     );
   });
+  it("supports undefined values used by optional save fields", () => {
+    expect(() => createChecksum({ pendingEvent: undefined, nested: [1, undefined, 3] })).not.toThrow();
+    expect(createChecksum({ pendingEvent: undefined })).not.toBe(createChecksum({}));
+  });
+
 });

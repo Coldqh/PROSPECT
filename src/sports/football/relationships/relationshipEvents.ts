@@ -367,10 +367,10 @@ export function resolveRelationshipEvent(save: CareerSave, optionId: string): Ca
 
   const nextCoachTrust = clamp(save.football.depthChart.coachTrust + (effects.coachTrust ?? 0));
   const nextGpa = Math.max(0, Math.min(4, Math.round((save.character.education.gpa + (effects.gpa ?? 0)) * 100) / 100));
+  const { pendingEvent: _resolvedPendingEvent, ...relationshipStateWithoutPending } = save.relationships;
   const nextRelationshipState: RelationshipState = {
-    ...save.relationships,
+    ...relationshipStateWithoutPending,
     npcs: nextNpcs,
-    pendingEvent: undefined,
     queuedEvents: [...save.relationships.queuedEvents, ...followUps],
     resolvedEvents: [
       ...save.relationships.resolvedEvents,
