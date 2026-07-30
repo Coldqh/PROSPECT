@@ -7,6 +7,7 @@ import { rosterUnitForPosition } from "../../sports/football/team/positions";
 import type { FootballRosterPlayer } from "../../sports/football/team/types";
 import { createInitialTrainingState } from "../../sports/football/training/createTrainingState";
 import { createInitialMatchState } from "../../sports/football/matches/createMatchState";
+import { createDefaultMatchUsagePlan, createEmptyMatchUsageStats } from "../../sports/football/matches/usage";
 import { generateHighSchoolSeason } from "../../sports/football/season/generateSeason";
 import { createFootballRelationships } from "../../sports/football/relationships/createFootballRelationships";
 import { createRecruitingState } from "../../sports/football/recruiting/createRecruitingState";
@@ -218,6 +219,16 @@ type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistr
 type LegacyMatchWithHeroControl = CareerSave["football"]["match"] & { heroControlMode: "assisted" | "manual" | "spectator" };
 type LegacyFootballWithHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithHeroControl };
 
+
+interface LegacyUsageSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 32 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: CareerSave["football"];
+  relationships: CareerSave["relationships"];
+  world: CareerSave["world"];
+  history: HistoryEntry[];
+}
 
 interface LegacyTacticalStaffSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 31 };
@@ -556,6 +567,23 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
 }
 
 
+
+function migrateVersionThirtyTwo(input: LegacyUsageSave): CareerSave {
+  const role = input.football.match.rosterRole;
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    football: {
+      ...input.football,
+      match: {
+        ...input.football.match,
+        usagePlan: createDefaultMatchUsagePlan(input.football.position, role),
+        usageStats: createEmptyMatchUsageStats(),
+      },
+    },
+    history: input.history,
+  });
+}
 
 function migrateVersionThirtyOne(input: LegacyTacticalStaffSave): CareerSave {
   const world = upgradeFootballEcosystemV11(input.world, input.meta.currentDate);
@@ -1373,6 +1401,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 32) return migratedResult(migrateVersionThirtyTwo(input as LegacyUsageSave), 32);
   if (schemaVersion === 31) return migratedResult(migrateVersionThirtyOne(input as LegacyTacticalStaffSave), 31);
   if (schemaVersion === 30) return migratedResult(migrateVersionThirty(input as LegacyPerformanceSave), 30);
   if (schemaVersion === 29) return migratedResult(migrateVersionTwentyNine(input as LegacyHeroControlSave), 29);

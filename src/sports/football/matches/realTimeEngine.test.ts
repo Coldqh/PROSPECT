@@ -166,6 +166,85 @@ describe("real-time football engine", () => {
     expect(state.outcome).toBeDefined();
   });
 
+  it("targets the hero when a receiver wins vertically and the defender is trailing", () => {
+    const snap = episode("WR");
+    snap.heroSlot = "X";
+    snap.receiverPriorities = { X: 96, H: 68, Y: 62, Z: 58, RB: 50 };
+    const state = createLivePlayEngine(snap, "WR", "hero-deep-window");
+    state.players
+      .filter((player) => player.unit === "defense" && ["EDGE", "DT"].includes(player.position))
+      .forEach((player) => { player.down = true; });
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 500 && !state.outcome; frame += 1) {
+      if (frame >= 80) {
+        const hero = state.players.find((player) => player.isHero)!;
+        const corner = state.players.find((player) => player.slot === "LCB")!;
+        hero.x = 20;
+        hero.y = 28;
+        hero.vx = 0;
+        hero.vy = -6;
+        corner.x = 20.5;
+        corner.y = 33;
+        corner.vx = 0;
+        corner.vy = -3;
+        const otherReceivers = state.players.filter((player) => player.unit === "offense" && player.kind === "route" && !player.isHero);
+        const otherDefenders = state.players.filter((player) => player.unit === "defense" && !player.down && player.id !== corner.id);
+        otherReceivers.forEach((receiver, index) => {
+          const defender = otherDefenders[index];
+          if (!defender) return;
+          defender.x = receiver.x + 0.35;
+          defender.y = receiver.y - 0.2;
+          defender.vx = receiver.vx;
+          defender.vy = receiver.vy;
+        });
+      }
+      stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    }
+    const throwEvent = state.events.find((event) => event.type === "throw");
+    expect(throwEvent?.targetId).toBe("o-x");
+    expect(state.heroOpenWindowSeen).toBe(true);
+    expect(state.heroOpenWindowTargeted).toBe(true);
+  });
+
+  it("does not force the hero target when a safety stays over the top", () => {
+    const snap = episode("WR");
+    snap.heroSlot = "X";
+    snap.receiverPriorities = { X: 100, H: 68, Y: 62, Z: 82, RB: 50 };
+    const state = createLivePlayEngine(snap, "WR", "hero-covered-window");
+    state.players
+      .filter((player) => player.unit === "defense" && ["EDGE", "DT"].includes(player.position))
+      .forEach((player) => { player.down = true; });
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 500 && !state.outcome; frame += 1) {
+      if (frame >= 80) {
+        const hero = state.players.find((player) => player.isHero)!;
+        const corner = state.players.find((player) => player.slot === "LCB")!;
+        const safety = state.players.find((player) => player.position === "S" && !player.down)!;
+        const alternative = state.players.find((player) => player.unit === "offense" && player.kind === "route" && player.slot === "Z")!;
+        hero.x = 20;
+        hero.y = 28;
+        hero.vx = 0;
+        hero.vy = -6;
+        corner.x = 20.4;
+        corner.y = 33;
+        corner.vx = 0;
+        corner.vy = -3;
+        safety.x = 20.2;
+        safety.y = 22;
+        safety.vx = 0;
+        safety.vy = 0;
+        alternative.x = 78;
+        alternative.y = 31;
+        alternative.vx = 0;
+        alternative.vy = -4;
+      }
+      stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    }
+    const throwEvent = state.events.find((event) => event.type === "throw");
+    expect(throwEvent).toBeDefined();
+    expect(throwEvent?.targetId).not.toBe("o-x");
+  });
+
   it("lets the QB commit to a scramble instead of selecting a scripted result", () => {
     const state = createLivePlayEngine(episode("QB"), "QB", "qb-run");
     issueLivePlayCommand(state, { type: "snap" });

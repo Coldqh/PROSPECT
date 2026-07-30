@@ -603,6 +603,22 @@ describe("migrateCareerSave", () => {
 
 
 
+  it("migrates version thirty-two saves into match usage plans", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { usagePlan: _usagePlan, usageStats: _usageStats, ...legacyMatch } = current.football.match;
+    const versionThirtyTwo = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 32 as const },
+      football: { ...current.football, match: legacyMatch },
+    };
+    const result = migrateCareerSave(versionThirtyTwo);
+    expect(result.migratedFrom).toBe(32);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.football.match.usagePlan.role).toBeTruthy();
+    expect(result.save.football.match.usageStats.routesRun).toBe(0);
+    expect(result.save.history).toEqual(current.history);
+  });
+
   it("migrates version thirty-one saves into staff-driven tactics", () => {
     const current = migrateCareerSave(legacySave).save;
     const legacyWorld = {

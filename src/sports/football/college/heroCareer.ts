@@ -340,6 +340,7 @@ function gameLogFor(
     ...(interactive ? {
       spotlight: interactive.spotlight,
       stats: { ...matchStats },
+      usage: interactive.usage ?? { ...save.football.match.usageStats },
     } : {}),
   };
 }

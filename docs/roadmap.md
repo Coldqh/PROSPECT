@@ -30,6 +30,7 @@
 - [x] Living professional week, injuries, dynamic depth chart and trade deadline
 - [x] Seamless autopilot takeover with snap-result overlay
 - [x] Persistent player identity from high school through professional retirement
+- [x] Usage plans, target share and open-window QB logic
 
 ## v0.11 — High school to college
 

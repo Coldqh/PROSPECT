@@ -141,6 +141,8 @@ describe("football match simulation", () => {
     expect(match.completedEpisodes.every((episode) => episode.assignmentScore >= 0 && episode.assignmentScore <= 100)).toBe(true);
     expect(match.advancedStats.snaps).toBe(match.completedEpisodes.length);
     expect(match.advancedStats.routeWins).toBeGreaterThan(0);
+    expect(match.usageStats.routesRun).toBeGreaterThan(0);
+    expect(match.finalResult?.usage).toEqual(match.usageStats);
     expect(match.stats.turnovers).toBe(0);
   });
 

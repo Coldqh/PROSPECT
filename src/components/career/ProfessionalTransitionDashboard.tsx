@@ -313,7 +313,7 @@ export function ProfessionalTransitionDashboard({
               <header><div><small>ОЦЕНКА ИСПОЛНЕНИЯ</small><strong>Последние матчи</strong></div><span>{averagePerformance !== undefined ? `${averagePerformance.toFixed(1)}/100` : "—"}</span></header>
               {recentPerformance.map((game) => <article key={game.gameId}>
                 <span className={`result-grade result-grade--${game.grade.toLowerCase()}`}>{game.grade}<small>{Math.round(game.performanceScore ?? 0)}</small></span>
-                <div><strong>W{game.week} · {game.won ? "W" : "L"} {game.teamScore}:{game.opponentScore} · {game.snaps} SNAP</strong>{game.criterionScores && <footer>{game.criterionScores.map((item) => <em key={item.id}>{item.label} {Math.round(item.score)}</em>)}</footer>}</div>
+                <div><strong>W{game.week} · {game.won ? "W" : "L"} {game.teamScore}:{game.opponentScore} · {game.snaps} SNAP</strong><footer>{game.usage && <><em>ROUTES {game.usage.routesRun}</em><em>OPEN {game.usage.openWindows}</em><em>MISSED {game.usage.missedOpenWindows}</em></>}{game.criterionScores?.map((item) => <em key={item.id}>{item.label} {Math.round(item.score)}</em>)}</footer></div>
               </article>)}
             </div>
           )}

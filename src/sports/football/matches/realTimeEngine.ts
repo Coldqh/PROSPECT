@@ -158,6 +158,9 @@ export interface LivePlayEngineState {
   qbTimeToThrow: number;
   qbEscapeDirection: -1 | 0 | 1;
   qbEscapeTarget?: MatchPoint;
+  heroOpenWindowSeen: boolean;
+  heroOpenWindowTargeted: boolean;
+  heroBestSeparation: number;
   events: LivePlayEvent[];
   outcome?: MatchLivePlayOutcome;
 }
@@ -396,6 +399,9 @@ interface QuarterbackTargetRead {
   depth: number;
   progressionIndex: number;
   risk: number;
+  openWindow: boolean;
+  behindCoverage: boolean;
+  overTopRisk: number;
 }
 
 function quarterbackTargetRead(state: LivePlayEngineState, receiver: LivePlayerState): QuarterbackTargetRead {
@@ -404,26 +410,56 @@ function quarterbackTargetRead(state: LivePlayEngineState, receiver: LivePlayerS
   const separation = closest ? distance(receiver, closest) : 12;
   const depth = Math.max(0, state.lineOfScrimmage - receiver.y);
   const call = offenseCallForEpisode(state.episode);
-  const progressionIndex = Math.max(0, call.progression.indexOf(receiver.slot));
-  const needed = state.episode.distance;
-  const sticksValue = depth >= needed ? 12 : -Math.max(0, needed - depth) * 1.8;
-  const deepConcept = call.tags.includes("shot") || call.tags.includes("deep") || call.tags.includes("long-yardage");
-  const excessDepthPenalty = Math.max(0, depth - (deepConcept ? 24 : Math.max(needed + 8, 15))) * (deepConcept ? 0.8 : 1.85);
-  const leverageRisk = closest
-    ? Math.max(0, 2.6 - separation) * 12 + Math.max(0, receiver.y - closest.y) * 2.4
+  const rawProgressionIndex = call.progression.indexOf(receiver.slot);
+  const progressionIndex = rawProgressionIndex < 0 ? call.progression.length + 1 : rawProgressionIndex;
+  const corridor = defenders.filter((defender) => Math.abs(defender.x - receiver.x) <= 7.5);
+  const trailDefender = corridor
+    .filter((defender) => defender.y >= receiver.y - 0.6)
+    .sort((left, right) => distance(receiver, left) - distance(receiver, right))[0];
+  const overTopDefender = corridor
+    .filter((defender) => defender.y < receiver.y - 0.6)
+    .sort((left, right) => Math.abs(receiver.y - left.y) - Math.abs(receiver.y - right.y))[0];
+  const trailDepth = trailDefender ? trailDefender.y - receiver.y : 0;
+  const behindCoverage = Boolean(trailDefender && trailDepth >= 1.25 && Math.abs(trailDefender.x - receiver.x) <= 5);
+  const overTopDepth = overTopDefender ? receiver.y - overTopDefender.y : 99;
+  const overTopRisk = overTopDefender
+    ? Math.max(0, 9 - overTopDepth) * 2.5 + Math.max(0, 5.5 - Math.abs(overTopDefender.x - receiver.x)) * 1.8
     : 0;
-  const sidelinePenalty = Math.max(0, 8 - Math.min(receiver.x, 100 - receiver.x)) * 1.5;
-  const progressionBonus = Math.max(0, 18 - progressionIndex * 5.5);
-  const checkdownBonus = receiver.slot === "RB" && state.elapsed >= 2.8 ? 8 : 0;
-  const score = separation * 10.5
-    + receiver.overall * 0.22
+  const needed = state.episode.distance;
+  const sticksValue = depth >= needed ? 12 : -Math.max(0, needed - depth) * 1.6;
+  const deepConcept = call.tags.includes("shot") || call.tags.includes("deep") || call.tags.includes("long-yardage");
+  const excessDepthPenalty = Math.max(0, depth - (deepConcept ? 30 : Math.max(needed + 10, 17))) * (deepConcept ? 0.45 : 1.25);
+  const leverageRisk = closest && !behindCoverage
+    ? Math.max(0, 2.8 - separation) * 11 + Math.max(0, receiver.y - closest.y) * 2
+    : 0;
+  const sidelinePenalty = Math.max(0, 6 - Math.min(receiver.x, 100 - receiver.x)) * 1.25;
+  const progressionBonus = Math.max(0, 12 - progressionIndex * 3.4);
+  const checkdownBonus = receiver.slot === "RB" && state.elapsed >= 2.8 ? 9 : 0;
+  const usagePriority = state.episode.receiverPriorities?.[receiver.slot] ?? (call.primarySlot === receiver.slot ? 78 : 58);
+  const openWindow = (separation >= 3 && overTopRisk < 16) || (behindCoverage && separation >= 1.6 && overTopRisk < 22);
+  const score = separation * 8.7
+    + receiver.overall * 0.2
+    + usagePriority * 0.46
     + sticksValue
     + progressionBonus
     + checkdownBonus
+    + (behindCoverage ? Math.min(30, 12 + trailDepth * 5.5) : 0)
+    + (openWindow ? 13 : 0)
     - leverageRisk
+    - overTopRisk
     - sidelinePenalty
     - excessDepthPenalty;
-  return { receiver, score, separation, depth, progressionIndex, risk: leverageRisk + sidelinePenalty };
+  return {
+    receiver,
+    score,
+    separation,
+    depth,
+    progressionIndex,
+    risk: leverageRisk + overTopRisk + sidelinePenalty,
+    openWindow,
+    behindCoverage,
+    overTopRisk,
+  };
 }
 
 function setCarrier(state: LivePlayEngineState, player: LivePlayerState): void {
@@ -460,6 +496,7 @@ function startPass(state: LivePlayEngineState, thrower: LivePlayerState, target:
   state.players.forEach((candidate) => { candidate.hasBall = false; });
   state.passAttempted = true;
   state.passTargetId = target.id;
+  if (target.isHero && state.heroOpenWindowSeen) state.heroOpenWindowTargeted = true;
   state.ball = {
     x: thrower.x,
     y: thrower.y,
@@ -636,6 +673,9 @@ function evaluationSignals(state: LivePlayEngineState): MatchLiveEvaluationSigna
     decisionQuality: state.qbDecisionQuality > 0 ? clamp(state.qbDecisionQuality, 20, 98) : undefined,
     timingScore: state.qbTimeToThrow > 0 ? clamp(92 - Math.abs(state.qbTimeToThrow - 2.65) * 18, 25, 98) : undefined,
     timeToThrow: state.qbTimeToThrow > 0 ? state.qbTimeToThrow : undefined,
+    heroOpenWindow: state.heroOpenWindowSeen || undefined,
+    targetedWhenOpen: state.heroOpenWindowTargeted || undefined,
+    separationYards: state.heroBestSeparation > 0 ? Math.round(state.heroBestSeparation * 10) / 10 : undefined,
   };
 }
 
@@ -1010,7 +1050,13 @@ function quarterbackStep(state: LivePlayEngineState, player: LivePlayerState, in
   const call = offenseCallForEpisode(state.episode);
   const receivers = state.players.filter((candidate) => candidate.unit === "offense" && candidate.kind === "route" && !candidate.down);
   const reads = receivers.map((receiver) => quarterbackTargetRead(state, receiver)).sort((left, right) => right.score - left.score);
-  const best = reads[0];
+  const heroRead = reads.find((read) => read.receiver.isHero);
+  if (heroRead && state.elapsed >= 1.05) {
+    state.heroBestSeparation = Math.max(state.heroBestSeparation, heroRead.separation);
+    if (heroRead.openWindow) state.heroOpenWindowSeen = true;
+  }
+  let best = reads[0];
+  if (heroRead?.openWindow && best && heroRead.score >= best.score - (heroRead.behindCoverage ? 12 : 6)) best = heroRead;
   const quickConcept = call.tags.includes("quick") || call.tags.includes("short") || call.playType === "screen";
   const deepConcept = call.tags.includes("shot") || call.tags.includes("deep") || call.tags.includes("long-yardage");
   const minimumReadTime = quickConcept ? 1.9 : deepConcept ? 3.05 : 2.45;
@@ -1328,6 +1374,9 @@ export function createLivePlayEngine(episode: MatchEpisode, heroPosition: Footba
     qbDecisionQuality: 0,
     qbTimeToThrow: 0,
     qbEscapeDirection: 0,
+    heroOpenWindowSeen: false,
+    heroOpenWindowTargeted: false,
+    heroBestSeparation: 0,
     events: [],
   };
   if (quarterbackPlayer) state.quarterbackId = quarterbackPlayer.id;

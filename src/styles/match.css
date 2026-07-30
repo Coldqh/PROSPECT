@@ -529,3 +529,26 @@
   .match-role-metrics { grid-template-columns: 1fr; }
   .match-possession-dialog > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+/* 0.45 usage and gameplan */
+.match-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--line);
+}
+.match-usage-grid > span {
+  min-height: 58px;
+  padding: 9px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  background: var(--surface);
+}
+.match-usage-grid small { color: var(--muted); }
+.match-usage-grid strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 620px) {
+  .match-usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

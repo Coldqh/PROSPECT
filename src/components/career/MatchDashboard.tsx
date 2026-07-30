@@ -77,6 +77,7 @@ function initials(name: string): string {
 function statLine(save: CareerSave): Array<{ label: string; value: string }> {
   const stats = save.football.match.stats;
   const advanced = save.football.match.advancedStats;
+  const usage = save.football.match.usageStats;
   switch (save.football.position) {
     case "QB": return [
       { label: "COMP/ATT", value: `${stats.completions}/${stats.passingAttempts}` },
@@ -94,8 +95,8 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
     case "TE": return [
       { label: "REC/TGT", value: `${stats.receptions}/${stats.targets}` },
       { label: "REC YDS", value: String(stats.receivingYards) },
-      { label: "ROUTE W", value: String(advanced.routeWins) },
-      { label: "TD", value: String(stats.touchdowns) },
+      { label: "OPEN", value: String(usage.openWindows) },
+      { label: "MISSED", value: String(usage.missedOpenWindows) },
     ];
     case "OT":
     case "OG":
@@ -258,6 +259,8 @@ export function MatchDashboard({
             <div className="match-role-metrics">
               <span><small>ВЫХОД</small><strong>Q{match.entryQuarter ?? 1}</strong></span>
               <span><small>SNAPS</small><strong>{match.totalEpisodes}</strong></span>
+              <span><small>GAMEPLAN</small><strong>{match.usagePlan.label}</strong></span>
+              <span><small>{save.football.position === "RB" ? "TOUCH SHARE" : "TARGET SHARE"}</small><strong>{Math.round(match.usagePlan.designedShare)}%</strong></span>
             </div>
             <button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}>
               <Icon name="brain" /><strong>ANALYSIS</strong><em>{analysisMode ? "ON" : "OFF"}</em>
@@ -364,6 +367,14 @@ export function MatchDashboard({
             <strong>{match.finalResult.won ? "ПОБЕДА" : "ПОРАЖЕНИЕ"}</strong>
           </section>
           <div className="match-stat-grid">{stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div>
+          {(save.football.position === "WR" || save.football.position === "TE" || save.football.position === "RB") && (
+            <section className="match-usage-grid">
+              <span><small>ROLE</small><strong>{match.usagePlan.label}</strong></span>
+              <span><small>ROUTES</small><strong>{match.usageStats.routesRun}</strong></span>
+              <span><small>OPEN TGT</small><strong>{match.usageStats.targetsWhenOpen}/{match.usageStats.openWindows}</strong></span>
+              <span><small>SEP</small><strong>{match.usageStats.separationSamples > 0 ? (match.usageStats.separationTotal / match.usageStats.separationSamples).toFixed(1) : "0.0"}</strong></span>
+            </section>
+          )}
           <section className="match-coach-report">
             <span className={`result-grade result-grade--${match.finalResult.grade.toLowerCase()}`}>{match.finalResult.grade}</span>
             <div>

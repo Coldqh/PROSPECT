@@ -9,6 +9,7 @@ import type {
   MatchUnit,
   MatchTacticalCall,
   MatchTacticalProfile,
+  MatchUsageRole,
 } from "./types";
 
 interface PlayDescriptor {
@@ -39,6 +40,8 @@ export interface PlayCallContext {
 export interface PlayCallStrategy {
   profile?: MatchTacticalProfile | undefined;
   recentOffense?: readonly MatchTacticalCall[] | undefined;
+  featuredRole?: MatchUsageRole | undefined;
+  featuredPriority?: number | undefined;
 }
 
 interface FormationPlayer {
@@ -111,6 +114,14 @@ function offenseWeight(play: PlayDescriptor, context: PlayCallContext, strategy?
   if (scoreMargin <= -10) weight *= play.aggression >= 60 ? 1.7 : 0.7;
   if (scoreMargin >= 10) weight *= play.aggression <= 55 ? 1.7 : 0.7;
   const profile = strategy?.profile;
+  const featuredRole = strategy?.featuredRole;
+  const featuredStrength = Math.max(0, Math.min(1, (strategy?.featuredPriority ?? 0) / 100));
+  if (featuredRole === "deep-threat" && (play.tags.includes("shot") || play.tags.includes("deep") || play.tags.includes("long-yardage"))) weight *= 1 + featuredStrength * .85;
+  if (featuredRole === "slot-option" && (play.tags.includes("quick") || play.tags.includes("man-beater") || play.tags.includes("third-down"))) weight *= 1 + featuredStrength * .58;
+  if (featuredRole === "possession-target" && (play.tags.includes("medium") || play.tags.includes("third-down") || play.tags.includes("safe"))) weight *= 1 + featuredStrength * .5;
+  if (featuredRole === "red-zone-target" && fieldPosition >= 76 && (play.tags.includes("goal-line") || play.playType === "play-action")) weight *= 1 + featuredStrength * .75;
+  if (featuredRole === "receiving-back" && (play.playType === "screen" || play.tags.includes("pressure-answer"))) weight *= 1 + featuredStrength * .7;
+  if (featuredRole === "lead-runner" && play.playType === "run") weight *= 1 + featuredStrength * .7;
   if (profile) {
     if (play.playType === "run") weight *= Math.max(.35, profile.runRate / 48);
     else weight *= Math.max(.45, (100 - profile.runRate) / 52);

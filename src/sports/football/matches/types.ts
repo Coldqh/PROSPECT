@@ -9,6 +9,43 @@ export type DecisionRisk = "safe" | "balanced" | "aggressive";
 export type MatchOutcomeGrade = "A" | "B" | "C" | "D";
 export type MatchPlayType = "run" | "pass" | "play-action" | "screen" | "blitz" | "coverage" | "field-goal" | "punt";
 export type MatchHeroInvolvement = "primary" | "secondary" | "assignment-only";
+
+export type MatchUsageRole =
+  | "field-general"
+  | "lead-runner"
+  | "receiving-back"
+  | "deep-threat"
+  | "slot-option"
+  | "possession-target"
+  | "red-zone-target"
+  | "foundation-blocker"
+  | "disruptor"
+  | "second-level-anchor"
+  | "coverage-leader"
+  | "specialist";
+
+export interface MatchUsagePlan {
+  role: MatchUsageRole;
+  label: string;
+  targetPriority: number;
+  touchPriority: number;
+  redZonePriority: number;
+  deepPriority: number;
+  designedShare: number;
+  shadowRisk: number;
+  doubleTeamRisk: number;
+}
+
+export interface MatchUsageStatLine {
+  routesRun: number;
+  openWindows: number;
+  targetsWhenOpen: number;
+  missedOpenWindows: number;
+  designedTouches: number;
+  actualTouches: number;
+  separationTotal: number;
+  separationSamples: number;
+}
 export type MatchSnapResult =
   | "run"
   | "completion"
@@ -157,6 +194,8 @@ export interface MatchEpisode {
   heroInvolvement: MatchHeroInvolvement;
   heroRole: string;
   heroSlot: string;
+  receiverPriorities?: Record<string, number> | undefined;
+  heroUsageRole?: MatchUsageRole | undefined;
   assignments: MatchPlayerAssignment[];
   options: MatchDecisionOption[];
 }
@@ -249,6 +288,9 @@ export interface MatchLiveEvaluationSignals {
   decisionQuality?: number | undefined;
   timingScore?: number | undefined;
   timeToThrow?: number | undefined;
+  heroOpenWindow?: boolean | undefined;
+  targetedWhenOpen?: boolean | undefined;
+  separationYards?: number | undefined;
 }
 
 export interface MatchEpisodeResult {
@@ -313,6 +355,7 @@ export interface MatchFinalResult {
   visibilityDelta: number;
   score?: number | undefined;
   evaluation?: MatchGameEvaluation | undefined;
+  usage?: MatchUsageStatLine | undefined;
 }
 
 export interface FootballMatchState {
@@ -356,6 +399,8 @@ export interface FootballMatchState {
   timeoutsHero: number;
   timeoutsOpponent: number;
   tacticalMemory: MatchTacticalMemory;
+  usagePlan: MatchUsagePlan;
+  usageStats: MatchUsageStatLine;
   currentEpisode?: MatchEpisode | undefined;
   lastResolvedEpisode?: MatchEpisode | undefined;
   lastResolvedResult?: MatchEpisodeResult | undefined;

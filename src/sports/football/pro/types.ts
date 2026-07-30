@@ -1,6 +1,6 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
-import type { MatchOutcomeGrade, MatchStatLine } from "../matches/types";
+import type { MatchOutcomeGrade, MatchStatLine, MatchUsageStatLine } from "../matches/types";
 import type { EcosystemDefenseSystem, EcosystemOffenseSystem, EcosystemTacticalAggression, EcosystemTacticalTempo } from "../ecosystem/types";
 
 export type ProfessionalStatus =
@@ -272,6 +272,7 @@ export interface ProfessionalHeroGameLog {
   criterionScores?: Array<{ id: string; label: string; score: number }> | undefined;
   snaps: number;
   stats: MatchStatLine;
+  usage?: MatchUsageStatLine | undefined;
 }
 
 

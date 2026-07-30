@@ -6,6 +6,7 @@ import { registerProfessionalDraftClass, syncProfessionalCareerRegistry } from "
 import type { EcosystemPlayerCareerRecord } from "../ecosystem/types";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats, matchUnitForPosition } from "../matches/createMatchState";
+import { buildMatchUsagePlan, createEmptyMatchUsageStats } from "../matches/usage";
 import type { FootballMatchState, MatchStatLine } from "../matches/types";
 import { PROFESSIONAL_SALARY_CAP } from "./createProfessionalState";
 import { advanceProfessionalCoaching, applyProfessionalSchemeFit, professionalSchemeFit, professionalStaffRating, professionalTacticalModifier } from "./coaching";
@@ -823,6 +824,8 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     stats: createEmptyMatchStats(),
     advancedStats: createEmptyAdvancedMatchStats(),
     tacticalMemory: { heroOffense: [], opponentOffense: [] },
+    usagePlan: buildMatchUsagePlan(save, role),
+    usageStats: createEmptyMatchUsageStats(),
   };
 }
 
@@ -1254,6 +1257,7 @@ export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
     criterionScores: match.finalResult.evaluation?.criteria.map((item) => ({ id: item.id, label: item.label, score: item.score })),
     snaps: match.advancedStats.snaps,
     stats: match.stats,
+    usage: match.finalResult.usage ?? match.usageStats,
   };
   const updated: CareerSave = {
     ...prepared,

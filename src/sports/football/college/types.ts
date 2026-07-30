@@ -1,6 +1,6 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { ProjectedCollegeRole, RecruitingProgramTier } from "../recruiting/types";
-import type { MatchStatLine } from "../matches/types";
+import type { MatchStatLine, MatchUsageStatLine } from "../matches/types";
 
 export type CollegeTransitionStatus = "high-school" | "signed" | "orientation" | "active";
 export type CollegeEntryRoute = "scholarship" | "preferred-walk-on";
@@ -92,6 +92,7 @@ export interface CollegeHeroGameLog {
   role: CollegeHeroRole;
   spotlight?: string | undefined;
   stats?: MatchStatLine | undefined;
+  usage?: MatchUsageStatLine | undefined;
 }
 
 export interface CollegeHeroSeasonSummary {

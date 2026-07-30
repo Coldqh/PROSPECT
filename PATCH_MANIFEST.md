@@ -1,20 +1,19 @@
-# PROSPECT 0.44.0 patch manifest
+# PROSPECT 0.45.0 patch manifest
 
-Base version: `0.43.3`  
-Target version: `0.44.0`  
-Save schema: `31 → 32`
+Base version: `0.44.0`  
+Target version: `0.45.0`  
+Save schema: `32 → 33`
 
 ## Systems
 
-- complete HC/OC/DC/position-coach staffs for college and professional teams;
-- contracts, staff movement and system changes;
-- team offensive and defensive tendencies;
-- adaptive play-calling from tactical identity and recent opponent behavior;
-- scheme fit in depth charts, free agency, contracts, trades and development;
-- migration support for active professional careers;
-- expanded career-registry day/week range for long-running worlds.
+- offensive usage plans and player roles;
+- role-driven play selection and target priority;
+- QB reads for trailing coverage, leverage and over-top safety;
+- target-share regulation during the match;
+- routes, open windows, missed windows and separation tracking;
+- persistent usage data in college and professional game logs.
 
 ## Files
 
-Replacement and new files are listed in `PATCH_FILES_0.44.0.txt`.  
-Files removed from 0.43.3 are listed in `DELETE_FILES_0.44.0.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.45.0.txt`.  
+Files removed from 0.44.0 are listed in `DELETE_FILES_0.45.0.txt`.

@@ -5,6 +5,7 @@ import type { FootballPosition } from "../career/types";
 import type { EcosystemCompetitionGame } from "../ecosystem/types";
 import type { FootballSeasonState } from "../season/types";
 import type { FootballMatchState, MatchAdvancedStatLine, MatchStatLine, MatchTeamSide, MatchUnit } from "./types";
+import { buildMatchUsagePlan, createDefaultMatchUsagePlan, createEmptyMatchUsageStats } from "./usage";
 
 function addDays(date: GameDate, days: number): GameDate {
   const value = new Date(Date.UTC(date.year, date.month - 1, date.day + days));
@@ -130,6 +131,8 @@ export function createInitialMatchState(
     timeoutsHero: 3,
     timeoutsOpponent: 3,
     tacticalMemory: { heroOffense: [], opponentOffense: [] },
+    usagePlan: createDefaultMatchUsagePlan(position),
+    usageStats: createEmptyMatchUsageStats(),
     completedEpisodes: [],
     drives: [],
     stats: createEmptyMatchStats(),
@@ -210,6 +213,8 @@ export function createCollegeMatchState(
     timeoutsHero: 3,
     timeoutsOpponent: 3,
     tacticalMemory: { heroOffense: [], opponentOffense: [] },
+    usagePlan: buildMatchUsagePlan(save, role === "developmental" ? "inactive" : role),
+    usageStats: createEmptyMatchUsageStats(),
     completedEpisodes: [],
     drives: [],
     stats: createEmptyMatchStats(),

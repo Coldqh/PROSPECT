@@ -10,6 +10,7 @@ import { createEmptyAdvancedMatchStats, createEmptyMatchStats } from "./createMa
 import { calculateDecisionForecast, decisionScoreCenter } from "./decisionForecast";
 import { decodeLivePlayOutcome } from "./realTimeEngine";
 import { aggregateMatchEvaluation, evaluateSnapPerformance, gradeFromPerformanceScore } from "./performanceEvaluation";
+import { addMatchUsageStats, buildMatchUsagePlan, createEmptyMatchUsageStats, receiverPriorityMap, usageDeltaForSnap } from "./usage";
 import type {
   FootballMatchState,
   MatchAdvancedStatLine,
@@ -58,6 +59,8 @@ interface SnapSimulation {
   teamExecutionScore: number;
   description: string;
   pressureOccurred?: boolean;
+  heroOpenWindow?: boolean;
+  heroSeparationYards?: number;
   grossPuntYards?: number;
   puntReturnYards?: number;
   kickDistance?: number;
@@ -549,6 +552,7 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     : match.opponentScore - match.heroScore;
   const offenseCanCheck = match.heroUnit === "offense" && canHeroCheck(save);
   const defenseCanCheck = match.heroUnit === "defense" && canHeroCheck(save);
+  const heroOffenseGameplan = offenseSide === "hero" && match.heroUnit === "offense" ? match.usagePlan : undefined;
   const offenseCall = callPlay(
     `${save.meta.worldSeed}:${match.gameId}:offense-call:${index}`,
     "offense",
@@ -562,6 +566,8 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     {
       profile: tacticalProfileForSide(save, offenseSide),
       recentOffense: offenseSide === "hero" ? match.tacticalMemory.heroOffense : match.tacticalMemory.opponentOffense,
+      featuredRole: heroOffenseGameplan?.role,
+      featuredPriority: heroOffenseGameplan?.targetPriority ?? heroOffenseGameplan?.touchPriority,
     },
   );
   const defenseCall = callPlay(
@@ -589,6 +595,14 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
   ));
   const heroAssignment = describeHeroAssignment(save.football.position, match.heroUnit, assignments, offenseCall, defenseCall);
   const hero = assignments.find((assignment) => assignment.isHero);
+  const receiverPriorities = receiverPriorityMap(
+    match.usagePlan,
+    match.usageStats,
+    offenseCall,
+    heroAssignment.heroSlot,
+    save.football.position,
+    match.driveFieldPosition,
+  );
   const playCall = match.heroUnit === "offense" ? offenseCall : defenseCall;
   const opponentCall = match.heroUnit === "offense" ? defenseCall : offenseCall;
   const fieldZone = match.driveFieldPosition >= 80 ? "red zone" : match.driveFieldPosition <= 20 ? "глубоко на своей половине" : "между двадцатками";
@@ -616,6 +630,8 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     heroInvolvement: heroAssignment.involvement,
     heroRole: heroAssignment.role,
     heroSlot: heroAssignment.heroSlot,
+    receiverPriorities,
+    heroUsageRole: match.usagePlan.role,
     assignments,
     options: assignmentOptions(save.football.position, hero ?? assignments[0]!, heroAssignment.involvement),
   };
@@ -639,13 +655,21 @@ function matchupModifier(offenseCall: MatchEpisode["playCall"], defenseCall: Mat
   return modifier;
 }
 
-function chooseTarget(call: MatchEpisode["playCall"], random: SeededRandom, pressured: boolean): string | undefined {
+function chooseTarget(
+  call: MatchEpisode["playCall"],
+  random: SeededRandom,
+  pressured: boolean,
+  priorities: Record<string, number> = {},
+  featuredOpenSlot?: string,
+): string | undefined {
   const progression = call.progression;
   if (progression.length === 0) return call.primarySlot;
   if (progression.length === 1) return progression[0];
-  const weights = progression.map((_, index) => {
-    if (pressured) return Math.max(.08, .62 - index * .17);
-    return Math.max(.1, .44 - index * .09);
+  const weights = progression.map((slot, index) => {
+    const progressionWeight = pressured ? Math.max(.08, .62 - index * .17) : Math.max(.1, .44 - index * .09);
+    const priority = Math.max(20, Math.min(100, priorities[slot] ?? (index === 0 ? 74 : 58)));
+    const openWindowMultiplier = slot === featuredOpenSlot ? 5.4 : 1;
+    return progressionWeight * Math.pow(priority / 60, 1.7) * openWindowMultiplier;
   });
   const total = weights.reduce((sum, value) => sum + value, 0);
   let cursor = random.next() * total;
@@ -748,7 +772,34 @@ function simulateSnap(
   const pressureBase = defenseCall.playType === "blitz" ? .31 + defenseCall.aggression * .003 : .11;
   const pressureChance = Math.max(.05, Math.min(.62, pressureBase - teamEdge * .006 + (offenseCall.playType === "screen" ? -.18 : 0)));
   const pressured = passLike && random.chance(pressureChance);
-  const targetSlot = passLike ? chooseTarget(offenseCall, random, pressured) : undefined;
+  const heroRouteSnap = passLike
+    && match.heroUnit === "offense"
+    && ["WR", "TE", "RB"].includes(save.football.position)
+    && episode.assignments.some((assignment) => assignment.isHero && assignment.kind === "route");
+  const heroPriority = episode.receiverPriorities?.[episode.heroSlot] ?? 0;
+  const featuredConcept = episode.playCall.primarySlot === episode.heroSlot
+    || (episode.heroUsageRole === "deep-threat" && (offenseCall.tags.includes("shot") || offenseCall.tags.includes("deep")))
+    || (episode.heroUsageRole === "slot-option" && (offenseCall.tags.includes("quick") || offenseCall.tags.includes("man-beater")))
+    || (episode.heroUsageRole === "red-zone-target" && episode.fieldPosition >= 78);
+  const openChance = Math.max(.04, Math.min(.62,
+    .025
+      + Math.max(-12, assignmentScore - 60) * .0035
+      + heroPriority * .0008
+      + (episode.heroInvolvement === "primary" ? .03 : 0)
+      + (featuredConcept ? .04 : 0)
+      - match.usagePlan.shadowRisk * .00055
+      - match.usagePlan.doubleTeamRisk * .00035,
+  ));
+  const heroOpenWindow = heroRouteSnap && random.chance(openChance);
+  const heroSeparationYards = heroOpenWindow
+    ? Math.max(2.2, Math.min(8.5, 2.5 + Math.max(0, assignmentScore - 58) * .045 + random.integer(0, 22) / 10))
+    : 0;
+  const targetPriorities = { ...(episode.receiverPriorities ?? {}) };
+  if (heroOpenWindow) targetPriorities[episode.heroSlot] = Math.min(100, (targetPriorities[episode.heroSlot] ?? 60) + 34);
+  const targetSlot = passLike
+    ? chooseTarget(offenseCall, random, pressured, targetPriorities, heroOpenWindow ? episode.heroSlot : undefined)
+    : undefined;
+  const usageMetadata = { heroOpenWindow, heroSeparationYards };
   let ballCarrierSlot = offenseCall.playType === "run" ? offenseCall.primarySlot ?? "RB" : undefined;
   if (offenseCall.concept.includes("Read") && random.chance(.21)) ballCarrierSlot = "QB";
 
@@ -766,6 +817,7 @@ function simulateSnap(
       ballCarrierSlot,
       teamExecutionScore,
       description: offensePenalty ? "Флаг против атаки. Пять ярдов назад, down повторяется." : "Защита нарушает правила. Атака получает ярды по штрафу.",
+      ...usageMetadata,
     };
   }
 
@@ -780,12 +832,12 @@ function simulateSnap(
     if (assignmentScore < 48 && selected.risk === "aggressive") yards -= random.integer(1, 5);
     const fumbleChance = Math.max(.008, .022 + Math.max(0, -teamEdge) * .0015 + selected.mistakeRisk * .0007);
     if (random.chance(fumbleChance)) {
-      return { snapResult: "turnover", yards, points: 0, turnover: true, firstDown: false, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: "Мяч выбит в контакте. Защита забирает владение." };
+      return { snapResult: "turnover", yards, points: 0, turnover: true, firstDown: false, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: "Мяч выбит в контакте. Защита забирает владение.", ...usageMetadata };
     }
     if (episode.fieldPosition + yards >= 100) {
-      return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: "Вынос проходит до зачётной зоны." };
+      return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: "Вынос проходит до зачётной зоны.", ...usageMetadata };
     }
-    return { snapResult: "run", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: yards < 0 ? "Фронт защиты выигрывает точку атаки." : `Вынос приносит ${yards} ярдов.` };
+    return { snapResult: "run", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, ballCarrierSlot, teamExecutionScore, description: yards < 0 ? "Фронт защиты выигрывает точку атаки." : `Вынос приносит ${yards} ярдов.`, ...usageMetadata };
   }
 
   const interceptionChance = simulatedPassInterceptionChance(teamEdge, offenseCall.aggression, pressured);
@@ -803,19 +855,20 @@ function simulateSnap(
       teamExecutionScore,
       description: pickSix ? "Защитник читает бросок и возвращает перехват в тачдаун." : "Защита перехватывает передачу и меняет владение.",
       pressureOccurred: pressured,
+      ...usageMetadata,
     };
   }
 
   const sackChance = pressured ? Math.max(.08, Math.min(.48, .22 - teamEdge * .008)) : Math.max(.01, .06 - teamEdge * .003);
   if (random.chance(sackChance)) {
     const yards = -random.integer(4, 10);
-    return { snapResult: "sack", yards, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: `Карман закрывается. Потеря ${Math.abs(yards)} ярдов.`, pressureOccurred: true };
+    return { snapResult: "sack", yards, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: `Карман закрывается. Потеря ${Math.abs(yards)} ярдов.`, pressureOccurred: true, ...usageMetadata };
   }
 
   const depthPenalty = offenseCall.aggression >= 75 ? .12 : offenseCall.aggression >= 60 ? .06 : 0;
   const completionChance = Math.max(.24, Math.min(.86, .59 + teamEdge * .011 - depthPenalty + (offenseCall.playType === "screen" ? .16 : 0) - (pressured ? .14 : 0)));
   if (!random.chance(completionChance)) {
-    return { snapResult: "incomplete", yards: 0, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: pressured ? "Давление ломает тайминг, пас не завершён." : "Окно закрывается до прибытия мяча.", pressureOccurred: pressured };
+    return { snapResult: "incomplete", yards: 0, points: 0, turnover: false, firstDown: false, repeatDown: false, targetSlot, teamExecutionScore, description: pressured ? "Давление ломает тайминг, пас не завершён." : "Окно закрывается до прибытия мяча.", pressureOccurred: pressured, ...usageMetadata };
   }
 
   const base = offenseCall.playType === "screen"
@@ -829,9 +882,9 @@ function simulateSnap(
   if (assignmentScore >= 68 && random.chance(Math.min(.42, selected.upside * .0042))) yards += random.integer(4, Math.max(6, Math.round(selected.upside * .24)));
   if (assignmentScore < 48 && selected.risk === "aggressive") yards = Math.max(-2, yards - random.integer(2, 7));
   if (episode.fieldPosition + yards >= 100) {
-    return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, targetSlot, teamExecutionScore, description: "Передача завершается в зачётной зоне.", pressureOccurred: pressured };
+    return { snapResult: "touchdown", yards: 100 - episode.fieldPosition, points: 7, scoringSide: offenseSide, turnover: false, firstDown: true, repeatDown: false, targetSlot, teamExecutionScore, description: "Передача завершается в зачётной зоне.", pressureOccurred: pressured, ...usageMetadata };
   }
-  return { snapResult: "completion", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, targetSlot, teamExecutionScore, description: `Пас завершён на ${yards} ярдов.`, pressureOccurred: pressured };
+  return { snapResult: "completion", yards, points: 0, turnover: false, firstDown: yards >= episode.distance, repeatDown: false, targetSlot, teamExecutionScore, description: `Пас завершён на ${yards} ярдов.`, pressureOccurred: pressured, ...usageMetadata };
 }
 
 function makeAdvancedDelta(hero: MatchPlayerAssignment, grade: MatchOutcomeGrade, involved: boolean, pressureOccurred: boolean): MatchAdvancedStatLine {
@@ -1187,8 +1240,8 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
   const spotlightByPosition: Record<FootballPosition, string> = {
     QB: `${match.stats.completions}/${match.stats.passingAttempts}, ${match.stats.passingYards} ярдов, задания ${assignmentRate}%`,
     RB: `${match.stats.rushingYards} ярдов, ${match.stats.receptions} приёмов, задания ${assignmentRate}%`,
-    WR: `${match.stats.receptions}/${match.stats.targets}, ${match.stats.receivingYards} ярдов, route wins ${match.advancedStats.routeWins}`,
-    TE: `${match.stats.receptions}/${match.stats.targets}, ${match.stats.receivingYards} ярдов, blocks ${match.advancedStats.blocksWon}`,
+    WR: `${match.stats.receptions}/${match.stats.targets}, ${match.stats.receivingYards} ярдов, OPEN ${match.usageStats.openWindows}, MISSED ${match.usageStats.missedOpenWindows}`,
+    TE: `${match.stats.receptions}/${match.stats.targets}, ${match.stats.receivingYards} ярдов, OPEN ${match.usageStats.openWindows}, MISSED ${match.usageStats.missedOpenWindows}`,
     OT: `${match.advancedStats.passProtectionWins} побед в pass pro, sacks allowed ${match.stats.sacksAllowed}, pancakes ${match.stats.pancakes}`,
     OG: `${match.advancedStats.runBlockWins} побед в выносе, pressures allowed ${match.stats.pressuresAllowed}, pancakes ${match.stats.pancakes}`,
     C: `${match.advancedStats.passProtectionWins + match.advancedStats.runBlockWins} выигранных блоков, pressures allowed ${match.stats.pressuresAllowed}, задания ${assignmentRate}%`,
@@ -1215,6 +1268,7 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
     visibilityDelta,
     score: evaluation.score,
     evaluation,
+    usage: { ...match.usageStats },
   };
 }
 
@@ -1273,6 +1327,8 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
     timeoutsHero: 3,
     timeoutsOpponent: 3,
     tacticalMemory: { heroOffense: [], opponentOffense: [] },
+    usagePlan: buildMatchUsagePlan(save, match.rosterRole),
+    usageStats: createEmptyMatchUsageStats(),
     completedEpisodes: [],
     drives: [],
     stats: createEmptyMatchStats(),
@@ -1376,6 +1432,18 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
   const statResolution = liveOutcome
     ? { stats: liveOutcome.statDelta, advanced: liveOutcome.advancedDelta, involved: liveOutcome.heroInvolved }
     : makeStatDelta(save, episode, simulation, preliminaryGrade, random);
+  const usageDelta = usageDeltaForSnap(
+    save.football.position,
+    episode,
+    simulation.targetSlot,
+    simulation.ballCarrierSlot,
+    liveOutcome?.evaluationSignals ?? {
+      heroOpenWindow: Boolean(simulation.heroOpenWindow),
+      targetedWhenOpen: Boolean(simulation.heroOpenWindow && simulation.targetSlot === episode.heroSlot),
+      separationYards: simulation.heroSeparationYards,
+    },
+    statResolution.advanced,
+  );
   const evaluation = evaluateSnapPerformance({
     position: save.football.position,
     episode,
@@ -1538,6 +1606,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     lastResolvedResult: { ...outcome, driveEnded },
     stats: addStats(match.stats, statResolution.stats),
     advancedStats: addAdvancedStats(match.advancedStats, statResolution.advanced),
+    usageStats: addMatchUsageStats(match.usageStats, usageDelta),
     currentEpisode: undefined,
   };
 
