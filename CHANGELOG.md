@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.45.1 — WORLD STYLES PACKAGING HOTFIX
+
+- restored `src/styles/world.css` in the patch package and Git source tree;
+- installer now verifies the required stylesheet before reporting success;
+- no save schema changes.
+
 ## 0.45.0 — USAGE PLAN / TARGET LOGIC
 
 ### Роли и игровой план
