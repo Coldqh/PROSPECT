@@ -2,7 +2,7 @@
 
 Браузерный симулятор жизни и карьеры игрока в американский футбол внутри автономной спортивной экосистемы.
 
-## Текущий этап — 0.43.1
+## Текущий этап — 0.43.2
 
 - итоговая оценка матча рассчитывается по роли, производству и цене ошибок;
 - 8 TKL, 7 TFL, 7 SACK и 10 PRESS дают 93/A вместо 67/C;
@@ -29,5 +29,5 @@ npm run build
 
 ```powershell
 cd C:\PROSPECT
-powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.43.1.ps1
+powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.43.2.ps1
 ```

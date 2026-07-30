@@ -19,7 +19,13 @@ export function cloneCareer(save: CareerSave): CareerSave {
 }
 
 export function draftEligibleCareer(seed = "professional-draft-test"): CareerSave {
-  const generated = createFootballCareerState(seed, createLegacyFootballSetup(seed));
+  const legacySetup = createLegacyFootballSetup(seed);
+  const generated = createFootballCareerState(seed, {
+    ...legacySetup,
+    position: "EDGE",
+    archetypeId: "speed-rusher",
+    jerseyNumber: 55,
+  });
   const first = generated.football.recruitment.programs[0];
   if (!first) throw new Error("No recruiting program");
   const football = {

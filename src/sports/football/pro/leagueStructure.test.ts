@@ -25,6 +25,7 @@ describe("professional league roster and preparation", () => {
 
   it("gives starters, rotation players and the bench different participation", () => {
     const base = cloneCareer(activeFixture);
+    expect(base.football.position).toBe("EDGE");
     const game = base.football.professional.league.schedule.find((item) => item.id === base.football.professional.league.activeGameId);
     const career = base.football.professional.heroCareer;
     if (!game || !career) throw new Error("No professional hero game");
@@ -65,6 +66,33 @@ describe("professional league roster and preparation", () => {
       },
     };
     expect(isProfessionalMatchAwaitingResolution(practice)).toBe(false);
+  });
+
+  it("keeps specialist participation separate from scrimmage positions", () => {
+    const base = cloneCareer(activeFixture);
+    const game = base.football.professional.league.schedule.find((item) => item.id === base.football.professional.league.activeGameId);
+    const career = base.football.professional.heroCareer;
+    if (!game || !career) throw new Error("No professional hero game");
+    const cases = [
+      { role: "starter" as const, snaps: 7 },
+      { role: "rotation" as const, snaps: 4 },
+      { role: "special-teams" as const, snaps: 4 },
+      { role: "inactive" as const, snaps: 1 },
+    ];
+    for (const item of cases) {
+      const save = {
+        ...base,
+        football: {
+          ...base.football,
+          position: "K" as const,
+          professional: {
+            ...base.football.professional,
+            heroCareer: { ...career, role: item.role },
+          },
+        },
+      };
+      expect(createProfessionalMatchState(save, game).totalEpisodes).toBe(item.snaps);
+    }
   });
 
   it("turns weekly preparation into readiness, health and depth-chart consequences", () => {
