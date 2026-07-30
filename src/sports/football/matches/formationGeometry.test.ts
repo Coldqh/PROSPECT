@@ -56,6 +56,7 @@ function episode(assignments: ReturnType<typeof buildSnapAssignments>): MatchEpi
     read: "Read QB",
     playCall: offenseCall("Gun Doubles"),
     opponentCall: defenseCall("Dime"),
+    heroActive: true,
     heroInvolvement: "secondary",
     heroRole: "Deep half",
     heroSlot: "FS",

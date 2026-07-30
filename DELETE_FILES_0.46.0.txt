@@ -1,0 +1,7 @@
+APPLY_PATCH_0.45.2.ps1
+APPLY_PATCH_0.45.2.sh
+DELETE_FILES_0.45.2.txt
+PACKAGE_0.45.2.md
+PATCH_0.45.2.md
+PATCH_FILES_0.45.2.txt
+src/components/career/CareerOverviewDashboard.tsx

@@ -2,28 +2,23 @@ import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { Icon, type IconName } from "../ui/Icon";
 
-export type CareerSecondaryView = "overview" | "season" | "matches" | "standings" | "recruiting" | "social" | "feed" | "market" | "rankings" | "leagues";
+export type CareerSecondaryView = "season" | "recruiting" | "social" | "feed" | "market" | "rankings";
 
 interface DrawerItem {
   id: CareerSecondaryView;
   label: string;
-  code: string;
   icon: IconName;
 }
 
 const careerItems: readonly DrawerItem[] = [
-  { id: "overview", label: "Обзор", code: "OVR", icon: "chart" },
-  { id: "season", label: "Сезон", code: "SEA", icon: "calendar" },
-  { id: "matches", label: "Матчи", code: "GMS", icon: "football" },
-  { id: "standings", label: "Таблица", code: "STD", icon: "trophy" },
+  { id: "season", label: "Сезон", icon: "calendar" },
 ];
 
 const worldItems: readonly DrawerItem[] = [
-  { id: "leagues", label: "Лиги", code: "LGS", icon: "trophy" },
-  { id: "social", label: "Социальная жизнь", code: "SOC", icon: "team" },
-  { id: "feed", label: "Лента", code: "FED", icon: "pulse" },
-  { id: "market", label: "Рынок", code: "MKT", icon: "swap" },
-  { id: "rankings", label: "Рейтинг", code: "RNK", icon: "chart" },
+  { id: "social", label: "Социальная жизнь", icon: "team" },
+  { id: "feed", label: "Лента", icon: "pulse" },
+  { id: "market", label: "Рынок", icon: "swap" },
+  { id: "rankings", label: "Рейтинг", icon: "chart" },
 ];
 
 interface CareerDrawerProps {
@@ -42,8 +37,10 @@ function seasonLine(save: CareerSave): string {
     const career = save.football.college.heroCareer;
     return `${career.seasonYear} · ${career.classYear} · W${career.week}`;
   }
-  if (save.meta.phase === "professional-draft" || save.meta.phase === "professional-career") {
-    return `${save.football.professional.draftYear} · DRAFT`;
+  if (save.meta.phase === "professional-draft") return `${save.football.professional.draftYear} · DRAFT`;
+  if (save.meta.phase === "professional-career") {
+    const league = save.football.professional.league;
+    return `${league.seasonYear} · W${league.week}`;
   }
   return `${save.football.season.year} · WEEK ${Math.min(save.football.season.week + 1, save.football.season.totalWeeks)}`;
 }
@@ -104,7 +101,6 @@ export function CareerDrawer({ open, save, active, showRecruiting = false, onSel
       className={active === item.id ? "is-active" : ""}
       onClick={() => onSelect(item.id)}
     >
-      <span className="game-drawer__code">{item.code}</span>
       <span className="game-drawer__label">{item.label}</span>
       <Icon name={item.icon} size={17} />
     </button>
@@ -130,7 +126,6 @@ export function CareerDrawer({ open, save, active, showRecruiting = false, onSel
             {renderItems(careerItems)}
             {showRecruiting && (
               <button type="button" className={active === "recruiting" ? "is-active" : ""} onClick={() => onSelect("recruiting")}>
-                <span className="game-drawer__code">REC</span>
                 <span className="game-drawer__label">Рекрутинг</span>
                 <Icon name="target" size={17} />
               </button>

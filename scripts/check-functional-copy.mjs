@@ -31,6 +31,9 @@ const forbidden = [
   "live-football__autopilot",
   "Матч упущен",
   "Индивидуальная оценка",
+  "item.detail",
+  "game-drawer__code",
+  "professional-root-tabs",
 ];
 const errors = [];
 for (const file of files) {

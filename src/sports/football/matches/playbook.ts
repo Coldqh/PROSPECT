@@ -538,13 +538,14 @@ export function buildSnapAssignments(
   heroUnit: MatchUnit,
   heroPosition: FootballPosition,
   seed: string,
+  heroActive = true,
 ): MatchPlayerAssignment[] {
   const random = new SeededRandom(seed);
   const defenseSide: MatchTeamSide = offenseSide === "hero" ? "opponent" : "hero";
-  const offensePlayers = heroUnit === "offense"
+  const offensePlayers = heroUnit === "offense" && heroActive
     ? ensureHeroPosition(offenseFormation(offenseCall.formation), heroPosition)
     : offenseFormation(offenseCall.formation);
-  const defensePlayers = heroUnit === "defense"
+  const defensePlayers = heroUnit === "defense" && heroActive
     ? ensureHeroPosition(defenseFormation(defenseCall.formation), heroPosition)
     : defenseFormation(defenseCall.formation);
   const heroPool = heroUnit === "offense" ? offensePlayers : defensePlayers;
@@ -553,14 +554,14 @@ export function buildSnapAssignments(
     player,
     offenseCall,
     offenseSide,
-    heroUnit === "offense" && offenseSide === "hero" && player.slot === heroSlot,
+    heroActive && heroUnit === "offense" && offenseSide === "hero" && player.slot === heroSlot,
     random,
   ));
   const defense = defensePlayers.map((player) => defenseAssignment(
     player,
     defenseCall,
     defenseSide,
-    heroUnit === "defense" && defenseSide === "hero" && player.slot === heroSlot,
+    heroActive && heroUnit === "defense" && defenseSide === "hero" && player.slot === heroSlot,
     random,
   ));
   return [...defense, ...offense];
@@ -620,6 +621,7 @@ export function buildSpecialTeamsAssignments(
   position: "K" | "P",
   heroSide: MatchTeamSide,
   seed: string,
+  heroActive = true,
 ): MatchPlayerAssignment[] {
   const random = new SeededRandom(seed);
   const opponentSide = heroSide === "hero" ? "opponent" : "hero";
@@ -651,7 +653,7 @@ export function buildSpecialTeamsAssignments(
     { slot: "SAM", position: "LB", label: "S", start: point(66, defenseY(4.5)) }, { slot: "FS", position: "S", label: "S", start: point(50, defenseY(13)) },
   ];
   const kickAssignments: MatchPlayerAssignment[] = kicking.map((player) => {
-    const isHero = player.position === position && player.slot === position;
+    const isHero = heroActive && player.position === position && player.slot === position;
     const kind: MatchPlayerAssignment["kind"] = isHero ? (position === "K" ? "kick" : "punt") : player.slot === "LS" ? "long-snap" : position === "P" && player.slot.includes("GUN") ? "return-coverage" : "kick-protection";
     return { id: `${heroSide}-special-${player.slot}`, side: heroSide, unit: "special" as const, slot: player.slot, position: player.position, label: player.label, isHero, kind, task: isHero ? (position === "K" ? "Провести удар между стойками" : "Поставить пант в вызванную зону") : kind === "long-snap" ? "Дать точный длинный снэп" : kind === "return-coverage" ? "Закрыть return lane" : "Защитить точку удара", start: player.start, end: isHero ? point(50, 22) : point(player.start.x, player.start.y - 10), delayMs: random.integer(20, 180) };
   });

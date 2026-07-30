@@ -1,11 +1,12 @@
 import { Icon, type IconName } from "../ui/Icon";
 
-export type CareerPrimaryView = "profile" | "home" | "team";
+export type CareerPrimaryView = "profile" | "home" | "team" | "league";
 
 const items = [
-  { id: "profile", label: "Профиль", icon: "user" },
-  { id: "home", label: "Дом", icon: "home" },
+  { id: "home", label: "Сегодня", icon: "home" },
+  { id: "profile", label: "Карьера", icon: "user" },
   { id: "team", label: "Команда", icon: "team" },
+  { id: "league", label: "Лига", icon: "trophy" },
 ] as const satisfies readonly { id: CareerPrimaryView; label: string; icon: IconName }[];
 
 interface CareerNavigationProps {

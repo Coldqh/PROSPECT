@@ -117,7 +117,7 @@ export function createInitialMatchState(
     heroFatigue: random.integer(4, 10),
     coachGrade: 55,
     episodeIndex: 0,
-    totalEpisodes: position === "K" || position === "P" ? 8 : 92,
+    totalEpisodes: position === "K" || position === "P" ? 18 : 120,
     driveDown: 1,
     driveDistance: 10,
     driveFieldPosition: openingFieldPosition,
@@ -163,15 +163,7 @@ export function createCollegeMatchState(
   const random = new SeededRandom(`${save.meta.worldSeed}:college-match:${game.id}`);
   const role = career?.role ?? "developmental";
   const openingFieldPosition = random.integer(18, 34);
-  const totalEpisodes = save.football.position === "K" || save.football.position === "P"
-    ? role === "starter" ? 9 : role === "rotation" || role === "special-teams" ? 7 : 4
-    : role === "starter"
-      ? 92
-      : role === "rotation"
-        ? 46
-        : role === "special-teams"
-          ? 24
-          : 16;
+  const totalEpisodes = save.football.position === "K" || save.football.position === "P" ? 18 : 120;
 
   return {
     moduleVersion: 1,

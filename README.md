@@ -1,17 +1,17 @@
 # PROSPECT
 
-Браузерный симулятор жизни и карьеры игрока в американский футбол внутри автономной спортивной экосистемы.
+Браузерный симулятор карьеры игрока в американский футбол внутри автономной спортивной экосистемы.
 
-## Текущий этап — 0.45.2
+## Текущий этап — 0.46.0
 
-- недельный usage plan для каждой позиции нападения;
-- роли deep threat, slot option, possession target, red-zone target, receiving back и lead runner;
-- play-caller вызывает концепты под роль героя;
-- QB учитывает trail coverage, safety сверху, leverage и реальное окно передачи;
-- чистый вертикальный отрыв поднимает героя в прогрессии;
-- target share регулируется по ходу матча и не превращается в форсирование;
-- routes, open windows, missed windows и separation сохраняются в истории матчей;
-- save schema 33.
+- тяжёлый автономный мир хранится отдельными IndexedDB-срезами;
+- текущие сохранения проходят Zod-валидацию перед записью;
+- участие героя определяется personnel package, ролью, усталостью, счётом и четвертью;
+- K/P выходят только в реальных ситуациях четвёртого дауна;
+- одна навигация для школы, колледжа и PRO: Сегодня / Карьера / Команда / Лига;
+- сезон, матчи и таблица объединены;
+- PRO-экран после драфта показывает активную карьеру, а не draft stock;
+- save schema 33, IndexedDB schema 2.
 
 ## Команды
 
@@ -26,11 +26,5 @@ npm run build
 
 ```powershell
 cd C:\PROSPECT
-powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.45.2.ps1
+powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.46.0.ps1
 ```
-
-
-### 0.45.2
-
-- восстановлен `src/styles/world.css` в patch ZIP и Git;
-- save schema без изменений.

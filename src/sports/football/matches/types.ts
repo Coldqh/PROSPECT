@@ -192,6 +192,7 @@ export interface MatchEpisode {
   playCall: MatchPlayCall;
   opponentCall: MatchPlayCall;
   heroInvolvement: MatchHeroInvolvement;
+  heroActive: boolean;
   heroRole: string;
   heroSlot: string;
   receiverPriorities?: Record<string, number> | undefined;

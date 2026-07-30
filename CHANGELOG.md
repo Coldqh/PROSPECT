@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.46.0 — CORE CONSOLIDATION
+
+### Persistence
+
+- autonomous-world players, social graph and career registry are stored in three content-addressed IndexedDB slices;
+- daily career snapshots keep only the compact career state and slice references;
+- unchanged world slices are reused instead of copied on every action;
+- current-schema saves are validated with Zod before the database transaction;
+- invalid state is rejected without replacing the latest valid snapshot;
+- legacy complete snapshots remain loadable.
+
+### Match participation
+
+- fixed starter/rotation/bench snap quotas were removed;
+- personnel package, role, position, fatigue, quarter and score determine every appearance;
+- inactive, practice-squad and free-agent players are skipped automatically;
+- kickers and punters enter only after real fourth-down field-position decisions;
+- an inactive professional player can advance the week without opening an impossible match.
+
+### Interface
+
+- school, college and professional stages use the same Today / Career / Team / League navigation;
+- Season, Matches and Standings are consolidated into one section with internal tabs;
+- the professional header changes from draft data to team, week, role, depth, health and record after the draft;
+- duplicate professional standings, position-room, transactions and injury panels were removed from the career home;
+- drawer codes and nonfunctional performance descriptions were removed.
+
+### Verification
+
+- compact snapshot: about 0.65 MB instead of about 7.9 MB for the full initial state;
+- three world slices restore all 2,481 generated players;
+- invalid current-schema health values are rejected;
+- inactive PRO career advances from week 1 to week 2;
+- dynamic participation tests cover starter, rotation, reserve, fatigue and package mismatch;
+- save schema remains 33; IndexedDB schema is upgraded to version 2.
+
 ## 0.45.2 — RELEASE INTEGRITY / USAGE PRIORITY HOTFIX
 
 - restored every source file accidentally removed from the 0.45.0 Git commit;

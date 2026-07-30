@@ -227,7 +227,7 @@ export function MatchDashboard({
       <header className="compact-page-head match-page-head">
         <div><span>WEEK {match.scheduledWeek} · {unitLabel(match.heroUnit)}</span><h2>Матч</h2></div>
         <button type="button" className="match-stat-button" onClick={() => setSheetOpen(true)}>
-          <small>SNAP</small><strong>{match.episodeIndex}/{match.totalEpisodes}</strong>
+          <small>SNAPS</small><strong>{match.advancedStats.snaps}</strong>
         </button>
       </header>
 
@@ -257,10 +257,10 @@ export function MatchDashboard({
               <span>{save.football.position}</span>
             </header>
             <div className="match-role-metrics">
-              <span><small>ВЫХОД</small><strong>Q{match.entryQuarter ?? 1}</strong></span>
-              <span><small>SNAPS</small><strong>{match.totalEpisodes}</strong></span>
+              <span><small>ROLE</small><strong>{match.rosterRole?.toUpperCase() ?? "ACTIVE"}</strong></span>
               <span><small>GAMEPLAN</small><strong>{match.usagePlan.label}</strong></span>
               <span><small>{save.football.position === "RB" ? "TOUCH SHARE" : "TARGET SHARE"}</small><strong>{Math.round(match.usagePlan.designedShare)}%</strong></span>
+              <span><small>HEALTH</small><strong>{Math.round(save.character.condition.health)}</strong></span>
             </div>
             <button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}>
               <Icon name="brain" /><strong>ANALYSIS</strong><em>{analysisMode ? "ON" : "OFF"}</em>
@@ -386,7 +386,7 @@ export function MatchDashboard({
           {match.finalResult.evaluation && (
             <section className="match-evaluation-grid">
               {match.finalResult.evaluation.criteria.map((item) => (
-                <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)}</strong><small>{item.detail}</small></article>
+                <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)}</strong></article>
               ))}
             </section>
           )}

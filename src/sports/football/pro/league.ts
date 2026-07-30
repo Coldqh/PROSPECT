@@ -767,17 +767,7 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
   const random = new SeededRandom(save.meta.worldSeed).fork(`professional-match:${game.id}`);
   const role = career.role;
   const specialist = save.football.position === "K" || save.football.position === "P";
-  const totalEpisodes = specialist
-    ? role === "starter" ? 7 : role === "rotation" || role === "special-teams" ? 4 : 1
-    : role === "starter" ? 64 : role === "rotation" ? 30 : role === "special-teams" ? 10 : 1;
-  const entryQuarter = role === "starter" ? 1 as const : role === "rotation" ? 2 as const : role === "special-teams" ? 3 as const : 4 as const;
-  const benchSummary = role === "starter"
-    ? "Первый состав: игрок начинает матч на поле."
-    : role === "rotation"
-      ? "Ротация: старт на лавке, выход после первой четверти."
-      : role === "special-teams"
-        ? "Глубокий резерв: основные снэпы только после вызова штаба."
-        : "Игрок не заявлен на матч.";
+  const totalEpisodes = specialist ? 18 : 120;
   const openingFieldPosition = random.integer(18, 34);
   return {
     moduleVersion: 1,
@@ -805,8 +795,6 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     episodeIndex: 0,
     totalEpisodes,
     rosterRole: role,
-    entryQuarter,
-    benchSummary,
     driveDown: 1,
     driveDistance: 10,
     driveFieldPosition: openingFieldPosition,

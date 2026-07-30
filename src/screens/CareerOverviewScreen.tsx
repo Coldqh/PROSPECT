@@ -14,12 +14,12 @@ import { CareerNavigation, type CareerPrimaryView } from "../components/career/C
 import { CareerDrawer, type CareerSecondaryView } from "../components/career/CareerDrawer";
 import { PlayerProfileDashboard } from "../components/career/PlayerProfileDashboard";
 import { TeamProfileDashboard } from "../components/career/TeamProfileDashboard";
-import { CareerOverviewDashboard } from "../components/career/CareerOverviewDashboard";
 import { RecruitingDashboard } from "../components/career/RecruitingDashboard";
 import { SeasonDashboard } from "../components/career/SeasonDashboard";
 import { SocialLifeDashboard } from "../components/career/SocialLifeDashboard";
 import { MarketDashboard } from "../components/career/MarketDashboard";
 import { LeagueDirectoryDashboard } from "../components/career/LeagueDirectoryDashboard";
+import { ProfessionalSeasonDashboard } from "../components/career/ProfessionalSeasonDashboard";
 import { useCareerSave } from "../hooks/useCareerSave";
 
 export default function CareerOverviewScreen() {
@@ -48,9 +48,21 @@ export default function CareerOverviewScreen() {
   );
 
   if (careerSave.meta.phase === "professional-draft" || careerSave.meta.phase === "professional-career") return (
-    <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
-      <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeProfessionalMatch={state.finalizeProfessionalMatch} onSetProfessionalWeekFocus={state.setProfessionalWeekFocus} onAdvanceProfessionalWeek={state.advanceProfessionalWeek} onAdvanceProfessionalOffseason={state.advanceProfessionalOffseason} onAcceptFreeAgentOffer={state.acceptProfessionalFreeAgentOffer} />
-      {commonDrawer(true)}
+    <ScreenShell header={<AppHeader compact action={menuButton} />} className="career-game-shell" footer={<CareerNavigation active={secondaryView ? undefined : primaryView} onChange={selectPrimary} />}>
+      <div className="career-game-page">
+        {secondaryView ? (
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "season" ? "Сезон" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : "Рейтинг"}</strong></header>{renderSecondary()}</>
+        ) : primaryView === "profile" ? (
+          <PlayerProfileDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} />
+        ) : primaryView === "team" ? (
+          <TeamProfileDashboard save={careerSave} {...(selectedTeamId ? { teamId: selectedTeamId } : {})} />
+        ) : primaryView === "league" ? (
+          <LeagueDirectoryDashboard save={careerSave} initialView="professional" onOpenCollegeTeam={(id) => openTeam(id)} />
+        ) : (
+          <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeProfessionalMatch={state.finalizeProfessionalMatch} onSetProfessionalWeekFocus={state.setProfessionalWeekFocus} onAdvanceProfessionalWeek={state.advanceProfessionalWeek} onAdvanceProfessionalOffseason={state.advanceProfessionalOffseason} onAcceptFreeAgentOffer={state.acceptProfessionalFreeAgentOffer} />
+        )}
+      </div>
+      {commonDrawer()}
     </ScreenShell>
   );
 
@@ -76,15 +88,13 @@ export default function CareerOverviewScreen() {
 
   function renderSecondary() {
     if (!secondaryView) return null;
-    if (secondaryView === "overview") return <CareerOverviewDashboard save={careerSave} />;
-    if (secondaryView === "season") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="season" />;
-    if (secondaryView === "matches") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="schedule" />;
-    if (secondaryView === "standings") return <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} lockedView="standings" />;
+    if (secondaryView === "season") return careerSave.meta.phase === "professional-career"
+      ? <ProfessionalSeasonDashboard save={careerSave} />
+      : <SeasonDashboard save={careerSave} onOpenMatch={() => setMatchOpen(true)} />;
     if (secondaryView === "social") return <SocialLifeDashboard save={careerSave} mutating={mutating} onResolveRelationshipEvent={state.resolveRelationshipEvent} />;
     if (secondaryView === "recruiting") return <RecruitingDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onAction={state.performRecruitingAction} onCommit={state.commitToCollege} onWithdrawCommitment={state.withdrawCollegeCommitment} />;
     if (secondaryView === "feed") return <WorldDashboard save={careerSave} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     if (secondaryView === "market") return <MarketDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenTeam={(id) => openTeam(id)} />;
-    if (secondaryView === "leagues") return <LeagueDirectoryDashboard save={careerSave} onOpenCollegeTeam={(id) => openTeam(id)} />;
     return <WorldDashboard save={careerSave} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
   }
 
@@ -94,11 +104,13 @@ export default function CareerOverviewScreen() {
         {matchOpen ? (
           <><header className="secondary-page-bar"><button type="button" onClick={() => setMatchOpen(false)}><Icon name="arrow-left" /></button><strong>Матч</strong></header><MatchDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onStartMatch={state.startMatch} onResolveDecision={state.resolveMatchDecision} /></>
         ) : secondaryView ? (
-          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "recruiting" ? "Рекрутинг" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : secondaryView === "leagues" ? "Лиги" : "Рейтинг"}</strong></header>{renderSecondary()}</>
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "season" ? "Сезон" : secondaryView === "recruiting" ? "Рекрутинг" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : "Рейтинг"}</strong></header>{renderSecondary()}</>
         ) : primaryView === "profile" ? (
           <PlayerProfileDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onSignCollege={state.signCollegeAgreement} onReportToCollege={state.reportToCollege} />
         ) : primaryView === "team" ? (
           <TeamProfileDashboard save={careerSave} {...(selectedTeamId ? { teamId: selectedTeamId } : {})} />
+        ) : primaryView === "league" ? (
+          <LeagueDirectoryDashboard save={careerSave} onOpenCollegeTeam={(id) => openTeam(id)} />
         ) : (
           <TodayDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onUpdatePlan={state.updateWeeklyPlan} onUpdateTrainingPlan={state.updateTrainingPlan} onAdvanceDay={state.advanceDay} onResolveRelationshipEvent={state.resolveRelationshipEvent} onOpenMatch={() => setMatchOpen(true)} />
         )}

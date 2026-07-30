@@ -12,7 +12,6 @@ import { WorldDashboard } from "./WorldDashboard";
 import { MatchDashboard } from "./MatchDashboard";
 import { PlayerProfileDashboard } from "./PlayerProfileDashboard";
 import { TeamProfileDashboard } from "./TeamProfileDashboard";
-import { CareerOverviewDashboard } from "./CareerOverviewDashboard";
 import { CollegeSectionsDashboard } from "./CollegeSectionsDashboard";
 import { SocialLifeDashboard } from "./SocialLifeDashboard";
 import { MarketDashboard } from "./MarketDashboard";
@@ -86,13 +85,9 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
   );
 
   function secondaryContent() {
-    if (secondaryView === "overview") return <CareerOverviewDashboard save={save} />;
-    if (secondaryView === "season") return <CollegeSectionsDashboard save={save} view="season" />;
-    if (secondaryView === "matches") return <CollegeSectionsDashboard save={save} view="matches" />;
-    if (secondaryView === "standings") return <CollegeSectionsDashboard save={save} view="standings" />;
+    if (secondaryView === "season") return <CollegeSectionsDashboard save={save} />;
     if (secondaryView === "social") return <SocialLifeDashboard save={save} mutating={mutating} onResolveRelationshipEvent={onResolveRelationshipEvent} />;
     if (secondaryView === "feed") return <WorldDashboard save={save} view="feed" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
-    if (secondaryView === "leagues") return <LeagueDirectoryDashboard save={save} onOpenCollegeTeam={(id) => openTeam(id)} />;
     if (secondaryView === "market") return <MarketDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onOpenTeam={(id) => openTeam(id)} onResolveCollegeDecision={onResolveDecision} />;
     if (secondaryView === "rankings") return <WorldDashboard save={save} view="rankings" hideNavigation onOpenTeam={(id) => openTeam(id)} />;
     return null;
@@ -102,11 +97,13 @@ export function CollegeCareerDashboard({ save, mutating, actionError, drawerOpen
     <div className="college-career-shell college-career-shell--v27">
       <div className="college-career-main">
         {secondaryView ? (
-          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "overview" ? "Обзор" : secondaryView === "season" ? "Сезон" : secondaryView === "matches" ? "Матчи" : secondaryView === "standings" ? "Таблица" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : secondaryView === "leagues" ? "Лиги" : "Рейтинг"}</strong></header>{secondaryContent()}</>
+          <><header className="secondary-page-bar"><button type="button" onClick={() => setSecondaryView(undefined)}><Icon name="arrow-left" /></button><strong>{secondaryView === "season" ? "Сезон" : secondaryView === "social" ? "Социальная жизнь" : secondaryView === "feed" ? "Лента" : secondaryView === "market" ? "Рынок" : "Рейтинг"}</strong></header>{secondaryContent()}</>
         ) : primaryView === "profile" ? (
           <PlayerProfileDashboard save={save} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveCollegeDecision={onResolveDecision} />
         ) : primaryView === "team" ? (
           <TeamProfileDashboard save={save} {...(selectedTeamId ? { teamId: selectedTeamId } : {})} />
+        ) : primaryView === "league" ? (
+          <LeagueDirectoryDashboard save={save} onOpenCollegeTeam={(id) => openTeam(id)} />
         ) : (
           <div className="college-home-page">
             <header className="college-home-head"><div><small>{career.classYear} · W{career.week}</small><h1>{program.shortName}</h1></div><strong>{team?.wins ?? 0}–{team?.losses ?? 0}</strong></header>

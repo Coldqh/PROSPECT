@@ -115,7 +115,7 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
           {world.movementMarket.coachVacancies.length === 0 && <div className="data-empty">Вакансий пока нет</div>}
         </div></section>
         <section className="market-section"><header><h2>Карусель штабов</h2><span>{coachTransactions.length}</span></header><div className="market-list">
-          {coachTransactions.map((item) => <button type="button" key={item.id} onClick={() => { const id = item.toTeamId ?? item.fromTeamId; if (id) onOpenTeam?.(id); }}><span className="market-list__code">{transactionCode(item.kind)}</span><div><strong>{item.title}</strong><small>{item.detail}</small></div><Icon name="arrow-right" size={15} /></button>)}
+          {coachTransactions.map((item) => <button type="button" key={item.id} onClick={() => { const id = item.toTeamId ?? item.fromTeamId; if (id) onOpenTeam?.(id); }}><span className="market-list__code">{transactionCode(item.kind)}</span><div><strong>{item.title}</strong><small>W{item.week}</small></div><Icon name="arrow-right" size={15} /></button>)}
           {coachTransactions.length === 0 && <div className="data-empty">Штабы пока стабильны</div>}
         </div></section>
       </>}

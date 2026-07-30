@@ -43,10 +43,17 @@ import { createChecksum } from "./checksum";
 import { migrateCareerSave } from "./migrations";
 import {
   CURRENT_SCHEMA_VERSION,
+  careerSaveSchema,
   type CareerIndexRecord,
   type CareerSave,
 } from "./schema";
-import { getDatabase, type SnapshotRecord } from "../indexedDb/database";
+import { getDatabase, type SnapshotRecord, type WorldSliceRecord } from "../indexedDb/database";
+import {
+  compactCareerSave,
+  createWorldSliceRecords,
+  decodeWorldSlices,
+  hydrateCareerSave,
+} from "./worldSlices";
 
 const MAX_AUTOSAVE_BACKUPS = 5;
 const AUTOSAVE_BACKUP_INTERVAL = 5;
@@ -89,7 +96,7 @@ function toIndexRecord(save: CareerSave): CareerIndexRecord {
   };
 }
 
-function toSnapshot(save: CareerSave): SnapshotRecord {
+function toSnapshot(save: CareerSave, worldSlices: SnapshotRecord["worldSlices"]): SnapshotRecord {
   return {
     id: snapshotId(save.meta.id, save.meta.revision),
     careerId: save.meta.id,
@@ -97,8 +104,24 @@ function toSnapshot(save: CareerSave): SnapshotRecord {
     schemaVersion: save.meta.schemaVersion,
     checksum: createChecksum(save),
     createdAt: save.meta.updatedAt,
-    state: save,
+    state: compactCareerSave(save),
+    worldSlices,
   };
+}
+
+async function hydrateSnapshot(snapshot: SnapshotRecord): Promise<CareerSave | undefined> {
+  if (!snapshot.worldSlices) {
+    const legacy = snapshot.state as CareerSave;
+    return snapshot.checksum === createChecksum(legacy) ? legacy : undefined;
+  }
+  const database = await getDatabase();
+  const ids = [snapshot.worldSlices.players, snapshot.worldSlices.social, snapshot.worldSlices.careerRegistry];
+  const records = await Promise.all(ids.map((id) => database.get("careerWorldSlices", id)));
+  if (records.some((record) => !record)) return undefined;
+  const slices = decodeWorldSlices(records as WorldSliceRecord[]);
+  if (!slices) return undefined;
+  const hydrated = hydrateCareerSave(snapshot.state, slices);
+  return snapshot.checksum === createChecksum(hydrated) ? hydrated : undefined;
 }
 
 async function pruneBackups(careerId: string): Promise<void> {
@@ -109,6 +132,28 @@ async function pruneBackups(careerId: string): Promise<void> {
   const obsolete = records.slice(MAX_AUTOSAVE_BACKUPS);
   const transaction = database.transaction("autosaveBackups", "readwrite");
   await Promise.all(obsolete.map((record) => transaction.store.delete(record.id)));
+  await transaction.done;
+}
+
+async function pruneWorldSlices(careerId: string): Promise<void> {
+  const database = await getDatabase();
+  const snapshots = [
+    ...(await database.getAllFromIndex("careerSnapshots", "by-careerId", careerId)),
+    ...(await database.getAllFromIndex("autosaveBackups", "by-careerId", careerId)),
+    ...(await database.getAllFromIndex("manualSaves", "by-careerId", careerId)),
+  ];
+  const referenced = new Set<string>();
+  for (const snapshot of snapshots) {
+    if (!snapshot.worldSlices) continue;
+    referenced.add(snapshot.worldSlices.players);
+    referenced.add(snapshot.worldSlices.social);
+    referenced.add(snapshot.worldSlices.careerRegistry);
+  }
+  const slices = await database.getAllFromIndex("careerWorldSlices", "by-careerId", careerId);
+  const obsolete = slices.filter((slice) => !referenced.has(slice.id));
+  if (obsolete.length === 0) return;
+  const transaction = database.transaction("careerWorldSlices", "readwrite");
+  await Promise.all(obsolete.map((slice) => transaction.store.delete(slice.id)));
   await transaction.done;
 }
 
@@ -356,10 +401,11 @@ export class CareerRepository {
 
     const validated = careerSaveSchemaSafeParse(save);
     const database = await getDatabase();
-    const snapshot = toSnapshot(validated);
+    const world = createWorldSliceRecords(validated);
+    const snapshot = toSnapshot(validated, world.refs);
     const previous = await this.readLatestSnapshot(validated.meta.id);
     const transaction = database.transaction(
-      ["careerIndex", "careerSnapshots", "autosaveBackups"],
+      ["careerIndex", "careerSnapshots", "autosaveBackups", "careerWorldSlices"],
       "readwrite",
     );
 
@@ -370,10 +416,15 @@ export class CareerRepository {
       await transaction.objectStore("careerSnapshots").delete(previous.id);
     }
 
+    for (const record of world.records) {
+      const existing = await transaction.objectStore("careerWorldSlices").get(record.id);
+      if (!existing) await transaction.objectStore("careerWorldSlices").put(record);
+    }
     await transaction.objectStore("careerSnapshots").put(snapshot);
     await transaction.objectStore("careerIndex").put(toIndexRecord(validated));
     await transaction.done;
     if (shouldArchivePrevious) await pruneBackups(validated.meta.id);
+    await pruneWorldSlices(validated.meta.id);
 
     return validated;
   }
@@ -381,12 +432,15 @@ export class CareerRepository {
   async load(careerId: string): Promise<CareerSave> {
     const latest = await this.readLatestSnapshot(careerId);
 
-    if (latest && latest.checksum === createChecksum(latest.state)) {
-      const migration = migrateCareerSave(latest.state);
-      if (migration.migratedFrom !== undefined) {
-        return this.save({ ...migration.save, meta: { ...migration.save.meta, revision: latest.revision } });
+    if (latest) {
+      const hydrated = await hydrateSnapshot(latest);
+      if (hydrated) {
+        const migration = migrateCareerSave(hydrated);
+        if (migration.migratedFrom !== undefined) {
+          return this.save({ ...migration.save, meta: { ...migration.save.meta, revision: latest.revision } });
+        }
+        return careerSaveSchemaSafeParse(migration.save);
       }
-      return migration.save;
     }
 
     const database = await getDatabase();
@@ -394,11 +448,12 @@ export class CareerRepository {
     backups.sort((left, right) => right.revision - left.revision);
 
     for (const backup of backups) {
-      if (backup.checksum !== createChecksum(backup.state)) {
-        continue;
-      }
-      const migration = migrateCareerSave(backup.state);
-      return migration.migratedFrom !== undefined ? this.save(migration.save) : migration.save;
+      const hydrated = await hydrateSnapshot(backup);
+      if (!hydrated) continue;
+      const migration = migrateCareerSave(hydrated);
+      return migration.migratedFrom !== undefined
+        ? this.save(migration.save)
+        : careerSaveSchemaSafeParse(migration.save);
     }
 
     throw new Error("Career save is missing or corrupted");
@@ -407,13 +462,13 @@ export class CareerRepository {
   async remove(careerId: string): Promise<void> {
     const database = await getDatabase();
     const transaction = database.transaction(
-      ["careerIndex", "careerSnapshots", "autosaveBackups", "manualSaves"],
+      ["careerIndex", "careerSnapshots", "autosaveBackups", "manualSaves", "careerWorldSlices"],
       "readwrite",
     );
 
     await transaction.objectStore("careerIndex").delete(careerId);
 
-    for (const storeName of ["careerSnapshots", "autosaveBackups", "manualSaves"] as const) {
+    for (const storeName of ["careerSnapshots", "autosaveBackups", "manualSaves", "careerWorldSlices"] as const) {
       const store = transaction.objectStore(storeName);
       const records = await store.index("by-careerId").getAll(careerId);
       await Promise.all(records.map((record) => store.delete(record.id)));
@@ -467,8 +522,14 @@ export class CareerRepository {
 }
 
 function careerSaveSchemaSafeParse(save: CareerSave): CareerSave {
-  if (save.meta.schemaVersion === CURRENT_SCHEMA_VERSION) return save;
-  return migrateCareerSave(save).save;
+  const current = save.meta.schemaVersion === CURRENT_SCHEMA_VERSION
+    ? save
+    : migrateCareerSave(save).save;
+  const parsed = careerSaveSchema.safeParse(current);
+  if (parsed.success) return parsed.data;
+  const issue = parsed.error.issues[0];
+  const path = issue?.path.join(".") || "save";
+  throw new Error(`Career save validation failed at ${path}: ${issue?.message ?? "invalid state"}`);
 }
 
 export const careerRepository = new CareerRepository();

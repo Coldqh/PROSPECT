@@ -421,6 +421,7 @@ const matchEpisodeSchema = z.object({
   playCall: matchPlayCallSchema.default(legacyPlayCall),
   opponentCall: matchPlayCallSchema.default(legacyOpponentCall),
   heroInvolvement: z.enum(["primary", "secondary", "assignment-only"]).default("primary"),
+  heroActive: z.boolean().default(true),
   heroRole: z.string().min(2).default("Выполнить назначение"),
   heroSlot: z.string().min(1).default("HERO"),
   receiverPriorities: z.record(z.string(), z.number().min(0).max(100)).optional(),

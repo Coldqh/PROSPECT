@@ -1,14 +1,18 @@
-# PROSPECT 0.45.2 patch manifest
+# PROSPECT 0.46.0 patch manifest
 
-Base version: `0.45.1`  
-Target version: `0.45.2`  
-Save schema: `33` (unchanged)
+Base version: `0.45.2`  
+Target version: `0.46.0`  
+Save schema: `33` (unchanged)  
+IndexedDB schema: `1 → 2`
 
-## Fixes
+## Systems
 
-- restore all production and test files accidentally deleted in the 0.45.0 commit;
-- fail test/build once with the complete list of missing release files;
-- correct deep-threat usage weighting on matching concepts.
+- normalized persistence with content-addressed world slices;
+- full current-schema validation before writes;
+- dynamic per-snap participation and real fourth-down specialist opportunities;
+- one career navigation model across school, college and PRO;
+- consolidated season views and active professional career state;
+- inactive player week escape and regression coverage.
 
-Replacement and new files are listed in `PATCH_FILES_0.45.2.txt`.
-Old 0.45.1 packaging files are listed in `DELETE_FILES_0.45.2.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.46.0.txt`.  
+Removed files are listed in `DELETE_FILES_0.46.0.txt`.

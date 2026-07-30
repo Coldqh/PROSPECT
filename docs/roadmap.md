@@ -31,6 +31,7 @@
 - [x] Seamless autopilot takeover with snap-result overlay
 - [x] Persistent player identity from high school through professional retirement
 - [x] Usage plans, target share and open-window QB logic
+- [x] Core consolidation: sliced saves, dynamic participation and unified career navigation
 
 ## v0.11 — High school to college
 
@@ -301,3 +302,15 @@
 - World career archive exposes stage, team history, draft data and career events;
 - deterministic migration from schema v29 to v30.
 
+
+## v0.46 — Core consolidation
+
+- content-addressed world slices and compact career snapshots;
+- full current-schema validation before persistence;
+- dynamic participation from personnel, role, fatigue, quarter and score;
+- real fourth-down opportunities for kickers and punters;
+- one career shell and four primary destinations across all stages;
+- season, schedule and standings consolidated into one workspace;
+- professional career header no longer remains in draft mode;
+- inactive professional weeks cannot deadlock;
+- save schema 33, IndexedDB schema 2.

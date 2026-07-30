@@ -127,6 +127,7 @@ function episode(heroPosition: FootballPosition = "QB"): MatchEpisode {
     read: "Read the field",
     playCall: call("offense"),
     opponentCall: call("defense"),
+    heroActive: true,
     heroInvolvement: "primary",
     heroRole: "Direct control",
     heroSlot: heroPosition,

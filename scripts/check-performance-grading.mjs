@@ -6,6 +6,7 @@ const engine = read("src/sports/football/matches/realTimeEngine.ts");
 const simulation = read("src/sports/football/matches/simulateMatch.ts");
 const evaluation = read("src/sports/football/matches/performanceEvaluation.ts");
 const league = read("src/sports/football/pro/league.ts");
+const participation = read("src/sports/football/matches/participation.ts");
 
 const assertions = [
   [types.includes("MatchSnapEvaluation"), "snap evaluation contract"],
@@ -14,7 +15,7 @@ const assertions = [
   [engine.includes("routeAdherence"), "route adherence telemetry"],
   [simulation.includes("aggregateMatchEvaluation"), "match grade aggregation"],
   [evaluation.includes("routeCriteria") && evaluation.includes("coverageCriteria"), "position-specific criteria"],
-  [league.includes("entryQuarter") && league.includes("benchSummary"), "bench participation model"],
+  [participation.includes("heroParticipationForSnap") && simulation.includes("advancePastBenchSnaps"), "dynamic package participation"],
   [league.includes("performanceScore: match.finalResult.score"), "persistent professional match grade"],
   [engine.includes("minimumReadTime") && engine.includes("qbDecisionQuality"), "deliberate QB decision timing"],
   [engine.includes("distanceToSegment"), "route adherence measured against route segments"],

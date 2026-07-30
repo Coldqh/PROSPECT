@@ -9,7 +9,7 @@ const checks = [
   ["src/sports/football/pro/league.ts", "runProfessionalTradeDeadline"],
   ["src/sports/football/pro/league.ts", "rebuildProfessionalDepthCharts"],
   ["src/components/career/ProfessionalTransitionDashboard.tsx", "professional-week-plan"],
-  ["src/components/career/ProfessionalTransitionDashboard.tsx", "professional-inactive-list"],
+  ["src/components/career/ProfessionalTransitionDashboard.tsx", "heroCanPlay"],
   ["src/storage/saves/schema.ts", "injuryWeeks"],
 ];
 for (const [path, token] of checks) {

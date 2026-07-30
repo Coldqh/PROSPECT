@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { CareerSave } from "../../../storage/saves/schema";
-import { createProfessionalMatchState, isProfessionalMatchAwaitingResolution, setProfessionalWeekFocus } from "./league";
+import { advanceProfessionalWeek, createProfessionalMatchState, isProfessionalMatchAwaitingResolution, setProfessionalWeekFocus } from "./league";
+import { callPlay } from "../matches/playbook";
+import { expectedHeroSnapShare, heroParticipationForSnap } from "../matches/participation";
 import { activeProfessionalCareer, cloneCareer } from "./professionalTestFixtures";
 
 let activeFixture: CareerSave;
@@ -23,37 +25,55 @@ describe("professional league roster and preparation", () => {
     expect(state.league.roster.some((player) => player.sourcePlayerId && draftedNpcIds.has(player.sourcePlayerId))).toBe(true);
   });
 
-  it("gives starters, rotation players and the bench different participation", () => {
+  it("gives starters, rotation players and inactive players different package shares", () => {
     const base = cloneCareer(activeFixture);
     expect(base.football.position).toBe("EDGE");
     const game = base.football.professional.league.schedule.find((item) => item.id === base.football.professional.league.activeGameId);
     const career = base.football.professional.heroCareer;
     if (!game || !career) throw new Error("No professional hero game");
-    const cases = [
-      { role: "starter" as const, quarter: 1, snaps: 64 },
-      { role: "rotation" as const, quarter: 2, snaps: 30 },
-      { role: "special-teams" as const, quarter: 3, snaps: 10 },
-      { role: "inactive" as const, quarter: 4, snaps: 1 },
-    ];
-    for (const item of cases) {
+    const offenseCall = callPlay("participation-offense", "offense", 1, 10, 35, false);
+    const defenseCall = callPlay("participation-defense", "defense", 1, 10, 35, false);
+    const counts = new Map<string, number>();
+    const shares = new Map<string, number>();
+    for (const role of ["starter", "rotation", "special-teams", "inactive"] as const) {
       const save = {
         ...base,
         football: {
           ...base.football,
           professional: {
             ...base.football.professional,
-            heroCareer: { ...career, role: item.role },
+            heroCareer: { ...career, role },
           },
         },
       };
       const match = createProfessionalMatchState(save, game);
-      expect(match.entryQuarter).toBe(item.quarter);
-      expect(match.totalEpisodes).toBe(item.snaps);
-      if (item.role === "inactive") {
-        const inactive = { ...save, football: { ...save.football, match } };
-        expect(isProfessionalMatchAwaitingResolution(inactive)).toBe(false);
+      shares.set(role, expectedHeroSnapShare(save, match, offenseCall, defenseCall, true));
+      let active = 0;
+      for (let snap = 0; snap < 240; snap += 1) {
+        if (heroParticipationForSnap(save, match, offenseCall, defenseCall, true, snap).active) active += 1;
       }
+      counts.set(role, active);
+      expect(match.totalEpisodes).toBe(120);
     }
+    expect(shares.get("starter") ?? 0).toBeGreaterThan(shares.get("rotation") ?? 0);
+    expect(shares.get("rotation") ?? 0).toBeGreaterThan(shares.get("special-teams") ?? 0);
+    expect(counts.get("starter") ?? 0).toBeGreaterThan(counts.get("rotation") ?? 0);
+    expect(counts.get("rotation") ?? 0).toBeGreaterThan(counts.get("special-teams") ?? 0);
+    expect(counts.get("inactive")).toBe(0);
+
+    const inactive = {
+      ...base,
+      football: {
+        ...base.football,
+        professional: {
+          ...base.football.professional,
+          heroCareer: { ...career, role: "inactive" as const },
+        },
+      },
+    };
+    expect(isProfessionalMatchAwaitingResolution(inactive)).toBe(false);
+    const inactiveAdvanced = advanceProfessionalWeek(inactive);
+    expect(inactiveAdvanced.football.professional.league.week).toBe(base.football.professional.league.week + 1);
     const practice = {
       ...base,
       football: {
@@ -68,18 +88,15 @@ describe("professional league roster and preparation", () => {
     expect(isProfessionalMatchAwaitingResolution(practice)).toBe(false);
   });
 
-  it("keeps specialist participation separate from scrimmage positions", () => {
+  it("creates specialist opportunities from drives instead of fixed attempt counts", () => {
     const base = cloneCareer(activeFixture);
     const game = base.football.professional.league.schedule.find((item) => item.id === base.football.professional.league.activeGameId);
     const career = base.football.professional.heroCareer;
     if (!game || !career) throw new Error("No professional hero game");
-    const cases = [
-      { role: "starter" as const, snaps: 7 },
-      { role: "rotation" as const, snaps: 4 },
-      { role: "special-teams" as const, snaps: 4 },
-      { role: "inactive" as const, snaps: 1 },
-    ];
-    for (const item of cases) {
+    const offenseCall = callPlay("specialist-offense", "offense", 4, 8, 42, false);
+    const defenseCall = callPlay("specialist-defense", "defense", 4, 8, 42, false);
+    const shares: number[] = [];
+    for (const role of ["starter", "rotation", "special-teams", "inactive"] as const) {
       const save = {
         ...base,
         football: {
@@ -87,13 +104,19 @@ describe("professional league roster and preparation", () => {
           position: "K" as const,
           professional: {
             ...base.football.professional,
-            heroCareer: { ...career, role: item.role },
+            heroCareer: { ...career, role },
           },
         },
       };
-      expect(createProfessionalMatchState(save, game).totalEpisodes).toBe(item.snaps);
+      const match = createProfessionalMatchState(save, game);
+      expect(match.totalEpisodes).toBe(18);
+      shares.push(expectedHeroSnapShare(save, match, offenseCall, defenseCall, true));
     }
+    expect(shares[0]).toBeGreaterThan(shares[1] ?? 0);
+    expect(shares[1]).toBeGreaterThan(shares[3] ?? 0);
+    expect(shares[3]).toBe(0);
   });
+
 
   it("turns weekly preparation into readiness, health and depth-chart consequences", () => {
     const initial = cloneCareer(activeFixture);

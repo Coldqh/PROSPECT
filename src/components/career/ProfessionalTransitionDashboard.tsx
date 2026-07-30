@@ -2,10 +2,8 @@ import { useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../../sports/football/pro/types";
 import type { MatchParticipationMode } from "../../sports/football/matches/types";
-import { professionalStandings } from "../../sports/football/pro/league";
 import { MatchDashboard } from "./MatchDashboard";
 import { Icon } from "../ui/Icon";
-import { LeagueDirectoryDashboard } from "./LeagueDirectoryDashboard";
 
 interface ProfessionalTransitionDashboardProps {
   save: CareerSave;
@@ -96,29 +94,18 @@ export function ProfessionalTransitionDashboard({
   const topProspects = professional.prospects.slice(0, 8);
   const recentDraft = professional.draftResults.filter((pick) => pick.round <= 2).slice(0, 12);
   const [matchOpen, setMatchOpen] = useState(false);
-  const [professionalView, setProfessionalView] = useState<"career" | "league">("career");
   const league = professional.league;
   const heroCareer = professional.heroCareer;
   const heroTeam = heroCareer?.teamId ? professional.teams.find((team) => team.id === heroCareer.teamId) : undefined;
   const activeGame = league.activeGameId ? league.schedule.find((game) => game.id === league.activeGameId) : undefined;
   const opponentId = activeGame && heroTeam ? (activeGame.homeTeamId === heroTeam.id ? activeGame.awayTeamId : activeGame.homeTeamId) : undefined;
   const opponent = opponentId ? professional.teams.find((team) => team.id === opponentId) : undefined;
-  const standings = professionalStandings(professional.teams);
+  const heroCanPlay = professional.status === "roster" && heroCareer?.role !== "inactive";
   const matchBelongsToLeague = Boolean(activeGame && save.football.match.gameId === activeGame.id);
   const showMatch = matchBelongsToLeague && (matchOpen || save.football.match.status !== "upcoming");
-  const champion = league.championTeamId ? professional.teams.find((team) => team.id === league.championTeamId) : undefined;
-  const positionRoom = league.roster
-    .filter((player) => player.teamId === heroCareer?.teamId && player.position === save.football.position)
-    .sort((left, right) => left.depthRank - right.depthRank || right.overall - left.overall);
-  const inactivePlayers = league.roster
-    .filter((player) => player.teamId === heroCareer?.teamId && player.availability !== "active")
-    .sort((left, right) => right.injuryWeeks - left.injuryWeeks)
-    .slice(0, 8);
-  const recentPerformance = [...(heroCareer?.gameLog ?? [])].reverse().slice(0, 5);
-  const gradedGames = (heroCareer?.gameLog ?? []).filter((game) => game.performanceScore !== undefined);
-  const averagePerformance = gradedGames.length > 0
-    ? gradedGames.reduce((sum, game) => sum + (game.performanceScore ?? 0), 0) / gradedGames.length
-    : undefined;
+  const activeProfessionalCareer = save.meta.phase === "professional-career"
+    && ["roster", "practice-squad", "free-agent", "cut"].includes(professional.status);
+  const professionalTeamLabel = heroTeam ? `${heroTeam.city} ${heroTeam.name}` : "FREE AGENT";
 
   if (showMatch) {
     return (
@@ -137,42 +124,27 @@ export function ProfessionalTransitionDashboard({
   }
 
 
-  if (professionalView === "league") {
-    return (
-      <div className="professional-shell">
-        <nav className="compact-segmented professional-root-tabs" aria-label="PRO раздел">
-          <button type="button" onClick={() => setProfessionalView("career")}>КАРЬЕРА</button>
-          <button type="button" className="is-active">ЛИГА</button>
-        </nav>
-        <LeagueDirectoryDashboard save={save} initialView="professional" />
-      </div>
-    );
-  }
-
   return (
     <div className="professional-shell">
-      <nav className="compact-segmented professional-root-tabs" aria-label="PRO раздел">
-        <button type="button" className="is-active">КАРЬЕРА</button>
-        <button type="button" onClick={() => setProfessionalView("league")}>ЛИГА</button>
-      </nav>
       <header className="elite-draft-header">
         <div className="elite-draft-header__title">
           <span className="elite-draft-shield">PRO</span>
-          <div><small>ПРОФЕССИОНАЛЬНЫЙ ДРАФТ</small><h1>{professional.draftYear}</h1><p>{statusLabel(professional.status)}</p></div>
+          {activeProfessionalCareer ? (
+            <div><small>{statusLabel(professional.status).toUpperCase()}</small><h1>{professionalTeamLabel}</h1><p>{league.seasonYear} · W{league.week}</p></div>
+          ) : (
+            <div><small>ПРОФЕССИОНАЛЬНЫЙ ДРАФТ</small><h1>{professional.draftYear}</h1><p>{statusLabel(professional.status)}</p></div>
+          )}
         </div>
       </header>
 
       <section className="elite-draft-candidate">
         <div className="elite-draft-candidate__art" aria-hidden="true"><span>{initials(save.character.identity.fullName)}</span><strong>#{save.football.jerseyNumber}</strong></div>
-        <div className="elite-draft-candidate__copy"><small>{save.football.college.program?.shortName ?? save.football.school.shortName}</small><h2>{save.character.identity.fullName}</h2><p>{save.football.position}</p><div><span><small>Проекция</small><strong>{professional.projectedRange}</strong></span><span><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong></span></div></div>
-        <div className={`professional-stock ${gradeClass(professional.draftStock)}`}><small>Draft stock</small><strong>{Math.round(professional.draftStock)}</strong><span>{professional.projectedRound ? `R${professional.projectedRound}` : "UDFA"}</span></div>
+        <div className="elite-draft-candidate__copy"><small>{activeProfessionalCareer ? professionalTeamLabel : save.football.college.program?.shortName ?? save.football.school.shortName}</small><h2>{save.character.identity.fullName}</h2><p>{save.football.position}</p><div>{activeProfessionalCareer ? <><span><small>Role</small><strong>{heroCareer?.role ?? "FA"}</strong></span><span><small>Depth</small><strong>{heroCareer?.depthRank ? `#${heroCareer.depthRank}` : "—"}</strong></span></> : <><span><small>Проекция</small><strong>{professional.projectedRange}</strong></span><span><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong></span></>}</div></div>
+        {activeProfessionalCareer ? <div className={`professional-stock ${gradeClass(heroCareer?.coachTrust ?? 0)}`}><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong><span>TRUST {Math.round(heroCareer?.coachTrust ?? 0)}</span></div> : <div className={`professional-stock ${gradeClass(professional.draftStock)}`}><small>Draft stock</small><strong>{Math.round(professional.draftStock)}</strong><span>{professional.projectedRound ? `R${professional.projectedRound}` : "UDFA"}</span></div>}
       </section>
 
       <section className="professional-market-strip">
-        <span><small>Класс</small><strong>#{heroRank || "—"}</strong></span>
-        <span><small>Клубы</small><strong>{professional.teams.length}</strong></span>
-        <span><small>Пики</small><strong>{professional.draftOrder.length}</strong></span>
-        <span><small>Позиция</small><strong>{save.football.position}</strong></span>
+        {activeProfessionalCareer ? <><span><small>Record</small><strong>{heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "—"}</strong></span><span><small>Games</small><strong>{heroCareer?.gamesPlayed ?? 0}</strong></span><span><small>Snaps</small><strong>{heroCareer?.snaps ?? 0}</strong></span><span><small>Health</small><strong>{Math.round(save.character.condition.health)}</strong></span></> : <><span><small>Класс</small><strong>#{heroRank || "—"}</strong></span><span><small>Клубы</small><strong>{professional.teams.length}</strong></span><span><small>Пики</small><strong>{professional.draftOrder.length}</strong></span><span><small>Позиция</small><strong>{save.football.position}</strong></span></>}
       </section>
 
       {professional.status === "decision" && (
@@ -283,40 +255,12 @@ export function ProfessionalTransitionDashboard({
         </section>
       )}
 
-      {(professional.status === "roster" || professional.status === "practice-squad" || professional.status === "free-agent" || professional.status === "cut") && (
-        <section className={`professional-outcome professional-outcome--${professional.status}`}>
-          <Icon name={professional.status === "roster" ? "trophy" : professional.status === "practice-squad" ? "team" : "close"} />
-          <small>СТАТУС ИГРОКА</small>
-          <h2>{professional.status === "roster" ? "Активный состав" : professional.status === "practice-squad" ? "Тренировочный состав" : "Свободный агент"}</h2>
-          {professional.contract && professional.status !== "free-agent" && <strong>{professional.contract.teamName} · {money(professional.contract.totalValue)}</strong>}
-        </section>
-      )}
-
       {save.meta.phase === "professional-career" && (
         <section className="professional-season">
           <header className="professional-season__head">
             <div><small>{league.phase === "playoffs" ? "ПЛЕЙ-ОФФ" : league.phase === "complete" ? "СЕЗОН ЗАВЕРШЁН" : "РЕГУЛЯРНЫЙ СЕЗОН"}</small><h2>{league.seasonYear} · Неделя {league.week}</h2></div>
             <strong>{heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "FA"}</strong>
           </header>
-
-          {champion && <div className="professional-champion"><Icon name="trophy" /><div><small>ЧЕМПИОН</small><strong>{champion.city} {champion.name}</strong></div></div>}
-
-          <div className="professional-season-grid">
-            <article><small>Клуб</small><strong>{heroTeam ? `${heroTeam.city} ${heroTeam.name}` : "Нет контракта"}</strong><span>{heroCareer?.role ?? "free-agent"}</span></article>
-            <article><small>Depth</small><strong>#{heroCareer?.depthRank ?? "—"}</strong><span>{heroCareer?.availability ?? "active"}</span></article>
-            <article><small>Trust</small><strong>{Math.round(heroCareer?.coachTrust ?? 0)}</strong><span>{heroCareer?.gamesPlayed ?? 0} игр</span></article>
-            <article><small>Cap space</small><strong>{heroTeam ? money(heroTeam.capSpace) : "—"}</strong><span>{heroTeam ? `${heroTeam.rosterSize}/53` : "рынок"}</span></article>
-          </div>
-
-          {recentPerformance.length > 0 && (
-            <div className="professional-performance-history">
-              <header><div><small>ОЦЕНКА ИСПОЛНЕНИЯ</small><strong>Последние матчи</strong></div><span>{averagePerformance !== undefined ? `${averagePerformance.toFixed(1)}/100` : "—"}</span></header>
-              {recentPerformance.map((game) => <article key={game.gameId}>
-                <span className={`result-grade result-grade--${game.grade.toLowerCase()}`}>{game.grade}<small>{Math.round(game.performanceScore ?? 0)}</small></span>
-                <div><strong>W{game.week} · {game.won ? "W" : "L"} {game.teamScore}:{game.opponentScore} · {game.snaps} SNAP</strong><footer>{game.usage && <><em>ROUTES {game.usage.routesRun}</em><em>OPEN {game.usage.openWindows}</em><em>MISSED {game.usage.missedOpenWindows}</em></>}{game.criterionScores?.map((item) => <em key={item.id}>{item.label} {Math.round(item.score)}</em>)}</footer></div>
-              </article>)}
-            </div>
-          )}
 
           {heroCareer?.weeklyPlan && league.phase !== "complete" && (
             <div className={`professional-week-plan${heroCareer.weeklyPlan.resolved ? " is-resolved" : ""}`}>
@@ -327,8 +271,8 @@ export function ProfessionalTransitionDashboard({
 
           {activeGame && heroTeam && opponent && (
             <div className="professional-next-game">
-              <div><small>{activeGame.playoffRound ? activeGame.playoffRound.toUpperCase() : `WEEK ${activeGame.week}`}</small><strong>{heroTeam.shortName} — {opponent.shortName}</strong><span>{activeGame.date.month}/{activeGame.date.day} · {opponent.wins}–{opponent.losses}</span></div>
-              <button type="button" disabled={mutating} onClick={() => setMatchOpen(true)}><Icon name="football" /><span>Играть</span></button>
+              <div><small>{activeGame.playoffRound ? activeGame.playoffRound.toUpperCase() : `WEEK ${activeGame.week}`}</small><strong>{heroTeam.shortName} — {opponent.shortName}</strong><span>{heroCanPlay ? `${activeGame.date.month}/${activeGame.date.day} · ${opponent.wins}–${opponent.losses}` : heroCareer?.availability?.toUpperCase()}</span></div>
+              {heroCanPlay && <button type="button" disabled={mutating} onClick={() => setMatchOpen(true)}><Icon name="football" /><span>Играть</span></button>}
             </div>
           )}
 
@@ -339,22 +283,7 @@ export function ProfessionalTransitionDashboard({
             </div>
           )}
 
-          {positionRoom.length > 0 && (
-            <div className="professional-position-room">
-              <header><small>POSITION ROOM</small><strong>{save.football.position}</strong></header>
-              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · FIT {Math.round(player.schemeFit)} · {player.availability}</small></div><em>{Math.round(player.overall)}</em></article>)}
-            </div>
-          )}
-
-          {inactivePlayers.length > 0 && <div className="professional-inactive-list"><header><small>МЕДИЦИНСКИЙ ОТЧЁТ</small><strong>Недоступные игроки</strong></header>{inactivePlayers.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>{player.position}</span><div><strong>{player.name}</strong><small>{player.availability} · {player.injuryWeeks} нед.</small></div><em>{Math.round(player.health)} HP</em></article>)}</div>}
-
-          <div className="professional-standings">
-            {(["AFC", "NFC"] as const).map((conference) => <section key={conference}><header><small>{conference}</small><strong>W–L</strong></header>{standings.filter((team) => team.conference === conference).slice(0, 8).map((team, index) => <article key={team.id} className={team.id === heroTeam?.id ? "is-hero" : ""}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.wins}–{team.losses}</em></article>)}</section>)}
-          </div>
-
-          {league.transactions.length > 0 && <div className="professional-transactions"><header><small>ТРАНЗАКЦИИ</small><strong>Последние сделки</strong></header>{league.transactions.slice(-5).reverse().map((transaction) => <article key={transaction.id}><span>{transaction.position}</span><p>{transaction.summary}</p></article>)}</div>}
-
-          {league.phase !== "complete" && !activeGame && professional.status !== "free-agent" && professional.status !== "cut" && (
+          {league.phase !== "complete" && (!activeGame || !heroCanPlay) && professional.status !== "free-agent" && professional.status !== "cut" && (
             <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceProfessionalWeek()}>
               <span><strong>{mutating ? "РАСЧЁТ…" : "ЗАВЕРШИТЬ НЕДЕЛЮ"}</strong></span><Icon name="arrow-right" />
             </button>
@@ -367,7 +296,7 @@ export function ProfessionalTransitionDashboard({
         </section>
       )}
 
-      {recentDraft.length > 0 && (
+      {!activeProfessionalCareer && recentDraft.length > 0 && (
         <section className="professional-draft-feed">
           <header><small>ПЕРВЫЕ РАУНДЫ</small><h2>Драфт</h2></header>
           {recentDraft.map((pick) => {

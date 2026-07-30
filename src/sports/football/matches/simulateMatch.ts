@@ -11,6 +11,7 @@ import { calculateDecisionForecast, decisionScoreCenter } from "./decisionForeca
 import { decodeLivePlayOutcome } from "./realTimeEngine";
 import { aggregateMatchEvaluation, evaluateSnapPerformance, gradeFromPerformanceScore } from "./performanceEvaluation";
 import { addMatchUsageStats, buildMatchUsagePlan, createEmptyMatchUsageStats, receiverPriorityMap, usageDeltaForSnap } from "./usage";
+import { heroParticipationForSnap } from "./participation";
 import type {
   FootballMatchState,
   MatchAdvancedStatLine,
@@ -498,8 +499,8 @@ function specialPlayCall(position: "K" | "P", canCheck: boolean): MatchEpisode["
 function generateSpecialEpisode(save: CareerSave, match: FootballMatchState, index: number): MatchEpisode {
   const position = save.football.position as "K" | "P";
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:special:${index}`);
-  const fieldPosition = position === "K" ? random.integer(58, 91) : random.integer(18, 68);
-  const distance = position === "K" ? 117 - fieldPosition : 10;
+  const fieldPosition = match.driveFieldPosition;
+  const distance = position === "K" ? 117 - fieldPosition : match.driveDistance;
   const playCall = specialPlayCall(position, false);
   const opponentCall: MatchEpisode["opponentCall"] = {
     id: position === "K" ? "field-goal-block" : "punt-return",
@@ -514,9 +515,15 @@ function generateSpecialEpisode(save: CareerSave, match: FootballMatchState, ind
     progression: [],
     tags: ["special-teams"],
   };
-  const assignments = bindRosterToAssignments(save, match, buildSpecialTeamsAssignments(position, "hero", `${save.meta.worldSeed}:${match.gameId}:special-assignments:${index}`));
+  const participation = heroParticipationForSnap(save, match, playCall, opponentCall, true, index);
+  const assignments = bindRosterToAssignments(save, match, buildSpecialTeamsAssignments(
+    position,
+    "hero",
+    `${save.meta.worldSeed}:${match.gameId}:special-assignments:${index}`,
+    participation.active,
+  ));
   const hero = assignments.find((assignment) => assignment.isHero) ?? assignments[0]!;
-  const role = position === "K" ? `Филд-гол с ${distance} ярдов` : "Пант с контролем return lane";
+  const role = position === "K" ? `FG ${distance}` : "PUNT";
   return {
     id: `${match.gameId}-special-${index + 1}`,
     driveId: match.currentDriveId,
@@ -537,6 +544,7 @@ function generateSpecialEpisode(save: CareerSave, match: FootballMatchState, ind
     playCall,
     opponentCall,
     heroInvolvement: "primary",
+    heroActive: participation.active,
     heroRole: role,
     heroSlot: hero.slot,
     assignments,
@@ -585,13 +593,37 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
       recentOffense: offenseSide === "hero" ? match.tacticalMemory.heroOffense : match.tacticalMemory.opponentOffense,
     },
   );
+  const assignmentSeed = `${save.meta.worldSeed}:${match.gameId}:assignments:${index}`;
+  const naturalAssignments = buildSnapAssignments(
+    offenseCall,
+    defenseCall,
+    offenseSide,
+    match.heroUnit,
+    save.football.position,
+    assignmentSeed,
+    false,
+  );
+  const naturalPackageFit = naturalAssignments.some((assignment) =>
+    assignment.side === "hero"
+      && assignment.unit === match.heroUnit
+      && assignment.position === save.football.position,
+  );
+  const participation = heroParticipationForSnap(
+    save,
+    match,
+    offenseCall,
+    defenseCall,
+    naturalPackageFit,
+    index,
+  );
   const assignments = bindRosterToAssignments(save, match, buildSnapAssignments(
     offenseCall,
     defenseCall,
     offenseSide,
     match.heroUnit,
     save.football.position,
-    `${save.meta.worldSeed}:${match.gameId}:assignments:${index}`,
+    assignmentSeed,
+    participation.active,
   ));
   const heroAssignment = describeHeroAssignment(save.football.position, match.heroUnit, assignments, offenseCall, defenseCall);
   const hero = assignments.find((assignment) => assignment.isHero);
@@ -628,6 +660,7 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     playCall,
     opponentCall,
     heroInvolvement: heroAssignment.involvement,
+    heroActive: participation.active,
     heroRole: heroAssignment.role,
     heroSlot: heroAssignment.heroSlot,
     receiverPriorities,
@@ -1144,6 +1177,136 @@ function backgroundDrive(
   };
 }
 
+
+function advanceToSpecialOpportunity(save: CareerSave, match: FootballMatchState, opportunityIndex: number): FootballMatchState {
+  const position = save.football.position;
+  if (position !== "K" && position !== "P") return match;
+  let next = match;
+  let offense: MatchTeamSide = next.possession;
+  let startFieldPosition = next.driveFieldPosition;
+  let driveNumber = next.driveNumber;
+  let safety = 0;
+
+  while (next.gameClockSeconds > 0 && safety < 28) {
+    if (offense === "opponent") {
+      const background = backgroundDrive(
+        save,
+        "opponent",
+        next.gameClockSeconds,
+        startFieldPosition,
+        driveNumber,
+        `${save.meta.worldSeed}:${match.gameId}:special-opponent:${opportunityIndex}:${driveNumber}`,
+      );
+      next = {
+        ...next,
+        heroScore: next.heroScore + background.heroScoreDelta,
+        opponentScore: next.opponentScore + background.opponentScoreDelta,
+        gameClockSeconds: background.gameClockSeconds,
+        quarter: clockParts(background.gameClockSeconds).quarter,
+        clockSeconds: clockParts(background.gameClockSeconds).clockSeconds,
+        drives: [...next.drives, background.summary],
+      };
+      offense = "hero";
+      startFieldPosition = background.nextControlledFieldPosition;
+      driveNumber += 1;
+      safety += 1;
+      continue;
+    }
+
+    const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:special-hero:${opportunityIndex}:${driveNumber}`);
+    const offenseRatings = ratingsForSide(save, "hero");
+    const defenseRatings = ratingsForSide(save, "opponent");
+    const edge = offenseRatings.offense + offenseRatings.coaching * .22 + offenseRatings.cohesion * .14
+      - defenseRatings.defense - defenseRatings.coaching * .2 - defenseRatings.cohesion * .12
+      + random.integer(-22, 22);
+    const plays = clampInteger(5 + Math.round(edge / 14) + random.integer(-2, 3), 3, 12);
+    const timeUsed = Math.min(next.gameClockSeconds, clampInteger(plays * random.integer(23, 36), 70, 390));
+    const gameClockSeconds = Math.max(0, next.gameClockSeconds - timeUsed);
+    const startClock = clockParts(next.gameClockSeconds);
+    const endClock = clockParts(gameClockSeconds);
+    const yards = clampInteger(24 + edge * 1.05 + random.integer(-16, 24), 3, 88);
+    const endFieldPosition = clampInteger(startFieldPosition + yards, 1, 99);
+    const touchdown = startFieldPosition + yards >= 100 || edge >= 24 && random.chance(.4);
+    const turnover = !touchdown && edge <= -18 && random.chance(.42);
+
+    if (!touchdown && !turnover) {
+      const specialOpportunity = position === "K" ? endFieldPosition >= 56 : endFieldPosition < 72;
+      if (specialOpportunity && gameClockSeconds > 0) {
+        return {
+          ...next,
+          possession: "hero",
+          quarter: endClock.quarter,
+          clockSeconds: endClock.clockSeconds,
+          gameClockSeconds,
+          driveDown: 4,
+          driveDistance: random.integer(1, 9),
+          driveFieldPosition: endFieldPosition,
+          driveNumber,
+          currentDriveId: `${match.gameId}-drive-${driveNumber}`,
+          driveStartQuarter: startClock.quarter,
+          driveStartClockSeconds: startClock.clockSeconds,
+          driveStartFieldPosition: startFieldPosition,
+          drivePlays: plays,
+          driveYards: yards,
+        };
+      }
+    }
+
+    let outcome: MatchDriveOutcome;
+    let points = 0;
+    let nextOpponentField = 25;
+    if (touchdown) {
+      outcome = "touchdown";
+      points = 7;
+    } else if (turnover) {
+      outcome = "turnover";
+      nextOpponentField = clampInteger(100 - endFieldPosition, 20, 72);
+    } else if (position === "P" && endFieldPosition >= 72) {
+      const kicker = specialistForSide(save, "hero", "K");
+      const kickDistance = 117 - endFieldPosition;
+      const made = random.chance(fieldGoalChance(kicker, kickDistance, offenseRatings.coaching));
+      outcome = made ? "field-goal" : "missed-field-goal";
+      points = made ? 3 : 0;
+      nextOpponentField = made ? 25 : clampInteger(100 - endFieldPosition, 20, 75);
+    } else {
+      outcome = "punt";
+      const punter = specialistForSide(save, "hero", "P");
+      nextOpponentField = clampInteger(100 - Math.min(99, endFieldPosition + puntNetYards(punter, random)), 8, 45);
+    }
+
+    const summary: MatchDriveSummary = {
+      id: `drive-${driveNumber}-special-background`,
+      offense: "hero",
+      startQuarter: startClock.quarter,
+      startClockSeconds: startClock.clockSeconds,
+      endQuarter: endClock.quarter,
+      endClockSeconds: endClock.clockSeconds,
+      startFieldPosition,
+      endFieldPosition,
+      plays,
+      yards,
+      points,
+      outcome,
+      description: `${outcome.toUpperCase()} · ${plays} · ${yards}`,
+      controlled: false,
+    };
+    next = {
+      ...next,
+      heroScore: next.heroScore + points,
+      gameClockSeconds,
+      quarter: endClock.quarter,
+      clockSeconds: endClock.clockSeconds,
+      drives: [...next.drives, summary],
+    };
+    offense = "opponent";
+    startFieldPosition = nextOpponentField;
+    driveNumber += 1;
+    safety += 1;
+  }
+
+  return next;
+}
+
 function finalizeScores(save: CareerSave, match: FootballMatchState): FootballMatchState {
   let gameClock = match.gameClockSeconds;
   let heroScore = match.heroScore;
@@ -1351,33 +1514,12 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
   } else {
     started = startControlledDrive(started, GAME_SECONDS, random.integer(22, 28), 1);
   }
-  const entryQuarter = match.entryQuarter ?? 1;
-  if (entryQuarter > 1) {
-    const targetClock = entryQuarter === 2 ? 33 * 60 : entryQuarter === 3 ? 21 * 60 : 9 * 60;
-    let side: MatchTeamSide = started.possession;
-    let driveNumber = started.driveNumber;
-    while (started.gameClockSeconds > targetClock && driveNumber < 9) {
-      const background = backgroundDrive(
-        save,
-        side,
-        started.gameClockSeconds,
-        25,
-        driveNumber,
-        `${save.meta.worldSeed}:${match.gameId}:bench:${driveNumber}`,
-      );
-      started = {
-        ...started,
-        heroScore: started.heroScore + background.heroScoreDelta,
-        opponentScore: started.opponentScore + background.opponentScoreDelta,
-        gameClockSeconds: background.gameClockSeconds,
-        drives: [...started.drives, background.summary],
-      };
-      side = otherSide(side);
-      driveNumber += 1;
-    }
-    started = startControlledDrive(started, Math.min(started.gameClockSeconds, targetClock), random.integer(20, 34), driveNumber);
+  if (started.heroUnit === "special") started = advanceToSpecialOpportunity(save, started, 0);
+  if (started.gameClockSeconds > 0) started = { ...started, currentEpisode: generateEpisode(save, started, 0) };
+  else {
+    const result = finalResult(started, save);
+    started = { ...started, status: "complete", finalResult: result, quarter: 4, clockSeconds: 0, currentEpisode: undefined };
   }
-  started = { ...started, currentEpisode: generateEpisode(save, started, 0) };
 
   return {
     ...save,
@@ -1389,7 +1531,7 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
         occurredAt: save.meta.updatedAt,
         type: "match-started",
         title: `Матч против ${match.opponentName}`,
-        description: `Начался полный матчевый симулятор. Штаб вызывает обе стороны розыгрыша, а ${save.football.position} отвечает только за своё назначение.`,
+        description: `${save.football.position} · ${match.opponentName}`,
       },
     ],
   };
@@ -1404,6 +1546,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     ? episode.options.find((item) => item.risk === "balanced") ?? episode.options[0]
     : episode.options.find((item) => item.id === optionId);
   if (!selected) throw new Error("Unknown match decision");
+  const heroActive = episode.heroActive !== false;
 
   const random = new SeededRandom(`${save.meta.worldSeed}:${match.gameId}:${episode.id}:${optionId}`);
   const assignmentScore = liveOutcome
@@ -1429,22 +1572,26 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
         ...(liveOutcome.kickDistance !== undefined ? { kickDistance: liveOutcome.kickDistance } : {}),
       }
     : simulateSnap(save, match, episode, assignmentScore, selected, random);
-  const statResolution = liveOutcome
-    ? { stats: liveOutcome.statDelta, advanced: liveOutcome.advancedDelta, involved: liveOutcome.heroInvolved }
-    : makeStatDelta(save, episode, simulation, preliminaryGrade, random);
-  const usageDelta = usageDeltaForSnap(
-    save.football.position,
-    episode,
-    simulation.targetSlot,
-    simulation.ballCarrierSlot,
-    liveOutcome?.evaluationSignals ?? {
-      heroOpenWindow: Boolean(simulation.heroOpenWindow),
-      targetedWhenOpen: Boolean(simulation.heroOpenWindow && simulation.targetSlot === episode.heroSlot),
-      separationYards: simulation.heroSeparationYards,
-    },
-    statResolution.advanced,
-  );
-  const evaluation = evaluateSnapPerformance({
+  const statResolution = heroActive
+    ? liveOutcome
+      ? { stats: liveOutcome.statDelta, advanced: liveOutcome.advancedDelta, involved: liveOutcome.heroInvolved }
+      : makeStatDelta(save, episode, simulation, preliminaryGrade, random)
+    : { stats: createEmptyMatchStats(), advanced: createEmptyAdvancedMatchStats(), involved: false };
+  const usageDelta = heroActive
+    ? usageDeltaForSnap(
+      save.football.position,
+      episode,
+      simulation.targetSlot,
+      simulation.ballCarrierSlot,
+      liveOutcome?.evaluationSignals ?? {
+        heroOpenWindow: Boolean(simulation.heroOpenWindow),
+        targetedWhenOpen: Boolean(simulation.heroOpenWindow && simulation.targetSlot === episode.heroSlot),
+        separationYards: simulation.heroSeparationYards,
+      },
+      statResolution.advanced,
+    )
+    : createEmptyMatchUsageStats();
+  const evaluation = heroActive ? evaluateSnapPerformance({
     position: save.football.position,
     episode,
     assignmentScore,
@@ -1456,11 +1603,11 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     statDelta: statResolution.stats,
     advancedDelta: statResolution.advanced,
     liveSignals: liveOutcome?.evaluationSignals,
-  });
-  const grade = evaluation.grade;
-  const coachDelta = round((evaluation.score - 68) * .055, 1);
-  const confidenceDelta = round((evaluation.score - 68) * .028, 1);
-  const fatigueDelta = round(1 + selected.difficulty * .013 + (selected.risk === "aggressive" ? .65 : 0), 1);
+  }) : undefined;
+  const grade = evaluation?.grade ?? gradeFromScore(simulation.teamExecutionScore);
+  const coachDelta = evaluation ? round((evaluation.score - 68) * .055, 1) : 0;
+  const confidenceDelta = evaluation ? round((evaluation.score - 68) * .028, 1) : 0;
+  const fatigueDelta = heroActive ? round(1 + selected.difficulty * .013 + (selected.risk === "aggressive" ? .65 : 0), 1) : 0;
   const snapTime = liveOutcome
     ? clampInteger(liveOutcome.elapsedSeconds + (simulation.snapResult === "incomplete" ? 8 : 24), 8, 42)
     : simulation.snapResult === "incomplete" || simulation.snapResult === "penalty"
@@ -1499,7 +1646,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     ballCarrierSlot: simulation.ballCarrierSlot,
     statDelta: statResolution.stats,
     advancedDelta: statResolution.advanced,
-    evaluation,
+    ...(evaluation ? { evaluation } : {}),
   };
 
   let heroScore = match.heroScore + (simulation.scoringSide === "hero" ? simulation.points : 0);
@@ -1593,7 +1740,9 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     gameClockSeconds,
     playClockSeconds: 25,
     heroFatigue: clamp(match.heroFatigue + fatigueDelta),
-    coachGrade: round((match.completedEpisodes.reduce((sum, item) => sum + (item.evaluation?.score ?? item.assignmentScore), 0) + evaluation.score) / (match.completedEpisodes.length + 1), 1),
+    coachGrade: heroActive && evaluation
+      ? round((match.completedEpisodes.reduce((sum, item) => sum + (item.evaluation?.score ?? 0), 0) + evaluation.score) / (match.completedEpisodes.filter((item) => item.evaluation).length + 1), 1)
+      : match.coachGrade,
     episodeIndex: match.episodeIndex + 1,
     driveDown: nextDown,
     driveDistance: nextDistance,
@@ -1601,9 +1750,9 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     drivePlays,
     driveYards,
     tacticalMemory,
-    completedEpisodes: [...match.completedEpisodes, { ...outcome, driveEnded }],
-    lastResolvedEpisode: episode,
-    lastResolvedResult: { ...outcome, driveEnded },
+    completedEpisodes: heroActive ? [...match.completedEpisodes, { ...outcome, driveEnded }] : match.completedEpisodes,
+    lastResolvedEpisode: heroActive ? episode : undefined,
+    lastResolvedResult: heroActive ? { ...outcome, driveEnded } : undefined,
     stats: addStats(match.stats, statResolution.stats),
     advancedStats: addAdvancedStats(match.advancedStats, statResolution.advanced),
     usageStats: addMatchUsageStats(match.usageStats, usageDelta),
@@ -1670,6 +1819,9 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     },
   };
 
+  if (nextMatch.heroUnit === "special" && nextMatch.gameClockSeconds > 0) {
+    nextMatch = advanceToSpecialOpportunity(save, nextMatch, nextMatch.episodeIndex);
+  }
   const shouldFinish = nextMatch.episodeIndex >= nextMatch.totalEpisodes || nextMatch.gameClockSeconds <= 0;
   let nextFootball = save.football;
   let history = save.history;
@@ -1766,6 +1918,7 @@ function automaticDecisionId(save: CareerSave): string {
 }
 
 function isKeyMoment(match: FootballMatchState, episode: MatchEpisode): boolean {
+  if (episode.heroActive === false) return false;
   if (episode.unit === "special") return true;
   if (episode.down >= 3) return true;
   if (episode.fieldPosition >= 85 || episode.fieldPosition <= 5) return true;
@@ -1778,6 +1931,18 @@ function isKeyMoment(match: FootballMatchState, episode: MatchEpisode): boolean 
   const decisivePrimaryRole = episode.heroInvolvement === "primary" && (highRiskCall || longYardage);
 
   return directPressureMoment || decisivePrimaryRole;
+}
+
+function advancePastBenchSnaps(save: CareerSave): CareerSave {
+  let current = save;
+  let safety = 0;
+  while (current.football.match.status === "in-progress"
+    && current.football.match.currentEpisode?.heroActive === false
+    && safety < 180) {
+    current = resolveOneMatchDecision(current, automaticDecisionId(current));
+    safety += 1;
+  }
+  return current;
 }
 
 function advanceAutomatic(save: CareerSave, stopAtKeyMoment: boolean): CareerSave {
@@ -1798,6 +1963,7 @@ export function startMatch(
 ): CareerSave {
   let started = startMatchCore(save, participationMode, analysisMode);
   if (participationMode === "auto") started = advanceAutomatic(started, false);
+  if (participationMode === "every-snap") started = advancePastBenchSnaps(started);
   if (participationMode === "key-moments") {
     started = advanceAutomatic(started, true);
     if (started.football.match.status === "in-progress") {
@@ -1817,7 +1983,8 @@ export function resolveMatchDecision(save: CareerSave, optionId: string): Career
   const resolved = resolveOneMatchDecision(save, optionId);
   const playbackEpisode = resolved.football.match.lastResolvedEpisode;
   const playbackResult = resolved.football.match.lastResolvedResult;
-  if (resolved.football.match.status !== "in-progress" || resolved.football.match.participationMode === "every-snap") return resolved;
+  if (resolved.football.match.status !== "in-progress") return resolved;
+  if (resolved.football.match.participationMode === "every-snap") return advancePastBenchSnaps(resolved);
   const advanced = advanceAutomatic(resolved, resolved.football.match.participationMode === "key-moments");
   if (!playbackEpisode || !playbackResult) return advanced;
   return {

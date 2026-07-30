@@ -58,6 +58,7 @@ function episode(position: FootballPosition, playType: MatchEpisode["playCall"][
     read: "Read leverage",
     playCall: call,
     opponentCall: { ...call, id: "defense", calledBy: "defensive-coordinator", concept: "Cover 3", playType: "coverage" },
+    heroActive: true,
     heroInvolvement: "primary",
     heroRole: "Primary responsibility",
     heroSlot: position,

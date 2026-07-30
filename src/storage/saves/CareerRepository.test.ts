@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CareerRepository } from "./CareerRepository";
 import { getDatabase } from "../indexedDb/database";
 import { advanceRelationshipWorld } from "../../sports/football/relationships/relationshipEvents";
+import type { CareerSave } from "./schema";
 
 describe("CareerRepository", () => {
   it("creates, lists, loads, exports and removes a career", async () => {
@@ -73,9 +74,22 @@ describe("CareerRepository", () => {
     const database = await getDatabase();
     const snapshots = await database.getAllFromIndex("careerSnapshots", "by-careerId", created.meta.id);
     const backups = await database.getAllFromIndex("autosaveBackups", "by-careerId", created.meta.id);
+    const worldSlices = await database.getAllFromIndex("careerWorldSlices", "by-careerId", created.meta.id);
     expect(snapshots).toHaveLength(1);
     expect(backups.length).toBeLessThanOrEqual(5);
+    expect(worldSlices).toHaveLength(3);
+    expect(snapshots[0]?.worldSlices).toBeTruthy();
+    expect((snapshots[0]?.state as { world?: { players?: unknown[] } }).world?.players).toEqual([]);
     expect((await repository.load(created.meta.id)).meta.revision).toBe(current.meta.revision);
+
+    const invalid = {
+      ...current,
+      character: {
+        ...current.character,
+        condition: { ...current.character.condition, health: 140 },
+      },
+    } as CareerSave;
+    await expect(repository.save(invalid)).rejects.toThrow(/character\.condition\.health/);
 
     const exported = await repository.export(created.meta.id);
     const exportedText = await new Promise<string>((resolve, reject) => {
