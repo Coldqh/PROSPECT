@@ -39,6 +39,7 @@ const required = [
   ["field", "live-keyboard-guide"],
   ["field", "fieldSpotLabel"],
   ["field", "endFieldPosition"],
+  ["field", "player.isHero ? \"#35c96f\""],
   ["dashboard", '"key-moments"'],
   ["dashboard", "Analysis Mode"],
   ["dashboard", "RealTimeMatchField"],
@@ -62,4 +63,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("Match experience architecture: OK (yard camera, physical passes, real returns, desktop arrows, mobile joystick)");
+console.log("Match experience architecture: OK (yard camera, physical passes, real returns, desktop arrows, mobile joystick, green hero marker)");

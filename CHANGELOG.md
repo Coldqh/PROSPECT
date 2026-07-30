@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.42.3
+
+- Герой и его маршрут на поле перекрашены из красного в зелёный.
+- PRO integration suite разделён на семь короткоживущих Vitest-процессов.
+- Устранён повторный `Timeout calling "onTaskUpdate"` в `camp.test.ts`.
+
+
 ## 0.42.2 — PROFESSIONAL TEST SUITE CI HOTFIX
 
 ### Исправления CI

@@ -188,7 +188,7 @@ function drawField(canvas: HTMLCanvasElement, engine: LivePlayEngineState, analy
     for (const player of engine.players) {
       if (!player.isHero && !analysisMode) continue;
       if (player.route.length === 0) continue;
-      context.strokeStyle = player.isHero ? "rgba(255,73,94,.95)" : player.unit === "offense" ? "rgba(255,255,255,.28)" : "rgba(255,115,115,.24)";
+      context.strokeStyle = player.isHero ? "rgba(61,220,116,.95)" : player.unit === "offense" ? "rgba(255,255,255,.28)" : "rgba(255,115,115,.24)";
       context.beginPath();
       context.moveTo(px(player.startX), pyWorld(player.startY));
       for (const point of player.route) context.lineTo(px(point.x), pyWorld(point.y));
@@ -203,7 +203,7 @@ function drawField(canvas: HTMLCanvasElement, engine: LivePlayEngineState, analy
     const radius = player.isHero ? 13 : 10;
     context.beginPath();
     context.arc(px(player.x), screenY, radius, 0, Math.PI * 2);
-    context.fillStyle = player.isHero ? "#ef3e52" : player.unit === "defense" ? "#b82f42" : player.unit === "special" ? "#74529a" : "#2f78d0";
+    context.fillStyle = player.isHero ? "#35c96f" : player.unit === "defense" ? "#b82f42" : player.unit === "special" ? "#74529a" : "#2f78d0";
     context.fill();
     context.lineWidth = player.isHero ? 3 : 1.6;
     context.strokeStyle = player.hasBall ? "#f6dd68" : "rgba(255,255,255,.88)";
