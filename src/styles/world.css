@@ -323,3 +323,49 @@
   .world-v27-career-summary,
   .world-v27-career-sheet > section { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* 0.43 league directory */
+.league-directory { display: grid; gap: 10px; }
+.league-directory__head { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.league-directory__head > div { display: grid; gap: 2px; }
+.league-directory__head small { color: var(--muted); }
+.league-directory__head h2 { margin: 0; color: var(--text); }
+.league-directory__head > span { color: var(--text); font-weight: 900; }
+.league-directory__tabs { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.league-directory__search { min-height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.league-directory__search svg { color: var(--muted); }
+.league-directory__search input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--text); background: transparent; }
+.league-directory__list { display: grid; gap: 6px; }
+.league-directory__list > button { min-height: 58px; padding: 8px 10px; display: grid; grid-template-columns: 42px minmax(0,1fr) auto auto; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 9px; color: var(--text); background: var(--surface); text-align: left; }
+.league-directory__list > button:disabled { opacity: 1; }
+.league-directory__mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; background: var(--surface-3); color: var(--accent); font-weight: 900; }
+.league-directory__list > button > div { min-width: 0; display: grid; gap: 2px; }
+.league-directory__list strong,
+.league-directory__list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.league-directory__list small { color: var(--muted); }
+.league-directory__list em { color: var(--text-secondary); font-style: normal; }
+.league-directory__list b { min-width: 28px; text-align: right; }
+.pro-team-sheet { display: grid; gap: 12px; }
+.pro-team-sheet__metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.pro-team-sheet__metrics > span { padding: 10px; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.pro-team-sheet__metrics small,
+.pro-team-sheet__needs small,
+.pro-team-sheet__roster small { color: var(--muted); }
+.pro-team-sheet__needs,
+.pro-team-sheet__roster { display: grid; gap: 7px; }
+.pro-team-sheet__needs > div { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 5px; }
+.pro-team-sheet__needs span { padding: 7px 4px; display: grid; place-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 7px; }
+.pro-team-sheet__needs em { color: var(--accent); font-style: normal; }
+.pro-team-sheet__roster > header { display: flex; justify-content: space-between; }
+.pro-team-sheet__roster article { min-height: 46px; padding: 7px 8px; display: grid; grid-template-columns: 44px minmax(0,1fr) auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.pro-team-sheet__roster article > span { color: var(--accent); font-weight: 900; }
+.pro-team-sheet__roster article > div { min-width: 0; display: grid; gap: 1px; }
+.pro-team-sheet__roster article strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pro-team-sheet__roster article em { font-style: normal; font-weight: 900; }
+.pro-team-sheet__roster article.is-hero { background: rgba(53,201,111,.08); }
+@media (max-width: 460px) {
+  .league-directory__list > button { grid-template-columns: 38px minmax(0,1fr) auto; }
+  .league-directory__list > button > b { display: none; }
+  .league-directory__mark { width: 38px; height: 38px; }
+  .pro-team-sheet__needs > div { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}

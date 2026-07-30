@@ -863,7 +863,12 @@ function makeStatDelta(
     stats.pancakes = hero.kind === "run-block" && grade === "A" && random.chance(.35) ? 1 : 0;
   } else if (save.football.position === "EDGE" || save.football.position === "DT" || save.football.position === "LB") {
     const runContact = simulation.ballCarrierSlot !== undefined && (hero.kind === "run-fit" || hero.kind === "rush") && random.chance(grade === "A" ? .72 : grade === "B" ? .48 : .23);
-    const pressureContact = simulation.snapResult === "sack" && hero.kind === "rush" && (grade === "A" || grade === "B" && random.chance(.35));
+    const sackShare = save.football.position === "EDGE" ? .34 : save.football.position === "DT" ? .22 : .16;
+    const gradeShare = grade === "A" ? .18 : grade === "B" ? .08 : 0;
+    const involvementShare = episode.heroInvolvement === "primary" ? .08 : episode.heroInvolvement === "secondary" ? .03 : 0;
+    const pressureContact = simulation.snapResult === "sack"
+      && hero.kind === "rush"
+      && random.chance(Math.min(.68, sackShare + gradeShare + involvementShare));
     const targetContact = simulation.targetSlot !== undefined && hero.matchupSlot === simulation.targetSlot;
     involved = runContact || pressureContact || targetContact || hero.kind === "rush";
     stats.tackles = runContact || pressureContact ? 1 : targetContact && simulation.snapResult === "completion" ? 1 : 0;
@@ -1118,7 +1123,12 @@ function resultCopy(episode: MatchEpisode, simulation: SnapSimulation, grade: Ma
 }
 
 function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalResult {
-  const evaluation = aggregateMatchEvaluation(save.football.position, match.completedEpisodes.map((item) => item.evaluation).filter((item): item is NonNullable<typeof item> => Boolean(item)));
+  const evaluation = aggregateMatchEvaluation(
+    save.football.position,
+    match.completedEpisodes.map((item) => item.evaluation).filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    match.stats,
+    match.advancedStats,
+  );
   const grade = evaluation.grade;
   const won = match.heroScore > match.opponentScore;
   const assignmentRate = match.advancedStats.snaps > 0
@@ -1143,19 +1153,13 @@ function finalResult(match: FootballMatchState, save: CareerSave): MatchFinalRes
   const spotlight = spotlightByPosition[save.football.position];
   const coachTrustDelta = round((evaluation.score - 68) * .08, 1);
   const visibilityDelta = round(Math.max(0, (evaluation.score - 62) * .07) + (won ? .8 : 0), 1);
-  const professionalTeam = save.meta.phase === "professional-career"
-    ? save.football.professional.teams.find((team) => team.id === save.football.professional.heroCareer?.teamId)
-    : undefined;
-  const teamName = professionalTeam?.shortName ?? (save.meta.phase === "college-season"
-    ? save.football.college.program?.shortName ?? "Программа"
-    : save.football.school.shortName);
   return {
     won,
     heroScore: match.heroScore,
     opponentScore: match.opponentScore,
     grade,
-    headline: won ? "Победа закрыта" : "Матч упущен",
-    summary: `${teamName} ${won ? "побеждает" : "проигрывает"} ${match.heroScore}:${match.opponentScore}. Индивидуальная оценка ${Math.round(evaluation.score)} (${grade}).`,
+    headline: won ? "ПОБЕДА" : "ПОРАЖЕНИЕ",
+    summary: `${Math.round(evaluation.score)}`,
     spotlight,
     coachTrustDelta,
     visibilityDelta,

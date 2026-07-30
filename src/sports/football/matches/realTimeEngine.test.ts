@@ -135,6 +135,10 @@ function episode(heroPosition: FootballPosition = "QB"): MatchEpisode {
   };
 }
 
+function blockerPosition(position: string): boolean {
+  return ["OT", "OG", "C"].includes(position);
+}
+
 function runUntilWhistle(position: FootballPosition, onFrame?: (frame: number, state: ReturnType<typeof createLivePlayEngine>) => void): ReturnType<typeof createLivePlayEngine> {
   const state = createLivePlayEngine(episode(position), position, `test-${position}`);
   issueLivePlayCommand(state, { type: "snap" });
@@ -280,6 +284,43 @@ describe("real-time football engine", () => {
     for (let frame = 0; frame < 45; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
     expect(liveHeroControlActive({ moveX: 0, moveY: 0 })).toBe(false);
     expect(Math.hypot(hero.x - releasePoint.x, hero.y - releasePoint.y)).toBeGreaterThan(0.8);
+  });
+
+  it("keeps automatic routes stable at waypoints", () => {
+    const state = createLivePlayEngine(episode("WR"), "WR", "stable-route");
+    const hero = state.players.find((player) => player.isHero)!;
+    issueLivePlayCommand(state, { type: "snap" });
+    let previousX = hero.x;
+    let previousDirection = 0;
+    let directionChanges = 0;
+    let maximumStep = 0;
+    for (let frame = 0; frame < 105 && !state.outcome; frame += 1) {
+      stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+      const dx = hero.x - previousX;
+      maximumStep = Math.max(maximumStep, Math.abs(dx));
+      const direction = Math.abs(dx) < 0.002 ? 0 : Math.sign(dx);
+      if (direction !== 0 && previousDirection !== 0 && direction !== previousDirection) directionChanges += 1;
+      if (direction !== 0) previousDirection = direction;
+      previousX = hero.x;
+    }
+    expect(directionChanges).toBeLessThanOrEqual(2);
+    expect(maximumStep).toBeLessThan(0.25);
+  });
+
+  it("moves the QB away from immediate edge pressure", () => {
+    const state = createLivePlayEngine(episode("QB"), "QB", "pocket-escape");
+    const qb = state.players.find((player) => player.isHero)!;
+    const rusher = state.players.find((player) => player.slot === "LE" && player.unit === "defense")!;
+    for (const defender of state.players.filter((player) => player.unit === "defense" && player.id !== rusher.id)) defender.down = true;
+    for (const blocker of state.players.filter((player) => player.unit === "offense" && blockerPosition(player.position))) blocker.down = true;
+    rusher.x = qb.x - 3.2;
+    rusher.y = qb.y - 0.6;
+    rusher.rushWon = true;
+    const start = { x: qb.x, y: qb.y };
+    issueLivePlayCommand(state, { type: "snap" });
+    for (let frame = 0; frame < 70 && !state.outcome; frame += 1) stepLivePlayEngine(state, { moveX: 0, moveY: 0 }, 1 / 60);
+    expect(state.pressureOccurred).toBe(true);
+    expect(Math.hypot(qb.x - start.x, qb.y - start.y)).toBeGreaterThan(1.2);
   });
 
   it("keeps role controls deliberately small", () => {

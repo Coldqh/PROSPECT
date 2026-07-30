@@ -49,6 +49,7 @@ import {
 import { getDatabase, type SnapshotRecord } from "../indexedDb/database";
 
 const MAX_AUTOSAVE_BACKUPS = 5;
+const AUTOSAVE_BACKUP_INTERVAL = 5;
 
 function snapshotId(careerId: string, revision: number): string {
   return `${careerId}:${revision.toString().padStart(8, "0")}`;
@@ -362,14 +363,17 @@ export class CareerRepository {
       "readwrite",
     );
 
+    const shouldArchivePrevious = previous !== undefined
+      && validated.meta.revision % AUTOSAVE_BACKUP_INTERVAL === 0;
     if (previous) {
-      await transaction.objectStore("autosaveBackups").put(previous);
+      if (shouldArchivePrevious) await transaction.objectStore("autosaveBackups").put(previous);
+      await transaction.objectStore("careerSnapshots").delete(previous.id);
     }
 
     await transaction.objectStore("careerSnapshots").put(snapshot);
     await transaction.objectStore("careerIndex").put(toIndexRecord(validated));
     await transaction.done;
-    await pruneBackups(validated.meta.id);
+    if (shouldArchivePrevious) await pruneBackups(validated.meta.id);
 
     return validated;
   }
@@ -453,13 +457,17 @@ export class CareerRepository {
 
   private async readLatestSnapshot(careerId: string): Promise<SnapshotRecord | undefined> {
     const database = await getDatabase();
-    const records = await database.getAllFromIndex("careerSnapshots", "by-careerId", careerId);
-    records.sort((left, right) => right.revision - left.revision);
-    return records[0];
+    const transaction = database.transaction("careerSnapshots", "readonly");
+    const cursor = await transaction.store.index("by-career-revision").openCursor(
+      IDBKeyRange.bound([careerId, 0], [careerId, Number.MAX_SAFE_INTEGER]),
+      "prev",
+    );
+    return cursor?.value;
   }
 }
 
 function careerSaveSchemaSafeParse(save: CareerSave): CareerSave {
+  if (save.meta.schemaVersion === CURRENT_SCHEMA_VERSION) return save;
   return migrateCareerSave(save).save;
 }
 

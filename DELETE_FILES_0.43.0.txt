@@ -1,0 +1,7 @@
+APPLY_PATCH_0.42.3.ps1
+APPLY_PATCH_0.42.3.sh
+DELETE_FILES_0.42.3.txt
+PACKAGE_0.42.3.md
+PATCH_0.42.3.md
+PATCH_FILES_0.42.3.txt
+docs/0.42.3-ci-report.md

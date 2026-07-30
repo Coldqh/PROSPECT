@@ -88,9 +88,9 @@ function weightedPick<T>(random: SeededRandom, items: readonly T[], weight: (ite
 }
 
 function offenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
-  let weight = 1;
   const { down, distance, fieldPosition, scoreMargin, quarter, clockSeconds } = context;
   const passLike = play.playType === "pass" || play.playType === "play-action" || play.playType === "screen";
+  let weight = passLike ? 0.72 : 1.35;
   if (distance >= 8) weight *= passLike ? 2.6 : 0.24;
   if (distance <= 3) weight *= play.playType === "run" || play.tags.includes("quick") ? 2.3 : 0.62;
   if (down === 1 && play.tags.includes("early-down")) weight *= 1.7;
@@ -106,7 +106,7 @@ function offenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
 }
 
 function defenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
-  let weight = 1;
+  let weight = play.playType === "blitz" ? 0.65 : 1.25;
   const { down, distance, fieldPosition, scoreMargin, quarter, clockSeconds } = context;
   if (distance >= 8) weight *= play.tags.includes("long-yardage") || play.tags.includes("two-high") ? 2.7 : 0.45;
   if (distance <= 3) weight *= play.tags.includes("short-yardage") || play.tags.includes("heavy-box") ? 3 : 0.48;

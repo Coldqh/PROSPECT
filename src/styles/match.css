@@ -5,6 +5,7 @@
 .match-upcoming,
 .match-live-view,
 .match-final-view { display: grid; gap: 10px; }
+.match-live-view { position: relative; }
 
 .match-stat-button {
   min-width: 58px;
@@ -455,53 +456,6 @@
 }
 
 
-/* 0.40 character control modes */
-.match-control-mode {
-  padding-top: 10px;
-  display: grid;
-  gap: 8px;
-  border-top: 1px solid var(--line);
-}
-.match-control-mode > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.match-control-mode > header small { color: var(--muted); }
-.match-control-mode > header strong { color: var(--text); font-size: var(--type-body-size); }
-.match-control-mode > div {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.match-control-mode button {
-  min-height: 88px;
-  padding: 9px;
-  display: grid;
-  align-content: start;
-  gap: 4px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  color: var(--text);
-  background: var(--surface-raised);
-  text-align: left;
-}
-.match-control-mode button span {
-  color: var(--muted);
-  font-size: var(--type-caption-size);
-  line-height: 1.35;
-}
-.match-control-mode button.is-active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-  background: var(--accent-soft);
-}
-@media (max-width: 560px) {
-  .match-control-mode > div { grid-template-columns: 1fr; }
-  .match-control-mode button { min-height: 62px; }
-}
-
 /* 0.42 bench role and match evaluation */
 .match-bench-summary { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--surface); }
 .match-evaluation-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
@@ -517,3 +471,61 @@
 .match-evaluation-grid strong em, .match-log-criteria em { margin-left: 4px; font-size: 13px; font-style: normal; }
 .match-evaluation-grid strong em.is-positive, .match-log-criteria em.is-positive { color: var(--success); }
 .match-evaluation-grid strong em.is-negative, .match-log-criteria em.is-negative { color: var(--danger); }
+
+/* 0.43 functional match UI */
+.match-role-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.match-role-metrics > span {
+  min-width: 0;
+  padding: 8px 9px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.match-role-metrics small { color: var(--muted); }
+.match-role-metrics strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.match-possession-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 5, 8, .76);
+  backdrop-filter: blur(3px);
+}
+.match-possession-dialog {
+  width: min(100%, 380px);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 11px;
+  background: rgba(10,14,20,.98);
+  box-shadow: 0 22px 70px rgba(0,0,0,.52);
+}
+.match-possession-dialog > header,
+.match-possession-dialog > div,
+.match-possession-dialog > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.match-possession-dialog > header small { color: var(--muted); }
+.match-possession-dialog > header strong { color: var(--text); }
+.match-possession-dialog > strong { color: #fff; font-size: clamp(26px, 8vw, 42px); line-height: 1; }
+.match-possession-dialog > div { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }
+.match-possession-dialog > div span { display: grid; gap: 2px; }
+.match-possession-dialog > div small { color: var(--muted); }
+.match-possession-dialog > div b { color: var(--text); }
+.match-possession-dialog > button { min-height: 44px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 900; }
+@media (max-width: 480px) {
+  .match-role-metrics { grid-template-columns: 1fr; }
+  .match-possession-dialog > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CareerRepository } from "./CareerRepository";
+import { getDatabase } from "../indexedDb/database";
 
 describe("CareerRepository", () => {
   it("creates, lists, loads, exports and removes a career", async () => {
@@ -37,6 +38,15 @@ describe("CareerRepository", () => {
     expect(loaded.meta.worldSeed).toBe(created.meta.worldSeed);
     expect(loaded.football.worldSeed).toBe(created.meta.worldSeed);
     expect(loaded.character.origin.city).toBe("Houston");
+
+    let current = loaded;
+    for (let index = 0; index < 8; index += 1) current = await repository.save(current);
+    const database = await getDatabase();
+    const snapshots = await database.getAllFromIndex("careerSnapshots", "by-careerId", created.meta.id);
+    const backups = await database.getAllFromIndex("autosaveBackups", "by-careerId", created.meta.id);
+    expect(snapshots).toHaveLength(1);
+    expect(backups.length).toBeLessThanOrEqual(5);
+    expect((await repository.load(created.meta.id)).meta.revision).toBe(current.meta.revision);
 
     const exported = await repository.export(created.meta.id);
     const exportedText = await new Promise<string>((resolve, reject) => {

@@ -42,7 +42,6 @@ interface HudState {
   fieldYard: number;
   gameClockSeconds: number;
   controlActive: boolean;
-  latestEvent?: string;
   outcome?: MatchLivePlayOutcome;
 }
 
@@ -68,21 +67,6 @@ function fieldSpotLabel(yard: number): string {
   if (spot === 50) return "50";
   if (spot < 50) return `OWN ${spot}`;
   return `OPP ${100 - spot}`;
-}
-
-function roleHint(position: FootballPosition): string {
-  if (position === "QB") return "Стрелки — движение в кармане. Нажми кнопку ресивера для паса. После пересечения линии скримиджа остаётся только бег.";
-  if (position === "RB") return "Выбирай настоящий гэп движением. Рывок даёт скорость, финт помогает уйти от первого защитника.";
-  if (position === "WR" || position === "TE") return "Сам веди маршрут. Ускоряйся на прямой, срезай на брейке, готовь приём кнопкой «Ловить».";
-  if (position === "OT" || position === "OG" || position === "C") return "Держи корпус между защитником и QB. Силовой блок двигает соперника, якорь удерживает карман.";
-  if (position === "EDGE" || position === "DT") return "Обходи блок движением. Speed rush атакует край, power rush пробивает напрямую.";
-  if (position === "LB" || position === "CB" || position === "S") return "Следи за мячом и своей зоной. Брейк ускоряет реакцию, тэкл завершает контакт, перехват — игра на летящий мяч.";
-  return "Дождись точного окна и нажми кнопку удара.";
-}
-
-function controlHint(position: FootballPosition, active: boolean): string {
-  if (active) return `${roleHint(position)} Отпусти управление — игрок сразу продолжит назначение сам.`;
-  return `Игрок сам выполняет назначение. Коснись джойстика или нажми стрелку, чтобы вмешаться. ${roleHint(position)}`;
 }
 
 function resultTitle(outcome: MatchLivePlayOutcome): string {
@@ -249,19 +233,6 @@ function drawField(canvas: HTMLCanvasElement, engine: LivePlayEngineState, analy
   context.textAlign = "right";
   context.fillText(fieldSpotLabel(liveWorldToFieldYard(engine, engine.ball.y)), width - 18, 29);
 
-  const latest = engine.events[engine.events.length - 1];
-  if (latest && engine.phase !== "pre-snap" && !engine.outcome) {
-    const text = latest.text;
-    context.font = "700 11px Inter, sans-serif";
-    const textWidth = context.measureText(text).width;
-    const boxWidth = Math.min(width - 24, textWidth + 22);
-    context.fillStyle = "rgba(5,8,12,.84)";
-    context.fillRect((width - boxWidth) / 2, height - 42, boxWidth, 30);
-    context.fillStyle = "#fff";
-    context.textAlign = "center";
-    context.fillText(text, width / 2, height - 27, boxWidth - 12);
-  }
-
 }
 
 export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabled, seed, onComplete }: RealTimeMatchFieldProps) {
@@ -332,7 +303,6 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
       const canvas = canvasRef.current;
       if (canvas) drawField(canvas, engine, analysisMode);
       if (now - lastHudUpdateRef.current > 80 || outcome) {
-        const latest = engine.events[engine.events.length - 1];
         const nextHud: HudState = {
           phase: engine.phase,
           elapsed: engine.elapsed,
@@ -342,7 +312,6 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
           gameClockSeconds: Math.max(0, episode.clockSeconds - Math.floor(engine.elapsed)),
           controlActive,
         };
-        if (latest) nextHud.latestEvent = latest.text;
         if (engine.outcome) nextHud.outcome = engine.outcome;
         setHud(nextHud);
         lastHudUpdateRef.current = now;
@@ -438,7 +407,7 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
     <section className={`live-football${hud.controlActive ? " is-manual-override" : " is-autopilot"}`} aria-label="Игровой розыгрыш в реальном времени">
       <header className="live-football__header">
         <div><small>Q{episode.quarter} · {clockLabel(hud.gameClockSeconds)}</small><strong>{downLabel(episode.down)} & {episode.distance} · {fieldSpotLabel(hud.fieldYard)}</strong></div>
-        <span className={hud.pressure ? "is-danger" : ""}>{hud.pressure ? "ДАВЛЕНИЕ" : `${hud.controlActive ? "РУЧНОЕ ВМЕШАТЕЛЬСТВО" : "АВТОМАРШРУТ"} · ${hud.runCommitted ? "QB RUN" : episode.playCall.concept}`}</span>
+        <span className={hud.pressure ? "is-danger" : ""}>{hud.pressure ? "PRESSURE" : hud.runCommitted ? "QB RUN" : episode.playCall.concept}</span>
       </header>
       <div className="live-football__canvas-wrap">
         <canvas ref={canvasRef} className="live-football__canvas" onClick={canvasClick} />
@@ -449,16 +418,13 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
               <div className="live-snap-result-grade"><b>{snapEvaluation?.grade ?? "C"}</b><strong>{Math.round(snapEvaluation?.score ?? hud.outcome.assignmentScore)}</strong><span>/100</span></div>
               <h3>{resultTitle(hud.outcome)}</h3>
               <div><span>{hud.outcome.yards >= 0 ? "+" : ""}{hud.outcome.yards} ярдов</span><span>{fieldSpotLabel(hud.outcome.endFieldPosition ?? episode.fieldPosition)}</span></div>
-              <p>{snapEvaluation?.summary ?? hud.outcome.description}</p>
-              {snapEvaluation && <div className="live-snap-result-criteria">{snapEvaluation.criteria.map((item) => <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)} <em className={item.delta >= 0 ? "is-positive" : "is-negative"}>{item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}</em></strong><small>{item.detail}</small></article>)}</div>}
+              {snapEvaluation && <div className="live-snap-result-criteria">{snapEvaluation.criteria.map((item) => <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)}</strong></article>)}</div>}
               <footer><span>Задание {Math.round(hud.outcome.assignmentScore)}</span><span>Команда {Math.round(hud.outcome.teamExecutionScore)}</span></footer>
               <button type="button" disabled={disabled} onClick={submitOutcome}>{disabled ? "Сохранение…" : "Следующий снэп"}</button>
             </section>
           </div>
         )}
       </div>
-      <p className="live-football__hint">{controlHint(heroPosition, hud.controlActive)}</p>
-
       {hud.phase === "pre-snap" ? (
         <button type="button" className="live-football__snap" disabled={disabled} onClick={() => command({ type: "snap" })}>СНЭП</button>
       ) : !hud.outcome ? (
@@ -481,10 +447,6 @@ export function RealTimeMatchField({ episode, heroPosition, analysisMode, disabl
           <div className="live-role-actions">
             {canThrow && <div className="live-receiver-buttons">{receivers.map((receiver) => <button type="button" key={receiver.id} onClick={() => command({ type: "throw", targetId: receiver.id })}><strong>{receiver.slot}</strong><span>{receiver.label}</span></button>)}</div>}
             <div className="live-role-actions__main">{actions.map((action) => <button type="button" key={action.id} disabled={disabled} onClick={() => command({ type: action.id } as LivePlayCommand)}>{action.label}</button>)}</div>
-          </div>
-          <div className={`live-football__autopilot-state${hud.controlActive ? " is-manual" : ""}`}>
-            <span>{hud.controlActive ? "YOU" : "AI"}</span>
-            <div><strong>{hud.controlActive ? "Ты управляешь движением" : "Игрок выполняет назначение"}</strong><small>{hud.controlActive ? "Отпусти джойстик — автоматика продолжит из текущей точки" : "Коснись джойстика в любой момент"}</small></div>
           </div>
         </div>
       ) : null}

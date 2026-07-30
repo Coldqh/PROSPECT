@@ -151,4 +151,23 @@ describe("position-specific performance evaluation", () => {
     expect(report.criteria).toHaveLength(4);
     expect(report.bestSnapIds).toHaveLength(2);
   });
+
+  it("grades elite front-seven production as an elite match instead of averaging it into a C", () => {
+    const ordinary = Array.from({ length: 43 }, () => evaluate("LB", {
+      assignmentScore: 64,
+      involved: false,
+      statDelta: statLine(),
+      advancedDelta: advancedLine({ snaps: 1 }),
+    }));
+    const report = aggregateMatchEvaluation(
+      "LB",
+      ordinary,
+      statLine({ tackles: 8, tacklesForLoss: 7, sacks: 7, hurries: 3 }),
+      advancedLine({ snaps: 43, assignmentWins: 28, assignmentLosses: 6, pressures: 10, missedTackles: 0 }),
+    );
+    expect(report.grade).toBe("A");
+    expect(report.score).toBeGreaterThanOrEqual(90);
+    expect(report.criteria.find((item) => item.id === "rush")?.score).toBeGreaterThanOrEqual(90);
+    expect(report.criteria.find((item) => item.id === "finish")?.score).toBeGreaterThanOrEqual(88);
+  });
 });

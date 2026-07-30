@@ -565,3 +565,5 @@
 .professional-performance-history article p { margin: 0; color: var(--muted); }
 .professional-performance-history article footer { display: flex; flex-wrap: wrap; gap: 5px; }
 .professional-performance-history article footer em { padding: 3px 6px; border-radius: 6px; background: var(--surface-1); color: var(--muted); font-size: 13px; font-style: normal; }
+
+.professional-root-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); }

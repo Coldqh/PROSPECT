@@ -1,12 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 import { formatGameDate, toGameDateKey } from "../../core/calendar/types";
 import { encodeLivePlayOutcome, type MatchLivePlayOutcome } from "../../sports/football/matches/realTimeEngine";
-import type { MatchDriveOutcome, MatchEpisode, MatchParticipationMode, MatchUnit } from "../../sports/football/matches/types";
+import type {
+  MatchDriveOutcome,
+  MatchDriveSummary,
+  MatchEpisode,
+  MatchParticipationMode,
+  MatchUnit,
+} from "../../sports/football/matches/types";
 import type { CareerSave } from "../../storage/saves/schema";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { RealTimeMatchField } from "./RealTimeMatchField";
-
 
 interface MatchDashboardProps {
   save: CareerSave;
@@ -26,28 +31,44 @@ function unitLabel(unit: MatchUnit): string {
 }
 
 function involvementLabel(value: MatchEpisode["heroInvolvement"]): string {
-  return { primary: "Ключевая роль", secondary: "Второе чтение", "assignment-only": "Работа без мяча" }[value];
+  return { primary: "PRIMARY", secondary: "SECONDARY", "assignment-only": "ASSIGNMENT" }[value];
 }
 
 function driveOutcomeLabel(outcome: MatchDriveOutcome): string {
   return {
-    active: "Драйв продолжается",
-    touchdown: "Тачдаун",
-    "defensive-touchdown": "Тачдаун защиты",
-    "field-goal": "Филд-гол",
-    "missed-field-goal": "Промах",
-    punt: "Пант",
-    turnover: "Потеря",
-    "turnover-on-downs": "Смена по даунам",
-    "end-half": "Конец половины",
-    "end-game": "Конец матча",
+    active: "ACTIVE",
+    touchdown: "TOUCHDOWN",
+    "defensive-touchdown": "DEFENSIVE TD",
+    "field-goal": "FIELD GOAL",
+    "missed-field-goal": "MISSED FG",
+    punt: "PUNT",
+    turnover: "TURNOVER",
+    "turnover-on-downs": "4TH DOWN",
+    "end-half": "HALFTIME",
+    "end-game": "FINAL",
   }[outcome];
 }
 
-function modeLabel(mode: MatchParticipationMode): string {
-  return { auto: "Автоматически", "key-moments": "Ключевые моменты", "every-snap": "Каждый снэп" }[mode];
+function defenseOutcomeLabel(outcome: MatchDriveOutcome): string {
+  return {
+    active: "ACTIVE",
+    touchdown: "TD ALLOWED",
+    "defensive-touchdown": "DEFENSIVE TD",
+    "field-goal": "FG ALLOWED",
+    "missed-field-goal": "MISSED FG",
+    punt: "PUNT FORCED",
+    turnover: "TURNOVER FORCED",
+    "turnover-on-downs": "4TH DOWN STOP",
+    "end-half": "HALFTIME",
+    "end-game": "FINAL",
+  }[outcome];
 }
 
+function driveDuration(drive: MatchDriveSummary): string {
+  const start = (4 - drive.startQuarter) * 900 + drive.startClockSeconds;
+  const end = (4 - drive.endQuarter) * 900 + drive.endClockSeconds;
+  return clockLabel(Math.max(0, start - end));
+}
 
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
@@ -73,7 +94,7 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
     case "TE": return [
       { label: "REC/TGT", value: `${stats.receptions}/${stats.targets}` },
       { label: "REC YDS", value: String(stats.receivingYards) },
-      { label: "BLOCK W", value: String(advanced.blocksWon) },
+      { label: "ROUTE W", value: String(advanced.routeWins) },
       { label: "TD", value: String(stats.touchdowns) },
     ];
     case "OT":
@@ -82,12 +103,12 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
       { label: "PASS PRO", value: String(advanced.passProtectionWins) },
       { label: "RUN BLOCK", value: String(advanced.runBlockWins) },
       { label: "PRESS ALW", value: String(stats.pressuresAllowed) },
-      { label: "PANCAKES", value: String(stats.pancakes) },
+      { label: "SACK ALW", value: String(stats.sacksAllowed) },
     ];
     case "EDGE":
     case "DT": return [
       { label: "SACK", value: String(stats.sacks) },
-      { label: "HURRY", value: String(stats.hurries) },
+      { label: "PRESS", value: String(advanced.pressures) },
       { label: "TFL", value: String(stats.tacklesForLoss) },
       { label: "RUN STOP", value: String(stats.runStops) },
     ];
@@ -95,14 +116,14 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
       { label: "TACKLES", value: String(stats.tackles) },
       { label: "TFL", value: String(stats.tacklesForLoss) },
       { label: "SACK", value: String(stats.sacks) },
-      { label: "INT", value: String(stats.interceptions) },
+      { label: "PRESS", value: String(advanced.pressures) },
     ];
     case "CB":
     case "S": return [
       { label: "TACKLES", value: String(stats.tackles) },
       { label: "PBU", value: String(stats.passBreakups) },
       { label: "INT", value: String(stats.interceptions) },
-      { label: "COV SNAP", value: String(stats.coverageSnaps) },
+      { label: "COV W", value: String(advanced.coverageWins) },
     ];
     case "K": return [
       { label: "FG", value: `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}` },
@@ -122,13 +143,44 @@ function statLine(save: CareerSave): Array<{ label: string; value: string }> {
 
 function SnapPersonnel({ episode }: { episode: MatchEpisode }) {
   const groups = episode.unit === "special"
-    ? (["hero", "opponent"] as const).map((side) => ({ id: side, label: side === "hero" ? "Спецкоманда" : "Блок / возврат", assignments: episode.assignments.filter((item) => item.side === side) }))
-    : (["offense", "defense"] as const).map((unit) => ({ id: unit, label: unit === "offense" ? "Атака" : "Защита", assignments: episode.assignments.filter((item) => item.unit === unit) }));
-  return <section className="snap-personnel">{groups.map((group) => <div key={group.id}><header><strong>{group.label}</strong><span>{group.assignments.length}</span></header>{group.assignments.map((item) => <article key={item.id} className={item.isHero ? "is-hero" : ""}><span>{item.slot}</span><div><strong>{item.playerName ?? item.label}</strong><small>{item.position} · {item.task}</small></div><em>{item.overall ? Math.round(item.overall) : "—"}</em></article>)}</div>)}</section>;
+    ? (["hero", "opponent"] as const).map((side) => ({
+        id: side,
+        label: side === "hero" ? "SPECIAL" : "RETURN",
+        assignments: episode.assignments.filter((item) => item.side === side),
+      }))
+    : (["offense", "defense"] as const).map((unit) => ({
+        id: unit,
+        label: unit === "offense" ? "OFFENSE" : "DEFENSE",
+        assignments: episode.assignments.filter((item) => item.unit === unit),
+      }));
+  return (
+    <section className="snap-personnel">
+      {groups.map((group) => (
+        <div key={group.id}>
+          <header><strong>{group.label}</strong><span>{group.assignments.length}</span></header>
+          {group.assignments.map((item) => (
+            <article key={item.id} className={item.isHero ? "is-hero" : ""}>
+              <span>{item.slot}</span>
+              <div><strong>{item.playerName ?? item.label}</strong><small>{item.position} · {item.task}</small></div>
+              <em>{item.overall ? Math.round(item.overall) : "—"}</em>
+            </article>
+          ))}
+        </div>
+      ))}
+    </section>
+  );
 }
 
-export function MatchDashboard({ save, mutating, actionError, onStartMatch, onResolveDecision, onFinalizeMatch }: MatchDashboardProps) {
+export function MatchDashboard({
+  save,
+  mutating,
+  actionError,
+  onStartMatch,
+  onResolveDecision,
+  onFinalizeMatch,
+}: MatchDashboardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [dismissedTransitionId, setDismissedTransitionId] = useState<string>();
   const mode: MatchParticipationMode = "every-snap";
   const [analysisMode, setAnalysisMode] = useState(true);
   const match = save.football.match;
@@ -143,7 +195,14 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
   const stats = useMemo(() => statLine(save), [save]);
   const isMatchDay = match.status !== "upcoming" || toGameDateKey(save.meta.currentDate) === toGameDateKey(match.scheduledDate);
   const episode = match.currentEpisode;
-  const assignmentRate = match.advancedStats.snaps > 0 ? Math.round(match.advancedStats.assignmentWins / match.advancedStats.snaps * 100) : 0;
+  const assignmentRate = match.advancedStats.snaps > 0
+    ? Math.round(match.advancedStats.assignmentWins / match.advancedStats.snaps * 100)
+    : 0;
+  const transitionDrive = match.status === "in-progress"
+    ? [...match.drives].reverse().find((drive) => !drive.controlled)
+    : undefined;
+  const showTransition = Boolean(transitionDrive && transitionDrive.id !== dismissedTransitionId);
+
   const resolveLivePlay = useCallback(async (outcome: MatchLivePlayOutcome) => {
     await onResolveDecision(encodeLivePlayOutcome(outcome));
   }, [onResolveDecision]);
@@ -151,36 +210,213 @@ export function MatchDashboard({ save, mutating, actionError, onStartMatch, onRe
   const offenseCall = episode ? (match.heroUnit === "offense" ? episode.playCall : episode.opponentCall) : undefined;
   const defenseCall = episode ? (match.heroUnit === "defense" ? episode.playCall : episode.opponentCall) : undefined;
   const heroAssignment = episode?.assignments.find((item) => item.isHero);
-  const heroMatchup = heroAssignment?.matchupSlot ? episode?.assignments.find((item) => item.slot === heroAssignment.matchupSlot && item.unit !== heroAssignment.unit) : undefined;
+  const heroMatchup = heroAssignment?.matchupSlot
+    ? episode?.assignments.find((item) => item.slot === heroAssignment.matchupSlot && item.unit !== heroAssignment.unit)
+    : undefined;
 
-  return <div className="compact-section match-section match-section--v36">
-    <header className="compact-page-head match-page-head"><div><span>WEEK {match.scheduledWeek} · {unitLabel(match.heroUnit)}</span><h2>{match.status === "complete" ? "Финал" : "Матч"}</h2></div><button type="button" className="match-stat-button" onClick={() => setSheetOpen(true)}><small>SNAP</small><strong>{match.episodeIndex}/{match.totalEpisodes}</strong></button></header>
-    {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
-    <section className="match-scoreboard"><div><small>{heroTeamName}</small><strong>{match.heroScore}</strong></div><span><em>{match.status === "upcoming" ? formatGameDate(match.scheduledDate) : `Q${match.quarter} · ${clockLabel(match.clockSeconds)}`}</em><i>{match.status === "complete" ? "FINAL" : match.status === "in-progress" ? "LIVE" : "UPCOMING"}</i></span><div><small>{match.opponentName}</small><strong>{match.opponentScore}</strong></div></section>
+  const transitionIsHeroOffense = transitionDrive?.offense === "hero";
+  const transitionLabel = match.heroUnit === "defense" && transitionIsHeroOffense
+    ? `АТАКА · ${heroTeamName}`
+    : match.heroUnit === "offense" && !transitionIsHeroOffense
+      ? `ЗАЩИТА · ${heroTeamName}`
+      : `${transitionIsHeroOffense ? heroTeamName : match.opponentName}`;
 
-    {match.status === "upcoming" && <div className="compact-view match-upcoming">
-      <section className="opponent-card"><div className="opponent-card__mark"><Icon name={match.heroUnit === "defense" ? "shield" : "football"} size={28} /></div><div><small>СОПЕРНИК · {match.opponentRecord}</small><h3>{match.opponentName}</h3><p>{match.opponentThreat}</p></div></section>
-      <section className="match-mode-panel">
-        <header><div><small>РОЛЬ В МАТЧЕ</small><strong>{match.rosterRole === "starter" ? "Первый состав" : match.rosterRole === "rotation" ? "Ротация" : match.rosterRole === "special-teams" ? "Запасной" : "Полный матч"}</strong></div><span>{save.football.position}</span></header>
-        <p className="match-bench-summary">{match.benchSummary ?? "Персонаж сам выполняет назначение. Джойстик в любой момент передаёт тебе управление."}</p>
-        <button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}><Icon name="brain" /><span><strong>Analysis Mode</strong><small>Показывает вызов, matchup и ключи розыгрыша.</small></span><em>{analysisMode ? "ON" : "OFF"}</em></button>
+  return (
+    <div className="compact-section match-section match-section--v36">
+      <header className="compact-page-head match-page-head">
+        <div><span>WEEK {match.scheduledWeek} · {unitLabel(match.heroUnit)}</span><h2>Матч</h2></div>
+        <button type="button" className="match-stat-button" onClick={() => setSheetOpen(true)}>
+          <small>SNAP</small><strong>{match.episodeIndex}/{match.totalEpisodes}</strong>
+        </button>
+      </header>
+
+      {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
+
+      <section className="match-scoreboard">
+        <div><small>{heroTeamName}</small><strong>{match.heroScore}</strong></div>
+        <span>
+          <em>{match.status === "upcoming" ? formatGameDate(match.scheduledDate) : `Q${match.quarter} · ${clockLabel(match.clockSeconds)}`}</em>
+          <i>{match.status === "complete" ? "FINAL" : match.status === "in-progress" ? "LIVE" : "UPCOMING"}</i>
+        </span>
+        <div><small>{match.opponentName}</small><strong>{match.opponentScore}</strong></div>
       </section>
-      {isMatchDay ? <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onStartMatch(mode, analysisMode)}><span><small>Автопилот + мгновенное ручное вмешательство · Analysis {analysisMode ? "ON" : "OFF"}</small><strong>{mutating ? "Симуляция…" : "Начать матч"}</strong></span><Icon name="arrow-right" /></button> : <div className="match-lock-card"><Icon name="calendar" /><div><small>Матч назначен</small><strong>{formatGameDate(match.scheduledDate)}</strong></div></div>}
-    </div>}
 
-    {match.status === "in-progress" && episode && <div className="compact-view match-live-view elite-match-live">
-      <section className="elite-match-player-strip"><span className="elite-match-player-strip__avatar">{initials(save.character.identity.fullName)}</span><div><small>#{save.football.jerseyNumber} · {save.football.position}</small><strong>{save.character.identity.fullName}</strong><span>Автопилот · ручное вмешательство в любой момент</span></div><article><small>Оценка</small><strong>{Math.round(match.coachGrade)}</strong></article><article><small>Энергия</small><strong>{Math.round(100 - match.heroFatigue)}%</strong></article></section>
-      <section className="elite-match-situation"><header><div><small>ДРАЙВ {match.driveNumber}</small><h3>{episode.title}</h3></div><strong>{episode.down} & {episode.distance}</strong></header><div className="elite-match-facts"><span><small>Мяч</small><strong>{episode.fieldPosition} yd</strong></span><span><small>Время</small><strong>Q{episode.quarter} {clockLabel(episode.clockSeconds)}</strong></span><span><small>Роль</small><strong>{involvementLabel(episode.heroInvolvement)}</strong></span></div></section>
-      <section className="match-called-play match-called-play--kernel"><div className="match-call-duel"><article><small>АТАКА · {offenseCall?.personnel}</small><strong>{offenseCall?.formation}</strong><span>{offenseCall?.concept}</span></article><b>VS</b><article><small>ЗАЩИТА · {defenseCall?.personnel}</small><strong>{defenseCall?.formation}</strong><span>{defenseCall?.concept}</span></article></div><RealTimeMatchField episode={episode} heroPosition={save.football.position} analysisMode={match.analysisMode} disabled={mutating} seed={`${save.meta.worldSeed}:${match.gameId}:${episode.id}:real-time`} onComplete={resolveLivePlay} /><div className="match-called-play__meta"><span><small>Твой слот</small><strong>{episode.heroSlot}</strong></span><span><small>Задание</small><strong>{episode.heroRole}</strong></span></div>{heroAssignment && <div className="match-personnel-matchup"><article><small>ТЫ</small><strong>{heroAssignment.playerName ?? save.character.identity.fullName}</strong><span>{heroAssignment.position} · OVR {Math.round(heroAssignment.overall ?? save.football.ratings.overall)}</span></article><b>VS</b><article><small>МАТЧАП</small><strong>{heroMatchup?.playerName ?? heroAssignment.matchupSlot ?? "Схема"}</strong><span>{heroMatchup ? `${heroMatchup.position} · OVR ${Math.round(heroMatchup.overall ?? 0)}` : episode.opponentCall.concept}</span></article></div>}</section>
+      {match.status === "upcoming" && (
+        <div className="compact-view match-upcoming">
+          <section className="opponent-card">
+            <div className="opponent-card__mark"><Icon name={match.heroUnit === "defense" ? "shield" : "football"} size={28} /></div>
+            <div><small>{match.opponentRecord}</small><h3>{match.opponentName}</h3></div>
+          </section>
+          <section className="match-mode-panel">
+            <header>
+              <div>
+                <small>РОЛЬ</small>
+                <strong>{match.rosterRole === "starter" ? "STARTER" : match.rosterRole === "rotation" ? "ROTATION" : match.rosterRole === "special-teams" ? "SPECIAL TEAMS" : "ACTIVE"}</strong>
+              </div>
+              <span>{save.football.position}</span>
+            </header>
+            <div className="match-role-metrics">
+              <span><small>ВЫХОД</small><strong>Q{match.entryQuarter ?? 1}</strong></span>
+              <span><small>SNAPS</small><strong>{match.totalEpisodes}</strong></span>
+            </div>
+            <button type="button" className={`match-analysis-toggle${analysisMode ? " is-active" : ""}`} onClick={() => setAnalysisMode((value) => !value)}>
+              <Icon name="brain" /><strong>ANALYSIS</strong><em>{analysisMode ? "ON" : "OFF"}</em>
+            </button>
+          </section>
+          {isMatchDay ? (
+            <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onStartMatch(mode, analysisMode)}>
+              <span><strong>{mutating ? "ЗАПУСК…" : "НАЧАТЬ МАТЧ"}</strong></span><Icon name="arrow-right" />
+            </button>
+          ) : (
+            <div className="match-lock-card"><Icon name="calendar" /><strong>{formatGameDate(match.scheduledDate)}</strong></div>
+          )}
+        </div>
+      )}
 
-      {match.analysisMode && <section className="match-analysis-panel"><header><span><Icon name="brain" /></span><div><small>ANALYSIS MODE</small><strong>{episode.opponentCall.formation} · {episode.opponentCall.concept}</strong></div><em>{episode.opponentCall.playType === "blitz" ? "BLITZ" : episode.opponentCall.tags[0] ?? "READ"}</em></header><div><span><small>Фронт</small><strong>{episode.opponentCall.personnel}</strong></span><span><small>Сильная сторона</small><strong>{episode.opponentCall.strength}</strong></span><span><small>Ключ</small><strong>{episode.heroRole}</strong></span></div></section>}
+      {match.status === "in-progress" && episode && (
+        <div className="compact-view match-live-view elite-match-live">
+          <section className="elite-match-player-strip">
+            <span className="elite-match-player-strip__avatar">{initials(save.character.identity.fullName)}</span>
+            <div><small>#{save.football.jerseyNumber} · {save.football.position}</small><strong>{save.character.identity.fullName}</strong></div>
+            <article><small>GRADE</small><strong>{Math.round(match.coachGrade)}</strong></article>
+            <article><small>ENERGY</small><strong>{Math.round(100 - match.heroFatigue)}%</strong></article>
+          </section>
 
+          <section className="elite-match-situation">
+            <header><div><small>DRIVE {match.driveNumber}</small><h3>{episode.title}</h3></div><strong>{episode.down} & {episode.distance}</strong></header>
+            <div className="elite-match-facts">
+              <span><small>BALL</small><strong>{episode.fieldPosition}</strong></span>
+              <span><small>TIME</small><strong>Q{episode.quarter} {clockLabel(episode.clockSeconds)}</strong></span>
+              <span><small>ROLE</small><strong>{involvementLabel(episode.heroInvolvement)}</strong></span>
+            </div>
+          </section>
 
-      <section className="match-drive-strip"><header><small>Драйв {match.driveNumber} · {match.drivePlays} plays · {match.driveYards} yd</small><strong>{episode.down} & {episode.distance}</strong></header><div><i style={{ width: `${Math.max(4, Math.min(96, episode.fieldPosition))}%` }} /><b className="match-drive-strip__first" style={{ left: `${Math.max(4, Math.min(96, episode.fieldPosition + episode.distance))}%` }} /><span style={{ left: `${Math.max(4, Math.min(96, episode.fieldPosition))}%` }}>{episode.fieldPosition}</span></div><footer><span>Назначения {assignmentRate}%</span><span>Снэпы {match.advancedStats.snaps}</span></footer></section>
-    </div>}
+          <section className="match-called-play match-called-play--kernel">
+            <div className="match-call-duel">
+              <article><small>OFFENSE · {offenseCall?.personnel}</small><strong>{offenseCall?.formation}</strong><span>{offenseCall?.concept}</span></article>
+              <b>VS</b>
+              <article><small>DEFENSE · {defenseCall?.personnel}</small><strong>{defenseCall?.formation}</strong><span>{defenseCall?.concept}</span></article>
+            </div>
+            <RealTimeMatchField
+              episode={episode}
+              heroPosition={save.football.position}
+              analysisMode={match.analysisMode}
+              disabled={mutating || showTransition}
+              seed={`${save.meta.worldSeed}:${match.gameId}:${episode.id}:real-time`}
+              onComplete={resolveLivePlay}
+            />
+            <div className="match-called-play__meta">
+              <span><small>SLOT</small><strong>{episode.heroSlot}</strong></span>
+              <span><small>ASSIGNMENT</small><strong>{episode.heroRole}</strong></span>
+            </div>
+            {heroAssignment && (
+              <div className="match-personnel-matchup">
+                <article><small>YOU</small><strong>{heroAssignment.playerName ?? save.character.identity.fullName}</strong><span>{heroAssignment.position} · {Math.round(heroAssignment.overall ?? save.football.ratings.overall)}</span></article>
+                <b>VS</b>
+                <article><small>MATCHUP</small><strong>{heroMatchup?.playerName ?? heroAssignment.matchupSlot ?? "SCHEME"}</strong><span>{heroMatchup ? `${heroMatchup.position} · ${Math.round(heroMatchup.overall ?? 0)}` : episode.opponentCall.concept}</span></article>
+              </div>
+            )}
+          </section>
 
-    {match.status === "complete" && match.finalResult && <div className="compact-view match-final-view"><section className={`match-final-card ${match.finalResult.won ? "is-win" : "is-loss"}`}><small>{match.finalResult.won ? "ПОБЕДА" : "ПОРАЖЕНИЕ"}</small><div><strong>{match.finalResult.heroScore}</strong><span>:</span><strong>{match.finalResult.opponentScore}</strong></div><h3>{match.finalResult.headline}</h3><p>{match.finalResult.summary}</p></section><div className="match-stat-grid">{stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div><section className="match-stat-integrity"><Icon name="check" /><div><strong>Полная статистика матча</strong><span>Учтены все {match.advancedStats.snaps} снэпов героя: ручные и автоматические.</span></div></section><section className="match-coach-report"><span className={`result-grade result-grade--${match.finalResult.grade.toLowerCase()}`}>{match.finalResult.grade}</span><div><small>ОЦЕНКА ШТАБА · {Math.round(match.finalResult.score ?? match.coachGrade)}/100</small><strong>{match.finalResult.spotlight}</strong><p>{match.finalResult.evaluation?.summary} Доверие {match.finalResult.coachTrustDelta >= 0 ? "+" : ""}{match.finalResult.coachTrustDelta.toFixed(1)}.</p></div></section>{match.finalResult.evaluation && <section className="match-evaluation-grid">{match.finalResult.evaluation.criteria.map((item) => <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)} <em className={item.delta >= 0 ? "is-positive" : "is-negative"}>{item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}</em></strong><small>{item.detail}</small></article>)}</section>}{onFinalizeMatch && <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onFinalizeMatch()}><span><small>Результат войдёт в календарь</small><strong>{mutating ? "Фиксация…" : "Закрыть матч"}</strong></span><Icon name="arrow-right" /></button>}<button type="button" className="button button--ghost button--wide" onClick={() => setSheetOpen(true)}>Открыть протокол</button></div>}
+          {match.analysisMode && (
+            <section className="match-analysis-panel">
+              <header><div><small>ANALYSIS</small><strong>{episode.opponentCall.formation} · {episode.opponentCall.concept}</strong></div><em>{episode.opponentCall.playType === "blitz" ? "BLITZ" : episode.opponentCall.tags[0] ?? "READ"}</em></header>
+              <div>
+                <span><small>PERSONNEL</small><strong>{episode.opponentCall.personnel}</strong></span>
+                <span><small>STRENGTH</small><strong>{episode.opponentCall.strength}</strong></span>
+                <span><small>KEY</small><strong>{episode.heroRole}</strong></span>
+              </div>
+            </section>
+          )}
 
-    <BottomSheet open={sheetOpen} title="Протокол матча" eyebrow={`${save.football.position} · ${unitLabel(match.heroUnit)}`} onClose={() => setSheetOpen(false)}><div className="match-sheet-stats">{stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div>{episode && <SnapPersonnel episode={episode} />}{match.drives.length > 0 && <div className="match-sheet-drives">{[...match.drives].reverse().map((drive) => <article key={drive.id}><small>{drive.offense === "hero" ? heroTeamName : match.opponentName} · Q{drive.startQuarter} {clockLabel(drive.startClockSeconds)}</small><strong>{driveOutcomeLabel(drive.outcome)}</strong><span>{drive.plays} plays · {drive.yards} yd · {drive.points} pts</span></article>)}</div>}<div className="match-log">{[...match.completedEpisodes].reverse().map((result, index) => <article key={result.id}><span className={`result-grade result-grade--${result.grade.toLowerCase()}`}>{result.grade}<small>{Math.round(result.evaluation?.score ?? result.assignmentScore)}</small></span><div><small>СНЭП {match.completedEpisodes.length - index} · {result.startFieldPosition} → {result.endFieldPosition}</small><strong>{result.headline}</strong><p>{result.evaluation?.summary ?? result.description}</p>{result.evaluation && <div className="match-log-criteria">{result.evaluation.criteria.map((item) => <span key={item.id}>{item.label} {Math.round(item.score)} <em className={item.delta >= 0 ? "is-positive" : "is-negative"}>{item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}</em></span>)}</div>}</div></article>)}</div></BottomSheet>
-  </div>;
+          <section className="match-drive-strip">
+            <header><small>{match.drivePlays} PLAYS · {match.driveYards} YD</small><strong>{episode.down} & {episode.distance}</strong></header>
+            <div>
+              <i style={{ width: `${Math.max(4, Math.min(96, episode.fieldPosition))}%` }} />
+              <b className="match-drive-strip__first" style={{ left: `${Math.max(4, Math.min(96, episode.fieldPosition + episode.distance))}%` }} />
+              <span style={{ left: `${Math.max(4, Math.min(96, episode.fieldPosition))}%` }}>{episode.fieldPosition}</span>
+            </div>
+            <footer><span>ASSIGN {assignmentRate}%</span><span>SNAPS {match.advancedStats.snaps}</span></footer>
+          </section>
+
+          {showTransition && transitionDrive && (
+            <div className="match-possession-layer" role="presentation">
+              <section className="match-possession-dialog" role="dialog" aria-modal="true" aria-label="Смена сторон">
+                <small>СМЕНА СТОРОН</small>
+                <h3>{transitionLabel}</h3>
+                <strong>{match.heroUnit === "offense" && transitionDrive.offense === "opponent" ? defenseOutcomeLabel(transitionDrive.outcome) : driveOutcomeLabel(transitionDrive.outcome)}</strong>
+                <div>
+                  <span><small>PLAYS</small><b>{transitionDrive.plays}</b></span>
+                  <span><small>YARDS</small><b>{transitionDrive.yards}</b></span>
+                  <span><small>POINTS</small><b>{transitionDrive.points}</b></span>
+                  <span><small>TIME</small><b>{driveDuration(transitionDrive)}</b></span>
+                </div>
+                <button type="button" onClick={() => setDismissedTransitionId(transitionDrive.id)}>ПРОДОЛЖИТЬ</button>
+              </section>
+            </div>
+          )}
+        </div>
+      )}
+
+      {match.status === "complete" && match.finalResult && (
+        <div className="compact-view match-final-view">
+          <section className={`match-final-card ${match.finalResult.won ? "is-win" : "is-loss"}`}>
+            <strong>{match.finalResult.won ? "ПОБЕДА" : "ПОРАЖЕНИЕ"}</strong>
+          </section>
+          <div className="match-stat-grid">{stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div>
+          <section className="match-coach-report">
+            <span className={`result-grade result-grade--${match.finalResult.grade.toLowerCase()}`}>{match.finalResult.grade}</span>
+            <div>
+              <small>GRADE</small>
+              <strong>{Math.round(match.finalResult.score ?? match.coachGrade)}/100</strong>
+              <span>TRUST {match.finalResult.coachTrustDelta >= 0 ? "+" : ""}{match.finalResult.coachTrustDelta.toFixed(1)}</span>
+            </div>
+          </section>
+          {match.finalResult.evaluation && (
+            <section className="match-evaluation-grid">
+              {match.finalResult.evaluation.criteria.map((item) => (
+                <article key={item.id}><span>{item.label}</span><strong>{Math.round(item.score)}</strong><small>{item.detail}</small></article>
+              ))}
+            </section>
+          )}
+          {onFinalizeMatch && (
+            <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={() => void onFinalizeMatch()}>
+              <span><strong>{mutating ? "СОХРАНЕНИЕ…" : "ЗАКРЫТЬ МАТЧ"}</strong></span><Icon name="arrow-right" />
+            </button>
+          )}
+          <button type="button" className="button button--ghost button--wide" onClick={() => setSheetOpen(true)}>ПРОТОКОЛ</button>
+        </div>
+      )}
+
+      <BottomSheet open={sheetOpen} title="Протокол" eyebrow={`${save.football.position} · ${unitLabel(match.heroUnit)}`} onClose={() => setSheetOpen(false)}>
+        <div className="match-sheet-stats">{stats.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value}</strong></span>)}</div>
+        {episode && <SnapPersonnel episode={episode} />}
+        {match.drives.length > 0 && (
+          <div className="match-sheet-drives">
+            {[...match.drives].reverse().map((drive) => (
+              <article key={drive.id}>
+                <small>{drive.offense === "hero" ? heroTeamName : match.opponentName} · Q{drive.startQuarter} {clockLabel(drive.startClockSeconds)}</small>
+                <strong>{driveOutcomeLabel(drive.outcome)}</strong>
+                <span>{drive.plays} · {drive.yards} YD · {drive.points} PTS</span>
+              </article>
+            ))}
+          </div>
+        )}
+        <div className="match-log">
+          {[...match.completedEpisodes].reverse().map((result, index) => (
+            <article key={result.id}>
+              <span className={`result-grade result-grade--${result.grade.toLowerCase()}`}>{result.grade}<small>{Math.round(result.evaluation?.score ?? result.assignmentScore)}</small></span>
+              <div>
+                <small>SNAP {match.completedEpisodes.length - index} · {result.startFieldPosition} → {result.endFieldPosition}</small>
+                <strong>{result.headline}</strong>
+                {result.evaluation && (
+                  <div className="match-log-criteria">{result.evaluation.criteria.map((item) => <span key={item.id}>{item.label} {Math.round(item.score)}</span>)}</div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </BottomSheet>
+    </div>
+  );
 }

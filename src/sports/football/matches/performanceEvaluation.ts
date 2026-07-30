@@ -198,9 +198,157 @@ export function evaluateSnapPerformance(input: SnapEvaluationInput): MatchSnapEv
   };
 }
 
-export function aggregateMatchEvaluation(position: FootballPosition, snaps: MatchSnapEvaluation[]): MatchGameEvaluation {
+function averageCriterion(
+  criteria: MatchEvaluationCriterion[],
+  id: string,
+  fallback = 68,
+): number {
+  return criteria.find((item) => item.id === id)?.score ?? fallback;
+}
+
+function blend(base: number, production: number, productionWeight: number): number {
+  return clamp(base * (1 - productionWeight) + production * productionWeight);
+}
+
+function gameCriteria(
+  position: FootballPosition,
+  average: MatchEvaluationCriterion[],
+  stats: MatchStatLine,
+  advanced: MatchAdvancedStatLine,
+): MatchEvaluationCriterion[] {
+  const snaps = Math.max(1, advanced.snaps);
+  const assignmentRate = advanced.assignmentWins / snaps;
+  const assignmentBase = clamp(50 + assignmentRate * 50 - advanced.assignmentLosses / snaps * 28);
+  const impactDetail = (parts: Array<string | undefined>) => parts.filter(Boolean).join(" · ");
+
+  if (position === "QB") {
+    const attempts = Math.max(1, stats.passingAttempts);
+    const completionRate = stats.completions / attempts;
+    const yardsPerAttempt = stats.passingYards / attempts;
+    const decision = clamp(58 + completionRate * 25 + Math.min(18, yardsPerAttempt * 1.8) + stats.touchdowns * 7 - stats.turnovers * 24);
+    const accuracy = clamp(42 + completionRate * 55 + Math.min(10, yardsPerAttempt) - stats.turnovers * 18);
+    const impact = clamp(48 + stats.passingYards / 8 + stats.rushingYards / 10 + stats.touchdowns * 12 - stats.turnovers * 22);
+    return [
+      criterion("read", "Чтение защиты", "decision", blend(averageCriterion(average, "read"), decision, .62), 34, impactDetail([`${stats.completions}/${stats.passingAttempts}`, `${stats.turnovers} TO`])),
+      criterion("timing", "Тайминг", "technique", blend(averageCriterion(average, "timing"), assignmentBase, .38), 20, `${advanced.assignmentWins}/${snaps}`),
+      criterion("accuracy", "Точность", "execution", blend(averageCriterion(average, "accuracy"), accuracy, .72), 26, `${Math.round(completionRate * 100)}% · ${yardsPerAttempt.toFixed(1)} Y/A`),
+      criterion("impact", "Результат", "impact", blend(averageCriterion(average, "impact"), impact, .76), 20, impactDetail([`${stats.passingYards} YD`, `${stats.touchdowns} TD`])),
+    ];
+  }
+
+  if (position === "RB") {
+    const touches = Math.max(1, stats.rushingAttempts + stats.receptions);
+    const yards = stats.rushingYards + stats.receivingYards;
+    const yardsPerTouch = yards / touches;
+    const lane = clamp(50 + assignmentRate * 35 + Math.min(15, yardsPerTouch * 2));
+    const burst = clamp(48 + Math.min(36, yardsPerTouch * 6) + stats.touchdowns * 8);
+    const security = stats.turnovers > 0 ? clamp(55 - stats.turnovers * 25) : 88;
+    const impact = clamp(45 + yards / 4 + stats.touchdowns * 15 - stats.turnovers * 24);
+    return [
+      criterion("lane", "Чтение блока", "decision", blend(averageCriterion(average, "lane"), lane, .58), 28, `${yardsPerTouch.toFixed(1)} Y/T`),
+      criterion("burst", "Разгон и срез", "technique", blend(averageCriterion(average, "burst"), burst, .66), 24, `${yards} YD`),
+      criterion("security", "Контроль мяча", "discipline", blend(averageCriterion(average, "security"), security, .72), 22, `${stats.turnovers} TO`),
+      criterion("impact", "Результат", "impact", blend(averageCriterion(average, "impact"), impact, .76), 26, impactDetail([`${touches} TOUCH`, `${stats.touchdowns} TD`])),
+    ];
+  }
+
+  if (position === "WR" || position === "TE") {
+    const targets = Math.max(1, stats.targets);
+    const catchRate = stats.receptions / targets;
+    const yardsPerTarget = stats.receivingYards / targets;
+    const routeRate = advanced.routeWins / snaps;
+    const separationRate = advanced.separationWins / snaps;
+    const route = clamp(46 + assignmentRate * 24 + routeRate * 30);
+    const separation = clamp(48 + separationRate * 38 + Math.min(14, yardsPerTarget * 1.2));
+    const finish = clamp(38 + catchRate * 50 + Math.min(12, yardsPerTarget) + stats.touchdowns * 10);
+    const impact = clamp(45 + stats.receivingYards / 4 + stats.touchdowns * 16 + stats.receptions * 2);
+    return [
+      criterion("route", "Маршрут", "assignment", blend(averageCriterion(average, "route"), route, .56), 30, `${advanced.routeWins}/${snaps}`),
+      criterion("separation", "Отрыв", "technique", blend(averageCriterion(average, "separation"), separation, .62), 26, `${advanced.separationWins}/${snaps}`),
+      criterion("finish", "Мяч", "execution", blend(averageCriterion(average, "finish"), finish, .72), 22, `${stats.receptions}/${stats.targets}`),
+      criterion("impact", "Результат", "impact", blend(averageCriterion(average, "impact"), impact, .76), 22, impactDetail([`${stats.receivingYards} YD`, `${stats.touchdowns} TD`])),
+    ];
+  }
+
+  if (position === "OT" || position === "OG" || position === "C") {
+    const passWinRate = advanced.passProtectionWins / snaps;
+    const runWinRate = advanced.runBlockWins / snaps;
+    const cleanRate = clamp(1 - (stats.pressuresAllowed + stats.sacksAllowed * 2) / snaps, 0, 1);
+    const assignment = clamp(46 + assignmentRate * 38 + Math.max(passWinRate, runWinRate) * 16);
+    const leverage = clamp(42 + cleanRate * 45 + (passWinRate + runWinRate) * 9);
+    const finish = clamp(50 + (advanced.blocksWon / snaps) * 35 + stats.pancakes * 5 - stats.sacksAllowed * 22);
+    const discipline = clamp(86 - stats.pressuresAllowed * 5 - stats.sacksAllowed * 18);
+    return [
+      criterion("assignment", "Задание", "assignment", blend(averageCriterion(average, "assignment"), assignment, .62), 30, `${advanced.assignmentWins}/${snaps}`),
+      criterion("leverage", "Блок", "technique", blend(averageCriterion(average, "leverage"), leverage, .7), 32, impactDetail([`${stats.pressuresAllowed} PRESS ALW`, `${stats.sacksAllowed} SACK ALW`])),
+      criterion("finish", "Завершение", "execution", blend(averageCriterion(average, "finish"), finish, .66), 22, `${advanced.blocksWon} WIN`),
+      criterion("discipline", "Дисциплина", "discipline", blend(averageCriterion(average, "discipline"), discipline, .7), 16, `${stats.pancakes} PAN`),
+    ];
+  }
+
+  if (position === "EDGE" || position === "DT" || position === "LB") {
+    const pressures = Math.max(advanced.pressures, stats.sacks + stats.hurries);
+    const runFit = clamp(52 + stats.tacklesForLoss * 7 + stats.runStops * 4 + stats.tackles * 1.7 - advanced.missedTackles * 10);
+    const rush = clamp(50 + stats.sacks * 12 + stats.hurries * 3 + pressures * 2.5);
+    const finish = clamp(54 + stats.tackles * 4 + stats.tacklesForLoss * 3 + stats.sacks * 2 - advanced.missedTackles * 14);
+    const impact = clamp(48 + stats.sacks * 10 + stats.tacklesForLoss * 6 + stats.interceptions * 16 + stats.passBreakups * 5 + stats.runStops * 3);
+    return [
+      criterion("gap", "Своя зона", "assignment", blend(averageCriterion(average, "gap"), runFit, .74), 28, impactDetail([`${stats.tacklesForLoss} TFL`, `${stats.runStops} STOP`])),
+      criterion("rush", "Pass rush", "technique", blend(averageCriterion(average, "rush"), rush, .8), 30, impactDetail([`${stats.sacks} SACK`, `${pressures} PRESS`])),
+      criterion("finish", "Захват", "execution", blend(averageCriterion(average, "finish"), finish, .76), 22, impactDetail([`${stats.tackles} TKL`, `${advanced.missedTackles} MISS`])),
+      criterion("impact", "Влияние", "impact", blend(averageCriterion(average, "impact"), impact, .84), 20, impactDetail([`${stats.tacklesForLoss} TFL`, `${stats.interceptions} INT`])),
+    ];
+  }
+
+  if (position === "CB" || position === "S") {
+    const coverageSnaps = Math.max(1, stats.coverageSnaps);
+    const coverageWinRate = advanced.coverageWins / coverageSnaps;
+    const positionScore = clamp(48 + coverageWinRate * 42 + assignmentRate * 12);
+    const eyes = clamp(52 + stats.interceptions * 16 + stats.passBreakups * 7 + coverageWinRate * 24);
+    const ball = clamp(50 + stats.interceptions * 20 + stats.passBreakups * 9 - advanced.missedTackles * 8);
+    const limit = clamp(52 + stats.tackles * 3 + advanced.coverageWins * 2 - advanced.missedTackles * 14);
+    return [
+      criterion("leverage", "Позиция", "assignment", blend(averageCriterion(average, "leverage"), positionScore, .68), 32, `${advanced.coverageWins}/${coverageSnaps}`),
+      criterion("eyes", "Чтение QB", "decision", blend(averageCriterion(average, "eyes"), eyes, .62), 22, `${stats.interceptions} INT`),
+      criterion("ball", "Мяч", "execution", blend(averageCriterion(average, "ball"), ball, .76), 26, `${stats.passBreakups} PBU`),
+      criterion("limit", "Захват", "impact", blend(averageCriterion(average, "limit"), limit, .68), 20, impactDetail([`${stats.tackles} TKL`, `${advanced.missedTackles} MISS`])),
+    ];
+  }
+
+  if (position === "K") {
+    const attempts = Math.max(1, stats.fieldGoalsAttempted);
+    const rate = stats.fieldGoalsMade / attempts;
+    const accuracy = clamp(30 + rate * 58 + Math.min(12, stats.longestFieldGoal / 5));
+    const impact = clamp(45 + stats.fieldGoalsMade * 12 + stats.longestFieldGoal / 3);
+    return [
+      criterion("operation", "Операция", "assignment", averageCriterion(average, "operation"), 25, `${attempts} ATT`),
+      criterion("accuracy", "Точность", "technique", blend(averageCriterion(average, "accuracy"), accuracy, .78), 35, `${stats.fieldGoalsMade}/${stats.fieldGoalsAttempted}`),
+      criterion("power", "Дальность", "execution", blend(averageCriterion(average, "power"), clamp(50 + stats.longestFieldGoal), .7), 20, `${stats.longestFieldGoal} YD`),
+      criterion("impact", "Очки", "impact", blend(averageCriterion(average, "impact"), impact, .75), 20, `${stats.fieldGoalsMade * 3} PTS`),
+    ];
+  }
+
+  const punts = Math.max(1, stats.punts);
+  const net = stats.puntYards / punts;
+  const accuracy = clamp(45 + stats.puntsInside20 * 10 - stats.returnYardsAllowed / punts * 1.5);
+  const power = clamp(35 + net);
+  const impact = clamp(45 + net * .7 + stats.puntsInside20 * 8 - stats.returnYardsAllowed / punts);
+  return [
+    criterion("operation", "Операция", "assignment", averageCriterion(average, "operation"), 25, `${punts} PUNT`),
+    criterion("accuracy", "Направление", "technique", blend(averageCriterion(average, "accuracy"), accuracy, .7), 30, `${stats.puntsInside20} I20`),
+    criterion("power", "Дальность", "execution", blend(averageCriterion(average, "power"), power, .72), 20, `${net.toFixed(1)} NET`),
+    criterion("impact", "Позиция поля", "impact", blend(averageCriterion(average, "impact"), impact, .76), 25, `${stats.returnYardsAllowed} RET`),
+  ];
+}
+
+export function aggregateMatchEvaluation(
+  position: FootballPosition,
+  snaps: MatchSnapEvaluation[],
+  stats?: MatchStatLine,
+  advanced?: MatchAdvancedStatLine,
+): MatchGameEvaluation {
   if (snaps.length === 0) {
-    return { score: 60, grade: "C", snapCount: 0, roleLabel: position, criteria: [], bestSnapIds: [], worstSnapIds: [], summary: "Игровых снэпов для оценки не было." };
+    return { score: 0, grade: "D", snapCount: 0, roleLabel: position, criteria: [], bestSnapIds: [], worstSnapIds: [], summary: "0" };
   }
   const categories = new Map<string, { label: string; category: MatchEvaluationCategory; total: number; weight: number; samples: number }>();
   for (const snap of snaps) {
@@ -211,20 +359,20 @@ export function aggregateMatchEvaluation(position: FootballPosition, snaps: Matc
       categories.set(item.id, current);
     }
   }
-  const criteria = [...categories.entries()].map(([id, value]) => criterion(id, value.label, value.category, value.total / value.samples, value.weight, `Средняя оценка за ${value.samples} снэпов.`));
-  const score = round(snaps.reduce((sum, snap) => sum + snap.score, 0) / snaps.length, 1);
+  const averages = [...categories.entries()].map(([id, value]) => criterion(id, value.label, value.category, value.total / value.samples, value.weight, `${value.samples}`));
+  const criteria = stats && advanced ? gameCriteria(position, averages, stats, advanced) : averages;
+  const totalWeight = criteria.reduce((sum, item) => sum + item.weight, 0) || 1;
+  const score = round(criteria.reduce((sum, item) => sum + item.score * item.weight, 0) / totalWeight, 1);
   const ranked = snaps.map((snap, index) => ({ index, score: snap.score })).sort((left, right) => right.score - left.score);
-  const weakest = [...criteria].sort((left, right) => left.score - right.score)[0];
+  const grade = gradeFromPerformanceScore(score);
   return {
     score,
-    grade: gradeFromPerformanceScore(score),
+    grade,
     snapCount: snaps.length,
     roleLabel: position,
     criteria,
     bestSnapIds: ranked.slice(0, 3).map((entry) => String(entry.index)),
     worstSnapIds: ranked.slice(-3).reverse().map((entry) => String(entry.index)),
-    summary: weakest && weakest.score < 68
-      ? `Итог ${Math.round(score)}. Главная зона роста: ${weakest.label.toLowerCase()}.`
-      : `Итог ${Math.round(score)}. Исполнение роли стабильно по основным критериям.`,
+    summary: `${grade} · ${Math.round(score)}`,
   };
 }

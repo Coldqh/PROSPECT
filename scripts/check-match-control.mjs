@@ -5,10 +5,8 @@ const required = [
   ["src/sports/football/matches/realTimeEngine.ts", "function hasManualMovementInput"],
   ["src/sports/football/matches/realTimeEngine.ts", "export function liveHeroControlActive(input"],
   ["src/sports/football/matches/realTimeEngine.ts", "heroHasManualControl(player, input)"],
-  ["src/components/career/RealTimeMatchField.tsx", "is-manual-override"],
-  ["src/components/career/RealTimeMatchField.tsx", "АВТОМАРШРУТ"],
   ["src/components/career/RealTimeMatchField.tsx", "live-snap-result-dialog"],
-  ["src/components/career/MatchDashboard.tsx", "Автопилот + мгновенное ручное вмешательство"],
+  ["src/components/career/MatchDashboard.tsx", "match-possession-dialog"],
 ];
 for (const [path, token] of required) {
   if (!read(path).includes(token)) throw new Error(`${path}: missing ${token}`);
@@ -17,6 +15,9 @@ const forbidden = [
   ["src/sports/football/matches/types.ts", "MatchHeroControlMode"],
   ["src/storage/saves/schema.ts", "heroControlMode"],
   ["src/components/career/MatchDashboard.tsx", "match-control-mode"],
+  ["src/components/career/RealTimeMatchField.tsx", "АВТОМАРШРУТ"],
+  ["src/components/career/RealTimeMatchField.tsx", "Автопилот"],
+  ["src/components/career/MatchDashboard.tsx", "ручное вмешательство"],
 ];
 for (const [path, token] of forbidden) {
   if (read(path).includes(token)) throw new Error(`${path}: obsolete token ${token}`);

@@ -279,3 +279,5 @@
   .recruiting-status-strip article:nth-child(3) { border-right: 0; }
   .recruiting-status-strip article:nth-child(-n/**/+3) { border-bottom: 1px solid var(--line); }
 }
+
+.recruiting-view-tabs { grid-template-columns: repeat(3,minmax(0,1fr)); }

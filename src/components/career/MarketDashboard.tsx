@@ -90,7 +90,7 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
             <div className="market-hero__actions"><p>{heroDecision.detail}</p>{heroDecision.options.map((option) => <button type="button" key={option.id} disabled={mutating || !onResolveCollegeDecision} onClick={() => void onResolveCollegeDecision?.(option.id)}><span><strong>{option.label}</strong><small>{option.detail}</small></span><Icon name="arrow-right" size={16} /></button>)}</div>
           ) : heroCareer.transferOffers.length > 0 ? (
             <div className="market-hero__offers">{heroCareer.transferOffers.map((offer) => <button type="button" key={offer.teamId} onClick={() => onOpenTeam?.(offer.teamId)}><span><strong>{offer.teamName}</strong><small>{offer.projectedRole} · FIT {Math.round(offer.schemeFit)}</small></span><em>{offer.scholarship ? "FULL" : "PWO"}</em></button>)}</div>
-          ) : <p>Решение о портале появится из роли, доверия штаба и положения в depth chart.</p>}
+          ) : null}
           {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
         </section>
       )}
