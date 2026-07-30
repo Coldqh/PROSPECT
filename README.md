@@ -2,7 +2,7 @@
 
 Браузерный симулятор жизни и карьеры игрока в американский футбол внутри автономной спортивной экосистемы.
 
-## Текущий этап — 0.45.0
+## Текущий этап — 0.45.2
 
 - недельный usage plan для каждой позиции нападения;
 - роли deep threat, slot option, possession target, red-zone target, receiving back и lead runner;
@@ -26,5 +26,11 @@ npm run build
 
 ```powershell
 cd C:\PROSPECT
-powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.45.0.ps1
+powershell -ExecutionPolicy Bypass -File .\APPLY_PATCH_0.45.2.ps1
 ```
+
+
+### 0.45.2
+
+- восстановлен `src/styles/world.css` в patch ZIP и Git;
+- save schema без изменений.

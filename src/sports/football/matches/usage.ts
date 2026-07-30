@@ -211,7 +211,7 @@ export function receiverPriorityMap(
     const basePriority = map[heroSlot] ?? 52;
     const plannedPriority = usagePriorityForSnap(plan, stats, call, fieldPosition);
     const designedBonus = call.primarySlot === heroSlot ? 6 : 0;
-    map[heroSlot] = clamp(basePriority * .28 + plannedPriority * .72 + designedBonus, 18, 100);
+    map[heroSlot] = clamp(basePriority * .2 + plannedPriority * .8 + designedBonus, 18, 100);
   }
   return map;
 }

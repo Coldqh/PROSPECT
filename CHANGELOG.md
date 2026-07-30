@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.45.2 — RELEASE INTEGRITY / USAGE PRIORITY HOTFIX
+
+- restored every source file accidentally removed from the 0.45.0 Git commit;
+- release integrity now checks the complete source manifest before tests and builds;
+- matching featured concepts weight the usage plan above the static QB progression;
+- deep-threat priority in the regression scenario is 91.6 instead of 88.2;
+- save schema remains 33.
+
+## 0.45.1 — WORLD STYLES PACKAGING HOTFIX
+
+- restored `src/styles/world.css` in the patch package and Git source tree;
+- installer now verifies the required stylesheet before reporting success;
+- no save schema changes.
+
 ## 0.45.0 — USAGE PLAN / TARGET LOGIC
 
 ### Роли и игровой план

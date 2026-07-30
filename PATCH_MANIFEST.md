@@ -1,19 +1,14 @@
-# PROSPECT 0.45.0 patch manifest
+# PROSPECT 0.45.2 patch manifest
 
-Base version: `0.44.0`  
-Target version: `0.45.0`  
-Save schema: `32 → 33`
+Base version: `0.45.1`  
+Target version: `0.45.2`  
+Save schema: `33` (unchanged)
 
-## Systems
+## Fixes
 
-- offensive usage plans and player roles;
-- role-driven play selection and target priority;
-- QB reads for trailing coverage, leverage and over-top safety;
-- target-share regulation during the match;
-- routes, open windows, missed windows and separation tracking;
-- persistent usage data in college and professional game logs.
+- restore all production and test files accidentally deleted in the 0.45.0 commit;
+- fail test/build once with the complete list of missing release files;
+- correct deep-threat usage weighting on matching concepts.
 
-## Files
-
-Replacement and new files are listed in `PATCH_FILES_0.45.0.txt`.  
-Files removed from 0.44.0 are listed in `DELETE_FILES_0.45.0.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.45.2.txt`.
+Old 0.45.1 packaging files are listed in `DELETE_FILES_0.45.2.txt`.
