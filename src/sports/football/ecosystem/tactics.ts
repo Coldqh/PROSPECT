@@ -224,19 +224,23 @@ export function positionRoleLabel(role: EcosystemPositionRole): string {
 
 export function createTacticalIdentity(
   team: Pick<EcosystemTeam, "seed" | "offenseStyle" | "defenseStyle" | "level" | "prestige">,
-  coach: Pick<EcosystemCoach, "seed" | "development" | "reputation" | "philosophy"> | undefined,
+  coach: Pick<EcosystemCoach, "seed" | "development" | "reputation" | "philosophy" | "offenseSystem" | "defenseSystem" | "adaptability" | "tactics" | "gameManagement"> | undefined,
   random: SeededRandom,
+  staff: readonly EcosystemCoach[] = [],
 ): EcosystemTacticalIdentity {
   const coachRandom = random.fork(coach?.seed ?? `${team.seed}:staff`);
-  const offenseSystem = normalizedOffense(team.offenseStyle);
-  const defenseSystem = normalizedDefense(team.defenseStyle);
+  const offensiveCoordinator = staff.find((item) => item.role === "offensive-coordinator");
+  const defensiveCoordinator = staff.find((item) => item.role === "defensive-coordinator");
+  const offenseSystem = offensiveCoordinator?.offenseSystem ?? coach?.offenseSystem ?? normalizedOffense(team.offenseStyle);
+  const defenseSystem = defensiveCoordinator?.defenseSystem ?? coach?.defenseSystem ?? normalizedDefense(team.defenseStyle);
   const offense = offenseRoles(offenseSystem);
   const defense = defenseRoles(defenseSystem);
-  const coachQuality = coach ? coach.development * 0.55 + coach.reputation * 0.45 : team.prestige;
-  const complexity = clamp((team.level === "college" ? 58 : 38) + team.prestige * 0.22 + coachRandom.integer(-12, 12));
-  const installation = clamp(54 + coachQuality * 0.28 + coachRandom.integer(-12, 10));
-  const continuity = clamp(58 + (coach?.philosophy.includes("схем") ? 8 : 0) + coachRandom.integer(-16, 18));
-  const rotationDepth = clamp((team.level === "college" ? 58 : 42) + coachRandom.integer(-15, 20));
+  const coachQuality = coach ? coach.development * 0.35 + coach.reputation * 0.25 + coach.tactics * 0.4 : team.prestige;
+  const coordinatorQuality = ((offensiveCoordinator?.tactics ?? coachQuality) + (defensiveCoordinator?.tactics ?? coachQuality)) / 2;
+  const complexity = clamp((team.level === "college" ? 58 : 38) + team.prestige * 0.18 + coordinatorQuality * 0.18 + coachRandom.integer(-10, 10));
+  const installation = clamp(46 + coachQuality * 0.24 + coordinatorQuality * 0.22 + coachRandom.integer(-9, 9));
+  const continuity = clamp(54 + (coach?.philosophy.includes("схем") ? 7 : 0) + coachRandom.integer(-12, 16));
+  const rotationDepth = clamp((team.level === "college" ? 58 : 42) + coachRandom.integer(-14, 18));
   const tempo = offenseSystem === "air-raid" || offenseSystem === "spread-option"
     ? "fast"
     : offenseSystem === "power-run"
@@ -244,6 +248,12 @@ export function createTacticalIdentity(
       : coachRandom.pick(["controlled", "balanced", "balanced", "fast"] as const);
   const offensiveAggression = offenseSystem === "air-raid" ? "aggressive" : offenseSystem === "power-run" ? "conservative" : "balanced";
   const defensiveAggression = defenseSystem === "man-pressure" || defenseSystem === "multiple-34" ? "aggressive" : defenseSystem === "quarters-425" ? "balanced" : coachRandom.pick(["conservative", "balanced", "balanced"] as const);
+  const runRateBase: Record<EcosystemOffenseSystem, number> = { "air-raid": 31, "west-coast": 43, "power-run": 62, "spread-option": 54, multiple: 48 };
+  const blitzBase: Record<EcosystemDefenseSystem, number> = { "quarters-425": 24, "multiple-34": 42, "over-43": 29, "nickel-match": 31, "man-pressure": 51, "multiple-defense": 34 };
+  const manBase: Record<EcosystemDefenseSystem, number> = { "quarters-425": 28, "multiple-34": 39, "over-43": 34, "nickel-match": 43, "man-pressure": 68, "multiple-defense": 42 };
+  const staffFingerprint = staff.length > 0
+    ? staff.map((item) => `${item.role}:${item.seed}`).sort().join("|")
+    : coach?.seed ?? `${team.seed}:staff`;
   return {
     version: 1,
     offenseSystem,
@@ -256,6 +266,18 @@ export function createTacticalIdentity(
     continuity,
     rotationDepth,
     headCoachFingerprint: coach?.seed ?? `${team.seed}:staff`,
+    offensiveCoordinatorFingerprint: offensiveCoordinator?.seed ?? coach?.seed ?? `${team.seed}:offense`,
+    defensiveCoordinatorFingerprint: defensiveCoordinator?.seed ?? coach?.seed ?? `${team.seed}:defense`,
+    staffFingerprint,
+    runRate: clamp(runRateBase[offenseSystem] + coachRandom.integer(-5, 5)),
+    playActionRate: clamp((offenseSystem === "power-run" ? 28 : offenseSystem === "spread-option" ? 24 : 17) + coachRandom.integer(-4, 5)),
+    screenRate: clamp((offenseSystem === "west-coast" || offenseSystem === "air-raid" ? 19 : 11) + coachRandom.integer(-4, 4)),
+    deepShotRate: clamp((offenseSystem === "air-raid" ? 27 : offenseSystem === "power-run" ? 14 : 20) + coachRandom.integer(-5, 5)),
+    blitzRate: clamp(blitzBase[defenseSystem] + coachRandom.integer(-5, 5)),
+    manCoverageRate: clamp(manBase[defenseSystem] + coachRandom.integer(-5, 5)),
+    disguiseRate: clamp(38 + (defensiveCoordinator?.adaptability ?? coach?.adaptability ?? 55) * .42 + coachRandom.integer(-8, 8)),
+    fourthDownAggression: clamp(34 + (coach?.gameManagement ?? 55) * .38 + (offensiveAggression === "aggressive" ? 12 : offensiveAggression === "conservative" ? -8 : 0)),
+    adaptation: clamp((coach?.adaptability ?? 55) * .4 + (offensiveCoordinator?.adaptability ?? 55) * .3 + (defensiveCoordinator?.adaptability ?? 55) * .3),
     positionRoles: {
       ...offense,
       ...defense,
@@ -328,7 +350,7 @@ export function createPlayerTacticalProfile(
     learning,
     versatility,
     lastEvaluatedSeason: 0,
-    lastCoachFingerprint: identity.headCoachFingerprint,
+    lastCoachFingerprint: identity.staffFingerprint ?? identity.headCoachFingerprint,
   };
 }
 
@@ -338,7 +360,8 @@ export function reevaluatePlayerTacticalProfile(
   seasonYear: number,
 ): EcosystemPlayerTacticalProfile {
   const rawRoleFit = roleFitScore(player.tactical.preferredRole, player.tactical.secondaryRole, identity, player.position);
-  const familiarity = identity.headCoachFingerprint === player.tactical.lastCoachFingerprint ? 7 : -8;
+  const currentFingerprint = identity.staffFingerprint ?? identity.headCoachFingerprint;
+  const familiarity = currentFingerprint === player.tactical.lastCoachFingerprint ? 7 : -8;
   const schemeFit = clamp(
     rawRoleFit * 0.7
       + player.tactical.learning * 0.17
@@ -351,15 +374,17 @@ export function reevaluatePlayerTacticalProfile(
     roleFit: rawRoleFit,
     schemeFit,
     lastEvaluatedSeason: seasonYear,
-    lastCoachFingerprint: identity.headCoachFingerprint,
+    lastCoachFingerprint: identity.staffFingerprint ?? identity.headCoachFingerprint,
   };
 }
 
-export function tacticalDevelopmentMultiplier(player: EcosystemPlayer, team: EcosystemTeam): number {
+export function tacticalDevelopmentMultiplier(player: EcosystemPlayer, team: EcosystemTeam, staff: readonly EcosystemCoach[] = []): number {
   const fit = player.tactical.schemeFit;
   const installation = team.tactical.installation;
   const usage = player.usagePlan === "starter" ? 1.04 : player.usagePlan === "rotation" ? 1 : player.usagePlan === "developmental" || player.usagePlan === "redshirt" ? 0.96 : 0.98;
-  return Math.max(0.72, Math.min(1.2, (0.72 + fit * 0.0032 + installation * 0.0015) * usage));
+  const positionCoach = staff.find((coach) => coach.role === "position-coach" && coach.specialtyPositions.includes(player.position));
+  const specialistBonus = positionCoach ? (positionCoach.development - 50) * .0016 : 0;
+  return Math.max(0.72, Math.min(1.24, (0.72 + fit * 0.0032 + installation * 0.0015 + specialistBonus) * usage));
 }
 
 export function tacticalDepthScore(player: EcosystemPlayer): number {
@@ -395,9 +420,10 @@ export function refreshTacticalIdentityAfterCoachChange(
   team: EcosystemTeam,
   coach: EcosystemCoach,
   seasonYear: number,
+  staff: readonly EcosystemCoach[] = [],
 ): EcosystemTeam {
   const random = new SeededRandom(`${team.seed}:tactical-reset:${coach.seed}:${seasonYear}`);
-  const identity = createTacticalIdentity(team, coach, random);
+  const identity = createTacticalIdentity(team, coach, random, staff);
   return {
     ...team,
     offenseStyle: offenseSystemLabel(identity.offenseSystem),

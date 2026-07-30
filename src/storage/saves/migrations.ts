@@ -17,7 +17,8 @@ import type { FootballProfessionalState, ProfessionalTeam } from "../../sports/f
 import { activateCollegeHeroCareer } from "../../sports/football/college/heroCareer";
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { createCareerRegistry } from "../../sports/football/ecosystem/lifecycle";
-import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, upgradeFootballEcosystemV11, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { applyProfessionalSchemeFit, ensureProfessionalCoaching } from "../../sports/football/pro/coaching";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
 
@@ -217,6 +218,16 @@ type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistr
 type LegacyMatchWithHeroControl = CareerSave["football"]["match"] & { heroControlMode: "assisted" | "manual" | "spectator" };
 type LegacyFootballWithHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithHeroControl };
 
+
+interface LegacyTacticalStaffSave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 31 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: unknown;
+  relationships: CareerSave["relationships"];
+  world: unknown;
+  history: HistoryEntry[];
+}
 
 interface LegacyPerformanceSave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 30 };
@@ -545,6 +556,36 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
 }
 
 
+
+function migrateVersionThirtyOne(input: LegacyTacticalStaffSave): CareerSave {
+  const world = upgradeFootballEcosystemV11(input.world, input.meta.currentDate);
+  const football = input.football as CareerSave["football"];
+  const teams = ensureProfessionalCoaching(football.professional.teams, `${input.meta.worldSeed}:professional-coaching:v32`);
+  const league = {
+    ...football.professional.league,
+    roster: applyProfessionalSchemeFit(teams, football.professional.league.roster.map((player) => ({ ...player, schemeFit: player.schemeFit ?? 60 }))),
+    freeAgents: football.professional.league.freeAgents.map((player) => ({ ...player, schemeFit: 60 })),
+  };
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world,
+    football: {
+      ...football,
+      professional: { ...football.professional, teams, league },
+    },
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v32`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Тренерские штабы подключены",
+        description: "Команды получили координаторов, контракты, тактические тенденции и адаптацию по ходу матча.",
+      },
+    ],
+  });
+}
 
 function migrateVersionThirty(input: LegacyPerformanceSave): CareerSave {
   return parseMigratedSave({
@@ -1332,6 +1373,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 31) return migratedResult(migrateVersionThirtyOne(input as LegacyTacticalStaffSave), 31);
   if (schemaVersion === 30) return migratedResult(migrateVersionThirty(input as LegacyPerformanceSave), 30);
   if (schemaVersion === 29) return migratedResult(migrateVersionTwentyNine(input as LegacyHeroControlSave), 29);
   if (schemaVersion === 28) return migratedResult(migrateVersionTwentyEight(input as LegacyPreControlSave), 28);

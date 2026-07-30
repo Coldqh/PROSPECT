@@ -8,6 +8,7 @@ import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/type
 import { createEmptyAdvancedMatchStats, createEmptyMatchStats, matchUnitForPosition } from "../matches/createMatchState";
 import type { FootballMatchState, MatchStatLine } from "../matches/types";
 import { PROFESSIONAL_SALARY_CAP } from "./createProfessionalState";
+import { advanceProfessionalCoaching, applyProfessionalSchemeFit, professionalSchemeFit, professionalStaffRating, professionalTacticalModifier } from "./coaching";
 import type {
   ProfessionalCampInvite,
   ProfessionalDraftSelection,
@@ -104,6 +105,7 @@ function createPlayer(seed: string, teamId: string | undefined, position: Footba
     potential: clamp(overall + random.integer(age <= 25 ? 2 : -5, age <= 25 ? 11 : 4)),
     health: random.integer(72, 100),
     form: random.integer(48, 82),
+    schemeFit: 60,
     depthRank: freeAgent ? 0 : index + 1,
     yearsRemaining: freeAgent ? 0 : random.integer(1, 4),
     annualSalary,
@@ -143,6 +145,7 @@ function rookieFromProspect(
     potential: clamp(Math.max(prospect.potential, prospect.overall + random.integer(2, 8))),
     health: prospect.medicalScore,
     form: clamp(54 + prospect.production * 0.2 + random.integer(-5, 6)),
+    schemeFit: 60,
     depthRank: teamId ? 6 : 0,
     yearsRemaining: teamId ? 4 : 0,
     annualSalary,
@@ -313,12 +316,13 @@ function fitPayroll(players: ProfessionalRosterPlayer[], ceiling = PROFESSIONAL_
 }
 
 function generateLeagueRoster(seed: string, teams: ProfessionalTeam[]): ProfessionalRosterPlayer[] {
-  return teams.flatMap((team) => {
+  const roster = teams.flatMap((team) => {
     const players = CAREER_FOOTBALL_POSITIONS.flatMap((position) =>
       Array.from({ length: PROFESSIONAL_ROSTER_COUNTS[position] }, (_, index) => createPlayer(seed, team.id, position, index, false, "initial")),
     );
     return fitPayroll(players);
   });
+  return applyProfessionalSchemeFit(teams, roster);
 }
 
 function generateFreeAgents(seed: string, seasonYear: number): ProfessionalRosterPlayer[] {
@@ -403,27 +407,31 @@ function runNpcFreeAgency(seed: string, seasonYear: number, teams: ProfessionalT
       const maxSalary = currentTeam.capSpace - Math.max(0, spotsLeft - 1) * 760_000;
       if (maxSalary < 760_000) break;
       const target = available
-        .map((player) => ({ player, score: player.overall + currentTeam.needs[player.position] * 0.32 - Math.max(0, player.annualSalary - maxSalary) / 1_000_000 * 2.4 }))
-        .sort((a, b) => b.score - a.score || a.player.annualSalary - b.player.annualSalary || a.player.id.localeCompare(b.player.id))[0]?.player;
+        .map((player) => {
+          const fit = professionalSchemeFit(currentTeam, player);
+          return { player, fit, score: player.overall + currentTeam.needs[player.position] * 0.28 + fit * 0.16 - Math.max(0, player.annualSalary - maxSalary) / 1_000_000 * 2.4 };
+        })
+        .sort((a, b) => b.score - a.score || a.player.annualSalary - b.player.annualSalary || a.player.id.localeCompare(b.player.id))[0];
       if (!target) break;
-      const random = new SeededRandom(seed).fork(`fa:${seasonYear}:${team.id}:${target.id}`);
-      const proposedSalary = Math.max(760_000, Math.round(target.annualSalary * random.integer(95, 118) / 100 / 10_000) * 10_000);
+      const candidate = target.player;
+      const random = new SeededRandom(seed).fork(`fa:${seasonYear}:${team.id}:${candidate.id}`);
+      const proposedSalary = Math.max(760_000, Math.round(candidate.annualSalary * (random.integer(92, 112) + Math.max(0, target.fit - 65) * .18) / 100 / 10_000) * 10_000);
       const salary = Math.max(760_000, Math.min(proposedSalary, Math.floor(maxSalary / 10_000) * 10_000));
-      const depthRank = nextRoster.filter((player) => player.teamId === team.id && player.position === target.position && player.status === "active").length + 1;
-      const signed: ProfessionalRosterPlayer = { ...target, teamId: team.id, status: "active", depthRank, yearsRemaining: random.integer(1, 3), annualSalary: salary, guaranteedRemaining: Math.round(salary * 0.35 / 10_000) * 10_000 };
+      const depthRank = nextRoster.filter((player) => player.teamId === team.id && player.position === candidate.position && player.status === "active").length + 1;
+      const signed: ProfessionalRosterPlayer = { ...candidate, teamId: team.id, schemeFit: target.fit, status: "active", depthRank, yearsRemaining: random.integer(1, 3), annualSalary: salary, guaranteedRemaining: Math.round(salary * 0.35 / 10_000) * 10_000 };
       nextRoster.push(signed);
-      available.splice(available.findIndex((player) => player.id === target.id), 1);
+      available.splice(available.findIndex((player) => player.id === candidate.id), 1);
       transactions.push({
-        id: `pro-tx:${seasonYear}:w${week}:fa:${team.id}:${target.id}`,
+        id: `pro-tx:${seasonYear}:w${week}:fa:${team.id}:${candidate.id}`,
         seasonYear,
         week,
         kind: "signing",
-        playerId: target.id,
-        playerName: target.name,
-        position: target.position,
+        playerId: candidate.id,
+        playerName: candidate.name,
+        position: candidate.position,
         toTeamId: team.id,
         value: salary,
-        summary: `${team.shortName} подписали ${target.position} ${target.name} на ${Math.round(salary / 100_000) / 10}M в год.`,
+        summary: `${team.shortName} подписали ${candidate.position} ${candidate.name} на ${Math.round(salary / 100_000) / 10}M в год.`,
       });
       nextTeams = recalculateTeams(nextTeams, nextRoster);
     }
@@ -446,6 +454,7 @@ function heroRosterPlayer(save: CareerSave, teamId: string, status: "active" | "
     potential: save.football.ratings.potentialBand === "national-ceiling" ? 96 : save.football.ratings.potentialBand === "high-upside" ? 90 : save.football.ratings.potentialBand === "starter" ? 84 : 77,
     health: save.character.condition.health,
     form: clamp(54 + save.character.condition.confidence * 0.3),
+    schemeFit: save.football.professional.campInvites.find((invite) => invite.teamId === teamId)?.schemeFit ?? 60,
     depthRank,
     yearsRemaining: contract?.years ?? 1,
     annualSalary: contract?.salaryYearOne ?? 795_000,
@@ -503,7 +512,7 @@ function createHeroCareer(save: CareerSave, teamId: string | undefined): Profess
 function playerDepthScore(player: ProfessionalRosterPlayer, heroCoachTrust = 0): number {
   const availabilityPenalty = player.availability === "active" ? 0 : player.availability === "questionable" ? 7 : 40;
   const heroBonus = player.isHero ? heroCoachTrust * 0.12 : 0;
-  return player.overall * 0.72 + player.form * 0.18 + player.health * 0.1 + heroBonus - availabilityPenalty;
+  return player.overall * 0.64 + player.form * 0.16 + player.health * 0.08 + player.schemeFit * 0.12 + heroBonus - availabilityPenalty;
 }
 
 function rebuildProfessionalDepthCharts(roster: ProfessionalRosterPlayer[], heroCoachTrust = 0): ProfessionalRosterPlayer[] {
@@ -719,10 +728,10 @@ function runProfessionalTradeDeadline(
   if (!position) return { teams, roster, transactions };
   const candidates = roster.filter((player) => !player.isHero && player.teamId && player.teamId !== buyer.id && player.position === position && player.status === "active" && player.depthRank >= 2 && player.availability === "active" && player.annualSalary <= buyer.capSpace);
   if (candidates.length === 0) return { teams, roster, transactions };
-  const target = random.pick(candidates);
+  const target = [...candidates].sort((left, right) => professionalSchemeFit(buyer, right) - professionalSchemeFit(buyer, left) || right.overall - left.overall || left.id.localeCompare(right.id))[0] ?? random.pick(candidates);
   if (!target.teamId) return { teams, roster, transactions };
   const seller = teams.find((team) => team.id === target.teamId);
-  const moved = rebuildProfessionalDepthCharts(roster.map((player) => player.id === target.id ? { ...player, teamId: buyer.id } : player));
+  const moved = rebuildProfessionalDepthCharts(roster.map((player) => player.id === target.id ? { ...player, teamId: buyer.id, schemeFit: professionalSchemeFit(buyer, player) } : player));
   const nextTeams = recalculateTeams(teams, moved);
   return {
     teams: nextTeams,
@@ -813,6 +822,7 @@ export function createProfessionalMatchState(save: CareerSave, game: Professiona
     drives: [],
     stats: createEmptyMatchStats(),
     advancedStats: createEmptyAdvancedMatchStats(),
+    tacticalMemory: { heroOffense: [], opponentOffense: [] },
   };
 }
 
@@ -827,7 +837,7 @@ export function initializeProfessionalLeague(save: CareerSave): CareerSave {
   let teams = recalculateTeams(state.teams.map((team) => ({ ...team, wins: 0, losses: 0 })), roster);
   const market = runNpcFreeAgency(save.meta.worldSeed, seasonYear, teams, roster, freeAgents);
   teams = market.teams;
-  roster = market.roster;
+  roster = applyProfessionalSchemeFit(teams, market.roster);
   freeAgents = market.freeAgents;
   let transactions = [...rookies.transactions, ...market.transactions];
 
@@ -1032,8 +1042,10 @@ export function acceptProfessionalFreeAgentOffer(save: CareerSave, teamId: strin
 
 function simulationScore(seed: string, game: ProfessionalGame, home: ProfessionalTeam, away: ProfessionalTeam): { home: number; away: number } {
   const random = new SeededRandom(seed).fork(`pro-game:${game.id}`);
-  const homeBase = 17 + (home.rosterStrength - 65) * 0.52 + random.integer(-10, 12) + 2;
-  const awayBase = 17 + (away.rosterStrength - 65) * 0.52 + random.integer(-10, 12);
+  const homePace = home.tactical?.tempo === "fast" ? 2 : home.tactical?.tempo === "controlled" ? -1 : 0;
+  const awayPace = away.tactical?.tempo === "fast" ? 2 : away.tactical?.tempo === "controlled" ? -1 : 0;
+  const homeBase = 17 + (home.rosterStrength - 65) * 0.46 + (professionalStaffRating(home) - 65) * .09 + professionalTacticalModifier(home, away) + homePace + random.integer(-9, 10) + 2;
+  const awayBase = 17 + (away.rosterStrength - 65) * 0.46 + (professionalStaffRating(away) - 65) * .09 + professionalTacticalModifier(away, home) + awayPace + random.integer(-9, 10);
   let homeScore = Math.max(3, Math.round(homeBase));
   let awayScore = Math.max(3, Math.round(awayBase));
   if (homeScore === awayScore) {
@@ -1344,7 +1356,7 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
       ...player,
       age,
       yearsRemaining,
-      overall: clamp(player.overall - decline, 45, 99),
+      overall: clamp(player.overall - decline + (player.schemeFit - 60) * .018, 45, 99),
       health: clamp(player.health + random.integer(-8, 4)),
       form: clamp(player.form + random.integer(-9, 7)),
     };
@@ -1399,12 +1411,14 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
     });
   }
 
-  const offseasonTeams = state.teams.map((team) => ({
+  const coachedTeams = advanceProfessionalCoaching(state.teams, seasonYear, `${save.meta.worldSeed}:professional-coaching`);
+  const offseasonTeams = coachedTeams.map((team) => ({
     ...team,
     wins: 0,
     losses: 0,
     deadCap: Math.max(0, Math.round((team.deadCap * .42 + (releasedDeadCap.get(team.id) ?? 0)) / 10_000) * 10_000),
   }));
+  roster = applyProfessionalSchemeFit(offseasonTeams, roster);
   roster = offseasonTeams.flatMap((team) => {
     const teamPlayers = roster.filter((player) => player.teamId === team.id);
     const activeCount = teamPlayers.filter((player) => player.status === "active").length;
@@ -1413,13 +1427,13 @@ export function advanceProfessionalOffseason(save: CareerSave): CareerSave {
   });
   let teams = recalculateTeams(offseasonTeams, roster);
   const rookieDraft = runLifecycleRookieDraft(save, seasonYear, teams, roster, freeAgents);
-  roster = rookieDraft.roster;
+  roster = applyProfessionalSchemeFit(teams, rookieDraft.roster);
   freeAgents = rookieDraft.freeAgents;
   transactions = [...transactions, ...rookieDraft.transactions];
   teams = recalculateTeams(teams, roster);
   const market = runNpcFreeAgency(save.meta.worldSeed, seasonYear, teams, roster, freeAgents);
   teams = market.teams;
-  roster = market.roster;
+  roster = applyProfessionalSchemeFit(teams, market.roster);
   freeAgents = market.freeAgents;
   transactions = [...transactions, ...market.transactions].slice(-600);
 

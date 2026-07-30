@@ -247,7 +247,7 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
 
       {view === "staff" && (
         <div className="team-profile__staff">
-          {teamCoaches.map((coach) => <article key={coach.id}><div><small>{roleLabel(coach.role)}</small><strong>{coach.name}</strong></div><span>{"reputation" in coach ? Math.round(coach.reputation) : Math.round(coach.tactics)}</span><footer>{"careerWins" in coach ? `${coach.careerWins}–${coach.careerLosses}` : `DEV ${coach.development} · TAC ${coach.tactics}`}</footer></article>)}
+          {teamCoaches.map((coach) => <article key={coach.id}><div><small>{roleLabel(coach.role)}</small><strong>{coach.name}</strong></div><span>{Math.round(coach.tactics)}</span><footer>{"contractYears" in coach ? `DEV ${Math.round(coach.development)} · ADP ${Math.round(coach.adaptability)} · ${coach.contractYears}Y` : `DEV ${coach.development}`}</footer></article>)}
         </div>
       )}
 
@@ -260,8 +260,12 @@ export function TeamProfileDashboard({ save, teamId }: TeamProfileDashboardProps
               <section className="team-profile__metrics">
                 <article><small>Установка</small><strong>{Math.round(worldTeam.tactical.installation)}</strong></article>
                 <article><small>Связность</small><strong>{Math.round(worldTeam.tactical.continuity)}</strong></article>
-                <article><small>Сложность</small><strong>{Math.round(worldTeam.tactical.complexity)}</strong></article>
-                <article><small>Ротация</small><strong>{Math.round(worldTeam.tactical.rotationDepth)}</strong></article>
+                <article><small>Вынос</small><strong>{Math.round(worldTeam.tactical.runRate)}</strong></article>
+                <article><small>Глубина</small><strong>{Math.round(worldTeam.tactical.deepShotRate)}</strong></article>
+                <article><small>Блиц</small><strong>{Math.round(worldTeam.tactical.blitzRate)}</strong></article>
+                <article><small>Man</small><strong>{Math.round(worldTeam.tactical.manCoverageRate)}</strong></article>
+                <article><small>Маскировка</small><strong>{Math.round(worldTeam.tactical.disguiseRate)}</strong></article>
+                <article><small>Адаптация</small><strong>{Math.round(worldTeam.tactical.adaptation)}</strong></article>
               </section>
             </>
           ) : (

@@ -1,6 +1,7 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { CAREER_FOOTBALL_POSITIONS, type FootballPosition } from "../career/types";
 import type { FootballProfessionalState, ProfessionalAgent, ProfessionalLeagueState, ProfessionalTeam } from "./types";
+import { createProfessionalStaff, createProfessionalTacticalIdentity } from "./coaching";
 
 const TEAM_IDENTITIES = [
   ["Austin", "Outlaws", "AUS"],
@@ -45,8 +46,11 @@ function createTeams(worldSeed: string): ProfessionalTeam[] {
     const payroll = teamRandom.integer(184, 244) * 1_000_000;
     const deadCap = teamRandom.integer(1, 18) * 1_000_000;
     const needs = Object.fromEntries(positions.map((position) => [position, clamp(teamRandom.integer(34, 94) + (rating < 73 ? 7 : 0))])) as Record<FootballPosition, number>;
+    const id = `pro-${shortName.toLowerCase()}`;
+    const staff = createProfessionalStaff(id, teamRandom.integer(58, 94), `${worldSeed}:${shortName}:staff`);
+    const tactical = createProfessionalTacticalIdentity(staff, `${worldSeed}:${shortName}:tactical`);
     return {
-      id: `pro-${shortName.toLowerCase()}`,
+      id,
       city,
       name,
       shortName,
@@ -61,6 +65,8 @@ function createTeams(worldSeed: string): ProfessionalTeam[] {
       capSpace: Math.max(0, PROFESSIONAL_SALARY_CAP - payroll - deadCap),
       rosterSize: 0,
       needs,
+      staff,
+      tactical,
     };
   });
 }

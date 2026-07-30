@@ -25,6 +25,8 @@ import type {
   MatchSnapResult,
   MatchStatLine,
   MatchTeamSide,
+  MatchTacticalCall,
+  MatchTacticalProfile,
 } from "./types";
 
 const GAME_SECONDS = 48 * 60;
@@ -292,6 +294,46 @@ function opponentTeamRatings(save: CareerSave, opponentId: string): TeamRatings 
   return { offense: rating, defense: rating, coaching: clamp(rating + 2), cohesion: clamp(rating - 4) };
 }
 
+function defaultTacticalProfile(seed: string): MatchTacticalProfile {
+  const random = new SeededRandom(`${seed}:default-tactics`);
+  return {
+    offenseSystem: "multiple",
+    defenseSystem: "multiple-defense",
+    runRate: 48 + random.integer(-3, 3),
+    playActionRate: 18,
+    screenRate: 12,
+    deepShotRate: 20,
+    blitzRate: 34 + random.integer(-3, 3),
+    manCoverageRate: 42,
+    disguiseRate: 56,
+    fourthDownAggression: 50,
+    adaptation: 55,
+  };
+}
+
+function tacticalProfileForSide(save: CareerSave, side: MatchTeamSide): MatchTacticalProfile {
+  const teamId = side === "hero" ? heroTeamId(save) : save.football.match.opponentId;
+  if (save.meta.phase === "professional-career") {
+    const tactical = save.football.professional.teams.find((team) => team.id === teamId)?.tactical;
+    return tactical ? { ...tactical } : defaultTacticalProfile(`${save.meta.worldSeed}:${teamId}:pro`);
+  }
+  const tactical = save.world.teams.find((team) => team.id === teamId)?.tactical;
+  if (!tactical) return defaultTacticalProfile(`${save.meta.worldSeed}:${teamId}:world`);
+  return {
+    offenseSystem: tactical.offenseSystem,
+    defenseSystem: tactical.defenseSystem,
+    runRate: tactical.runRate ?? 48,
+    playActionRate: tactical.playActionRate ?? 18,
+    screenRate: tactical.screenRate ?? 12,
+    deepShotRate: tactical.deepShotRate ?? 20,
+    blitzRate: tactical.blitzRate ?? 34,
+    manCoverageRate: tactical.manCoverageRate ?? 42,
+    disguiseRate: tactical.disguiseRate ?? 56,
+    fourthDownAggression: tactical.fourthDownAggression ?? 50,
+    adaptation: tactical.adaptation ?? 55,
+  };
+}
+
 function ratingsForSide(save: CareerSave, side: MatchTeamSide): TeamRatings {
   return side === "hero" ? ownTeamRatings(save) : opponentTeamRatings(save, save.football.match.opponentId);
 }
@@ -517,6 +559,10 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     scoreMargin,
     match.quarter,
     match.clockSeconds,
+    {
+      profile: tacticalProfileForSide(save, offenseSide),
+      recentOffense: offenseSide === "hero" ? match.tacticalMemory.heroOffense : match.tacticalMemory.opponentOffense,
+    },
   );
   const defenseCall = callPlay(
     `${save.meta.worldSeed}:${match.gameId}:defense-call:${index}`,
@@ -528,6 +574,10 @@ function generateEpisode(save: CareerSave, match: FootballMatchState, index: num
     -scoreMargin,
     match.quarter,
     match.clockSeconds,
+    {
+      profile: tacticalProfileForSide(save, otherSide(offenseSide)),
+      recentOffense: offenseSide === "hero" ? match.tacticalMemory.heroOffense : match.tacticalMemory.opponentOffense,
+    },
   );
   const assignments = bindRosterToAssignments(save, match, buildSnapAssignments(
     offenseCall,
@@ -1222,6 +1272,7 @@ function startMatchCore(save: CareerSave, participationMode: MatchParticipationM
     driveYards: 0,
     timeoutsHero: 3,
     timeoutsOpponent: 3,
+    tacticalMemory: { heroOffense: [], opponentOffense: [] },
     completedEpisodes: [],
     drives: [],
     stats: createEmptyMatchStats(),
@@ -1450,6 +1501,21 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     driveDescription = "Время матча истекло на текущем владении.";
   }
 
+  const offenseCallForMemory = match.heroUnit === "offense" ? episode.playCall : episode.opponentCall;
+  const tacticalCall: MatchTacticalCall = {
+    id: offenseCallForMemory.id,
+    concept: offenseCallForMemory.concept,
+    playType: offenseCallForMemory.playType,
+    tags: [...offenseCallForMemory.tags],
+    yards: outcome.yards,
+    success: outcome.firstDown || outcome.points > 0 || outcome.yards >= Math.max(4, episode.distance),
+  };
+  const offenseMemoryKey = episode.possession === "hero" ? "heroOffense" : "opponentOffense";
+  const tacticalMemory = {
+    ...match.tacticalMemory,
+    [offenseMemoryKey]: [...match.tacticalMemory[offenseMemoryKey], tacticalCall].slice(-16),
+  };
+
   let nextMatch: FootballMatchState = {
     ...match,
     heroScore,
@@ -1466,6 +1532,7 @@ function resolveOneMatchDecision(save: CareerSave, optionId: string): CareerSave
     driveFieldPosition: nextFieldPosition,
     drivePlays,
     driveYards,
+    tacticalMemory,
     completedEpisodes: [...match.completedEpisodes, { ...outcome, driveEnded }],
     lastResolvedEpisode: episode,
     lastResolvedResult: { ...outcome, driveEnded },

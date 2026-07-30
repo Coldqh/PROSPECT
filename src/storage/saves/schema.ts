@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 31;
+export const CURRENT_SCHEMA_VERSION = 32;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -457,6 +457,21 @@ const matchDriveSummarySchema = z.object({
   controlled: z.boolean(),
 });
 
+
+const matchTacticalCallSchema = z.object({
+  id: z.string().min(1),
+  concept: z.string().min(1),
+  playType: z.enum(["run", "pass", "play-action", "screen", "blitz", "coverage", "field-goal", "punt"]),
+  tags: z.array(z.string()),
+  yards: z.number().int(),
+  success: z.boolean(),
+});
+
+const matchTacticalMemorySchema = z.object({
+  heroOffense: z.array(matchTacticalCallSchema).default([]),
+  opponentOffense: z.array(matchTacticalCallSchema).default([]),
+});
+
 const footballMatchSchema = z.object({
   moduleVersion: z.literal(1),
   gameId: z.string().min(1),
@@ -497,6 +512,7 @@ const footballMatchSchema = z.object({
   driveYards: z.number().int().default(0),
   timeoutsHero: z.number().int().min(0).max(3).default(3),
   timeoutsOpponent: z.number().int().min(0).max(3).default(3),
+  tacticalMemory: matchTacticalMemorySchema.default({ heroOffense: [], opponentOffense: [] }),
   currentEpisode: matchEpisodeSchema.optional(),
   lastResolvedEpisode: matchEpisodeSchema.optional(),
   lastResolvedResult: matchEpisodeResultSchema.optional(),
@@ -804,6 +820,7 @@ const professionalRosterPlayerSchema = z.object({
   potential: z.number().min(0).max(100),
   health: z.number().min(0).max(100),
   form: z.number().min(0).max(100),
+  schemeFit: z.number().min(0).max(100).default(60),
   depthRank: z.number().int().nonnegative(),
   yearsRemaining: z.number().int().min(0).max(7),
   annualSalary: z.number().int().nonnegative(),
@@ -836,6 +853,41 @@ const professionalMatchStatsSchema = z.object({
   longestFieldGoal: z.number().int().nonnegative(), punts: z.number().int().nonnegative(), puntYards: z.number().int(), puntsInside20: z.number().int().nonnegative(), returnYardsAllowed: z.number().int().nonnegative(),
 });
 
+
+const professionalCoachSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(2),
+  role: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator", "position-coach"]),
+  age: z.number().int().min(25).max(80),
+  reputation: z.number().min(0).max(100),
+  tactics: z.number().min(0).max(100),
+  development: z.number().min(0).max(100),
+  adaptability: z.number().min(0).max(100),
+  gameManagement: z.number().min(0).max(100),
+  jobSecurity: z.number().min(0).max(100),
+  contractYears: z.number().int().min(0).max(10),
+  annualSalary: z.number().int().nonnegative(),
+  offenseSystem: z.enum(["air-raid", "west-coast", "power-run", "spread-option", "multiple"]),
+  defenseSystem: z.enum(["quarters-425", "multiple-34", "over-43", "nickel-match", "man-pressure", "multiple-defense"]),
+});
+
+const professionalTacticalSchema = z.object({
+  offenseSystem: z.enum(["air-raid", "west-coast", "power-run", "spread-option", "multiple"]),
+  defenseSystem: z.enum(["quarters-425", "multiple-34", "over-43", "nickel-match", "man-pressure", "multiple-defense"]),
+  tempo: z.enum(["controlled", "balanced", "fast"]),
+  offensiveAggression: z.enum(["conservative", "balanced", "aggressive"]),
+  defensiveAggression: z.enum(["conservative", "balanced", "aggressive"]),
+  runRate: z.number().min(0).max(100),
+  playActionRate: z.number().min(0).max(100),
+  screenRate: z.number().min(0).max(100),
+  deepShotRate: z.number().min(0).max(100),
+  blitzRate: z.number().min(0).max(100),
+  manCoverageRate: z.number().min(0).max(100),
+  disguiseRate: z.number().min(0).max(100),
+  fourthDownAggression: z.number().min(0).max(100),
+  adaptation: z.number().min(0).max(100),
+});
+
 const professionalStateSchema = z.object({
   version: z.literal(2),
   status: z.enum(["dormant", "decision", "agent-selection", "evaluation", "draft-ready", "drafted", "undrafted", "training-camp", "roster", "practice-squad", "free-agent", "cut"]),
@@ -855,6 +907,8 @@ const professionalStateSchema = z.object({
     prestige: z.number().min(0).max(100), rosterStrength: z.number().min(0).max(100), wins: z.number().int().nonnegative(), losses: z.number().int().nonnegative(),
     salaryCap: z.number().int().positive(), payroll: z.number().int().nonnegative(), deadCap: z.number().int().nonnegative(), capSpace: z.number().int().nonnegative(), rosterSize: z.number().int().nonnegative(),
     needs: professionalPositionNeedsSchema,
+    staff: z.array(professionalCoachSchema).optional(),
+    tactical: professionalTacticalSchema.optional(),
   })).min(16),
   prospects: z.array(z.object({
     id: z.string().min(1), sourcePlayerId: z.string().min(1).optional(), collegeTeamId: z.string().min(1).optional(), previousTeamIds: z.array(z.string().min(1)).default([]), seasonsPlayed: z.number().int().nonnegative().default(0), declaredEarly: z.boolean().default(false), name: z.string().min(2), position: careerFootballPositionSchema, collegeName: z.string().min(1), age: z.number().int().min(18).max(30),
@@ -1401,7 +1455,7 @@ const ecosystemMovementMarketSchema = z.object({
   coachVacancies: z.array(z.object({
     id: z.string().min(1),
     teamId: z.string().min(1),
-    role: z.enum(["head-coach", "coordinator"]),
+    role: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator", "position-coach"]),
     status: z.enum(["open", "filled", "cancelled"]),
     openedSeasonYear: z.number().int().min(2020).max(2200),
     openedWeek: z.number().int().min(1),
@@ -1530,6 +1584,18 @@ const ecosystemTacticalIdentitySchema = z.object({
   continuity: z.number().min(0).max(100),
   rotationDepth: z.number().min(0).max(100),
   headCoachFingerprint: z.string().min(1),
+  offensiveCoordinatorFingerprint: z.string().min(1).default("legacy-offense"),
+  defensiveCoordinatorFingerprint: z.string().min(1).default("legacy-defense"),
+  staffFingerprint: z.string().min(1).default("legacy-staff"),
+  runRate: z.number().min(0).max(100).default(48),
+  playActionRate: z.number().min(0).max(100).default(18),
+  screenRate: z.number().min(0).max(100).default(12),
+  deepShotRate: z.number().min(0).max(100).default(20),
+  blitzRate: z.number().min(0).max(100).default(34),
+  manCoverageRate: z.number().min(0).max(100).default(42),
+  disguiseRate: z.number().min(0).max(100).default(58),
+  fourthDownAggression: z.number().min(0).max(100).default(52),
+  adaptation: z.number().min(0).max(100).default(58),
   positionRoles: z.object({
     QB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
     RB: z.object({ primary: ecosystemPositionRoleSchema, secondary: ecosystemPositionRoleSchema }),
@@ -1613,7 +1679,7 @@ const ecosystemSocialSchema = z.object({
 const ecosystemCareerEventSchema = z.object({
   id: z.string().min(1),
   seasonYear: z.number().int().min(2020).max(2200),
-  week: z.number().int().min(0).max(60),
+  week: z.number().int().min(0).max(400),
   kind: z.enum(["created", "enrolled", "transferred", "position-change", "graduated", "declared", "drafted", "signed", "released", "retired"]),
   detail: z.string().min(2),
   fromTeamId: z.string().min(1).optional(),
@@ -1647,7 +1713,7 @@ const ecosystemCareerRegistrySchema = z.object({
 }).default({ version: 1, records: [], draftPoolIds: [], retiredIds: [], lastSyncedSeasonYear: 2020 });
 
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(11),
+  moduleVersion: z.literal(12),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -1729,7 +1795,7 @@ const footballEcosystemSchema = z.object({
     seed: z.string().min(1),
     name: z.string().min(2),
     teamId: z.string().min(1),
-    role: z.enum(["head-coach", "coordinator"]),
+    role: z.enum(["head-coach", "offensive-coordinator", "defensive-coordinator", "position-coach"]),
     age: z.number().int().min(25).max(80),
     reputation: z.number().min(0).max(100),
     development: z.number().min(0).max(100),
@@ -1738,6 +1804,15 @@ const footballEcosystemSchema = z.object({
     jobSecurity: z.number().min(0).max(100),
     status: z.enum(["secure", "watched", "hot-seat"]),
     philosophy: z.string().min(2),
+    tactics: z.number().min(0).max(100).default(60),
+    adaptability: z.number().min(0).max(100).default(58),
+    gameManagement: z.number().min(0).max(100).default(58),
+    temperament: z.enum(["calm", "demanding", "volatile", "player-first"]).default("calm"),
+    offenseSystem: z.enum(["air-raid", "west-coast", "power-run", "spread-option", "multiple"]).default("multiple"),
+    defenseSystem: z.enum(["quarters-425", "multiple-34", "over-43", "nickel-match", "man-pressure", "multiple-defense"]).default("multiple-defense"),
+    specialtyPositions: z.array(ecosystemRosterPositionSchema).default([]),
+    contractYears: z.number().int().min(0).max(10).default(2),
+    annualSalary: z.number().int().nonnegative().default(500000),
     tenureYears: z.number().int().nonnegative(),
     careerWins: z.number().int().nonnegative(),
     careerLosses: z.number().int().nonnegative(),

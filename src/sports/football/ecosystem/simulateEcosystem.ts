@@ -4,6 +4,7 @@ import type { LifeState } from "../../../core/life/types";
 import type { RelationshipState } from "../../../core/relationships/types";
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import { createPlayerTacticalProfile, reevaluatePlayerTacticalProfile, refreshTacticalIdentityAfterCoachChange, tacticalDepthScore, tacticalDevelopmentMultiplier, tacticalTeamModifier } from "./tactics";
+import { createEcosystemCoach, staffRating } from "./coaching";
 import type { FootballCareerState } from "../career/types";
 import { FOOTBALL_ROSTER_POSITIONS, POSITION_ROOM_TARGETS, POSITION_STARTER_TARGETS } from "../team/positions";
 import type { FootballRosterPosition } from "../team/types";
@@ -182,7 +183,7 @@ function updatePlayersDaily(
               + developmentEnvironment * 0.0022
             ) * Math.min(1, developmentRoom / 18)
           : 0;
-        const tacticalMultiplier = team ? tacticalDevelopmentMultiplier(player, team) : 1;
+        const tacticalMultiplier = team ? tacticalDevelopmentMultiplier(player, team, save.world.coaches.filter((coach) => coach.teamId === team.id)) : 1;
         const socialMultiplier = playerSocialDevelopmentMultiplier(save.world.social, player.id);
         overall = clamp(overall + development * tacticalMultiplier * socialMultiplier, 40, 99);
       }
@@ -503,10 +504,15 @@ function conferencePairs(teamIds: string[], round: number): Array<[string, strin
   return pairs;
 }
 
-function gameScore(team: EcosystemTeam, opponent: EcosystemTeam, random: SeededRandom): number {
+function gameScore(team: EcosystemTeam, opponent: EcosystemTeam, coaches: EcosystemCoach[], random: SeededRandom): number {
   const trend = team.trend === "rising" ? 3 : team.trend === "falling" ? -3 : 0;
-  const matchup = (team.rating - opponent.rating) * 0.22;
-  return Math.max(6, Math.min(52, Math.round(24 + trend + matchup + random.integer(-11, 12))));
+  const matchup = (team.rating - opponent.rating) * 0.19;
+  const staff = (staffRating(coaches, team.id) - 65) * .08;
+  const execution = (team.tactical.installation - 60) * .035 + (team.tactical.continuity - 55) * .025;
+  const pressureAnswer = (team.tactical.screenRate - 12) * (opponent.tactical.blitzRate - 35) * .0014;
+  const adaptation = (team.tactical.adaptation - opponent.tactical.adaptation) * .022;
+  const pace = team.tactical.tempo === "fast" ? 2 : team.tactical.tempo === "controlled" ? -1 : 0;
+  return Math.max(6, Math.min(52, Math.round(24 + trend + matchup + staff + execution + pressureAnswer + adaptation + pace + random.integer(-10, 10))));
 }
 
 function simulateConferenceRound(
@@ -527,8 +533,8 @@ function simulateConferenceRound(
       const right = teamMap.get(rightId);
       if (!left || !right) continue;
       const matchRandom = random.fork(`${conference.id}:${leftId}:${rightId}`);
-      let leftScore = gameScore(left, right, matchRandom.fork("left"));
-      let rightScore = gameScore(right, left, matchRandom.fork("right"));
+      let leftScore = gameScore(left, right, coaches, matchRandom.fork("left"));
+      let rightScore = gameScore(right, left, coaches, matchRandom.fork("right"));
       if (leftScore === rightScore) leftScore += matchRandom.chance(0.5) ? 3 : -3;
       const leftWon = leftScore > rightScore;
       const winner = leftWon ? left : right;
@@ -622,8 +628,8 @@ function simulateConferenceChampionships(
     const second = finalists[1];
     if (!first || !second) return conference;
     const finalRandom = random.fork(conference.id);
-    const firstScore = gameScore(first, second, finalRandom.fork("first"));
-    let secondScore = gameScore(second, first, finalRandom.fork("second"));
+    const firstScore = gameScore(first, second, coaches, finalRandom.fork("first"));
+    let secondScore = gameScore(second, first, coaches, finalRandom.fork("second"));
     if (firstScore === secondScore) secondScore += 3;
     const champion = firstScore > secondScore ? first : second;
     const runnerUp = champion.id === first.id ? second : first;
@@ -735,7 +741,7 @@ function processCoachCarousel(
   save: EcosystemCareerState,
   random: SeededRandom,
   seasonYear: number,
-): { coaches: EcosystemCoach[]; transactions: EcosystemTransaction[]; stories: EcosystemStory[] } {
+): { coaches: EcosystemCoach[]; transactions: EcosystemTransaction[]; stories: EcosystemStory[]; changedTeamIds: string[] } {
   const transactions: EcosystemTransaction[] = [];
   const stories: EcosystemStory[] = [];
   let next = [...coaches];
@@ -756,6 +762,7 @@ function processCoachCarousel(
   const openingTeamIds = new Set(openings.map((team) => team.id));
   const originalCoachIds = new Set(coaches.map((coach) => coach.id));
   const movedCoachIds = new Set<string>();
+  const changedTeamIds = new Set<string>();
 
   for (const team of openings) {
     const fired = next.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
@@ -771,7 +778,7 @@ function processCoachCarousel(
       ))
       .map((coach) => {
         const candidateTeam = teams.find((item) => item.id === coach.teamId);
-        const promotion = coach.role === "coordinator" ? 10 : 0;
+        const promotion = coach.role === "offensive-coordinator" || coach.role === "defensive-coordinator" ? 10 : coach.role === "position-coach" ? 4 : 0;
         const upward = candidateTeam && candidateTeam.prestige < team.prestige ? 7 : 0;
         const sourceRetention = candidateTeam ? coachRetentionPower(candidateTeam.resources) : 45;
         const targetPower = coachRetentionPower(team.resources);
@@ -817,9 +824,10 @@ function processCoachCarousel(
       jobSecurity: 68,
       pressure: 24,
       status: "secure" as const,
-      reputation: clamp(coach.reputation + (oldRole === "coordinator" ? 3 : 1)),
+      reputation: clamp(coach.reputation + (oldRole === "offensive-coordinator" || oldRole === "defensive-coordinator" ? 3 : oldRole === "position-coach" ? 2 : 1)),
     } : coach);
     movedCoachIds.add(candidate.id);
+    changedTeamIds.add(team.id);
 
     const replacementRandom = random.fork(`replacement:${oldTeamId}:${seasonYear}:${candidate.id}`);
     const replacementBaseId = `${oldTeamId}:replacement:${seasonYear}:${oldRole}:${candidate.id}`;
@@ -847,6 +855,15 @@ function processCoachCarousel(
       jobSecurity: 66,
       status: "secure",
       philosophy: "Новый штаб перестраивает роли и требования",
+      tactics: clamp(58 + replacementRandom.integer(-12, 18)),
+      adaptability: clamp(56 + replacementRandom.integer(-14, 24)),
+      gameManagement: clamp(57 + replacementRandom.integer(-14, 22)),
+      temperament: replacementRandom.pick(["calm", "demanding", "volatile", "player-first"] as const),
+      offenseSystem: replacementRandom.pick(["air-raid", "west-coast", "power-run", "spread-option", "multiple"] as const),
+      defenseSystem: replacementRandom.pick(["quarters-425", "multiple-34", "over-43", "nickel-match", "man-pressure", "multiple-defense"] as const),
+      specialtyPositions: oldRole === "offensive-coordinator" ? ["QB", "WR", "RB"] : oldRole === "defensive-coordinator" ? ["EDGE", "LB", "CB"] : ["QB"],
+      contractYears: replacementRandom.integer(1, oldRole === "head-coach" ? 5 : 3),
+      annualSalary: replacementRandom.integer(180_000, oldRole === "head-coach" ? 4_800_000 : 1_600_000),
       tenureYears: 0,
       careerWins: 0,
       careerLosses: 0,
@@ -873,7 +890,52 @@ function processCoachCarousel(
     });
     stories.push(story(save, save.life.completedDays, "coach-move", `${team.shortName} сменил направление`, detail, related ? 5 : 4, [oldTeamId, team.id], [], [hired.id], related));
   }
-  return { coaches: next, transactions, stories };
+
+  const staffRoles = ["head-coach", "offensive-coordinator", "defensive-coordinator", "position-coach"] as const;
+  for (const team of teams.filter((item) => item.level === "college")) {
+    for (const role of staffRoles) {
+      const current = next.find((coach) => coach.teamId === team.id && coach.role === role);
+      if (!current) {
+        const added = createEcosystemCoach(team, role, random.fork(`missing:${team.id}:${role}:${seasonYear}`));
+        next.push({ ...added, id: `${added.id}:${seasonYear}`, seed: `${added.seed}:${seasonYear}` });
+        changedTeamIds.add(team.id);
+        continue;
+      }
+      if (current.contractYears > 1) {
+        next = next.map((coach) => coach.id === current.id ? { ...coach, contractYears: coach.contractYears - 1 } : coach);
+        continue;
+      }
+      const performance = current.reputation * .28 + current.tactics * .34 + current.development * .2 + current.adaptability * .18;
+      const replace = role !== "head-coach" && (performance < 56 || current.jobSecurity < 38 || random.fork(`staff-expiry:${current.id}:${seasonYear}`).chance(.22));
+      if (!replace) {
+        const renewedYears = random.fork(`staff-renew:${current.id}:${seasonYear}`).integer(2, role === "head-coach" ? 5 : 4);
+        next = next.map((coach) => coach.id === current.id ? { ...coach, contractYears: renewedYears } : coach);
+        continue;
+      }
+      const generated = createEcosystemCoach(team, role, random.fork(`staff-replacement:${team.id}:${role}:${seasonYear}`));
+      const replacement = {
+        ...generated,
+        id: `${team.id}-${role}:${seasonYear}`,
+        seed: `${team.seed}:${role}:${seasonYear}`,
+      };
+      next = [...next.filter((coach) => coach.id !== current.id), replacement];
+      changedTeamIds.add(team.id);
+      const related = team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35);
+      stories.push(story(
+        save,
+        save.life.completedDays,
+        "coach-move",
+        `${team.shortName}: ${role}`,
+        `${current.name} → ${replacement.name}`,
+        related ? 5 : 3,
+        [team.id],
+        [],
+        [current.id, replacement.id],
+        related,
+      ));
+    }
+  }
+  return { coaches: next, transactions, stories, changedTeamIds: [...changedTeamIds] };
 }
 
 function archiveSeason(teams: EcosystemTeam[], conferences: EcosystemConference[], coaches: EcosystemCoach[], seasonYear: number): EcosystemTeamSeasonRecord[] {
@@ -1105,12 +1167,16 @@ function processOffseason(
   const carousel = processCoachCarousel(teams, world.coaches, save, random.fork("carousel"), seasonYear);
   transactions.push(...carousel.transactions);
   stories.push(...carousel.stories);
-  const tacticalChangeTeamIds = new Set(carousel.transactions.filter((item) => item.kind === "coach-hired").map((item) => item.toTeamId).filter((id): id is string => Boolean(id)));
+  const tacticalChangeTeamIds = new Set([
+    ...carousel.changedTeamIds,
+    ...carousel.transactions.filter((item) => item.kind === "coach-hired").map((item) => item.toTeamId).filter((id): id is string => Boolean(id)),
+  ]);
   teams = teams.map((team) => {
     if (!tacticalChangeTeamIds.has(team.id)) return team;
     const headCoach = carousel.coaches.find((coach) => coach.teamId === team.id && coach.role === "head-coach");
     if (!headCoach) return team;
-    const changed = refreshTacticalIdentityAfterCoachChange(team, headCoach, seasonYear + 1);
+    const staff = carousel.coaches.filter((coach) => coach.teamId === team.id);
+    const changed = refreshTacticalIdentityAfterCoachChange(team, headCoach, seasonYear + 1, staff);
     const related = team.id === save.football.college.signedProgramId || save.football.recruitment.programs.some((program) => program.id === team.id && program.interest >= 35);
     const detail = `${team.shortName} устанавливает ${changed.offenseStyle} / ${changed.defenseStyle}. Старые роли пересматриваются, а освоение системы начинается заново.`;
     transactions.push({ id: `tactical-change:${seasonYear + 1}:${team.id}`, kind: "tactical-change", seasonYear: seasonYear + 1, week: save.life.weekNumber, createdOn: save.meta.currentDate, title: `${team.shortName} меняет систему`, detail, toTeamId: team.id, relatedToHero: related });

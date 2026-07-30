@@ -103,18 +103,20 @@ function requiredBonds(teams: EcosystemTeam[], players: EcosystemPlayer[], coach
     const roster = players.filter((player) => player.teamId === team.id);
     const staff = coaches.filter((coach) => coach.teamId === team.id);
     const headCoach = staff.find((coach) => coach.role === "head-coach");
-    const coordinator = staff.find((coach) => coach.role === "coordinator");
+    const coordinators = staff.filter((coach) => coach.role === "offensive-coordinator" || coach.role === "defensive-coordinator");
 
-    if (headCoach && coordinator) {
-      const [left, right] = orderedPair(headCoach, coordinator);
-      addDraft(drafts, {
-        entityAId: left.id,
-        entityBId: right.id,
-        entityAKind: "coach",
-        entityBKind: "coach",
-        teamId: team.id,
-        kind: "staff",
-      });
+    if (headCoach) {
+      for (const coordinator of coordinators) {
+        const [left, right] = orderedPair(headCoach, coordinator);
+        addDraft(drafts, {
+          entityAId: left.id,
+          entityBId: right.id,
+          entityAKind: "coach",
+          entityBKind: "coach",
+          teamId: team.id,
+          kind: "staff",
+        });
+      }
     }
 
     for (const player of roster) {
@@ -129,16 +131,18 @@ function requiredBonds(teams: EcosystemTeam[], players: EcosystemPlayer[], coach
           kind: "coach-player",
         });
       }
-      if (coordinator && player.depthRank <= 2) {
-        const playerFirst = player.id < coordinator.id;
-        addDraft(drafts, {
-          entityAId: playerFirst ? player.id : coordinator.id,
-          entityBId: playerFirst ? coordinator.id : player.id,
-          entityAKind: playerFirst ? "player" : "coach",
-          entityBKind: playerFirst ? "coach" : "player",
-          teamId: team.id,
-          kind: "coach-player",
-        });
+      if (player.depthRank <= 2) {
+        for (const coordinator of coordinators) {
+          const playerFirst = player.id < coordinator.id;
+          addDraft(drafts, {
+            entityAId: playerFirst ? player.id : coordinator.id,
+            entityBId: playerFirst ? coordinator.id : player.id,
+            entityAKind: playerFirst ? "player" : "coach",
+            entityBKind: playerFirst ? "coach" : "player",
+            teamId: team.id,
+            kind: "coach-player",
+          });
+        }
       }
     }
 

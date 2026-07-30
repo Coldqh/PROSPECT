@@ -92,6 +92,21 @@ function createCoach(
     jobSecurity,
     status: jobSecurity < 35 ? "hot-seat" : jobSecurity < 55 ? "watched" : "secure",
     philosophy: random.pick(PHILOSOPHIES),
+    tactics: clamp(reputation + random.integer(-12, 18)),
+    adaptability: clamp(56 + random.integer(-16, 26)),
+    gameManagement: clamp(58 + random.integer(-16, 24)),
+    temperament: random.pick(["calm", "demanding", "volatile", "player-first"] as const),
+    offenseSystem: random.pick(["air-raid", "west-coast", "power-run", "spread-option", "multiple"] as const),
+    defenseSystem: random.pick(["quarters-425", "multiple-34", "over-43", "nickel-match", "man-pressure", "multiple-defense"] as const),
+    specialtyPositions: role === "offensive-coordinator"
+      ? ["QB", "WR", "RB"]
+      : role === "defensive-coordinator"
+        ? ["EDGE", "LB", "CB"]
+        : role === "position-coach"
+          ? [random.pick(FOOTBALL_ROSTER_POSITIONS)]
+          : ["QB", "LB"],
+    contractYears: random.integer(1, role === "head-coach" ? 6 : 4),
+    annualSalary: Math.round((level === "college" ? 650_000 : 70_000) * (role === "head-coach" ? 4.2 : role === "position-coach" ? .75 : 1.6) * (.7 + reputation / 100)),
     tenureYears: random.integer(0, role === "head-coach" ? 9 : 5),
     careerWins: random.integer(level === "college" ? 12 : 4, level === "college" ? 118 : 54),
     careerLosses: random.integer(level === "college" ? 8 : 3, level === "college" ? 82 : 42),
@@ -424,17 +439,20 @@ export function createFootballEcosystem(
       random.fork("head-coach"),
       isHeroTeam ? football.staff.headCoach.name : undefined,
     );
-    const coordinator = createCoach(team.id, "coordinator", team.level, random.fork("coordinator"));
-    team.tactical = createTacticalIdentity(team, headCoach, random.fork("tactical-final"));
+    const offensiveCoordinator = createCoach(team.id, "offensive-coordinator", team.level, random.fork("offensive-coordinator"));
+    const defensiveCoordinator = createCoach(team.id, "defensive-coordinator", team.level, random.fork("defensive-coordinator"));
+    const positionCoach = createCoach(team.id, "position-coach", team.level, random.fork("position-coach"));
+    const staff = [headCoach, offensiveCoordinator, defensiveCoordinator, positionCoach];
+    team.tactical = createTacticalIdentity(team, headCoach, random.fork("tactical-final"), staff);
     const teamPlayers = isHeroTeam
       ? createHeroTeamPlayers(team, football, random.fork("players"), cycle.seasonYear).map((player) => player.isHero ? { ...player, name: character.identity.fullName, age: character.identity.age, overall: football.ratings.overall, potential: Math.max(football.ratings.overall, football.ratings.overall + 8), nationalRank: football.ratings.overall >= 82 ? 120 : football.ratings.overall >= 74 ? 420 : 1100 } : player)
       : createTeamPlayers(team, random.fork("players"), cycle.seasonYear);
     team.rosterIds = teamPlayers.map((player) => player.id);
     team.compliance = refreshTeamCompliance(team, teamPlayers, random.fork("compliance-final"), constitution);
     team.resources = createProgramResources(team, random.fork("resources-final"), cycle.seasonYear);
-    team.coachIds = [headCoach.id, coordinator.id];
+    team.coachIds = staff.map((coach) => coach.id);
     players.push(...teamPlayers);
-    coaches.push(headCoach, coordinator);
+    coaches.push(...staff);
   }
 
   const initialPlanning = reviewRosterManagement(
@@ -453,7 +471,7 @@ export function createFootballEcosystem(
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 11,
+    moduleVersion: 12,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,

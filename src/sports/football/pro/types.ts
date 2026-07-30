@@ -1,6 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
 import type { FootballPosition } from "../career/types";
 import type { MatchOutcomeGrade, MatchStatLine } from "../matches/types";
+import type { EcosystemDefenseSystem, EcosystemOffenseSystem, EcosystemTacticalAggression, EcosystemTacticalTempo } from "../ecosystem/types";
 
 export type ProfessionalStatus =
   | "dormant"
@@ -26,6 +27,42 @@ export type ProfessionalAvailability = "active" | "questionable" | "out" | "inju
 export type ProfessionalWeekFocus = "playbook" | "technique" | "recovery" | "competition";
 export type ProfessionalTransactionKind = "signing" | "release" | "waiver-claim" | "injury" | "promotion" | "trade" | "cap-move";
 
+export type ProfessionalCoachRole = "head-coach" | "offensive-coordinator" | "defensive-coordinator" | "position-coach";
+
+export interface ProfessionalCoach {
+  id: string;
+  name: string;
+  role: ProfessionalCoachRole;
+  age: number;
+  reputation: number;
+  tactics: number;
+  development: number;
+  adaptability: number;
+  gameManagement: number;
+  jobSecurity: number;
+  contractYears: number;
+  annualSalary: number;
+  offenseSystem: EcosystemOffenseSystem;
+  defenseSystem: EcosystemDefenseSystem;
+}
+
+export interface ProfessionalTacticalIdentity {
+  offenseSystem: EcosystemOffenseSystem;
+  defenseSystem: EcosystemDefenseSystem;
+  tempo: EcosystemTacticalTempo;
+  offensiveAggression: EcosystemTacticalAggression;
+  defensiveAggression: EcosystemTacticalAggression;
+  runRate: number;
+  playActionRate: number;
+  screenRate: number;
+  deepShotRate: number;
+  blitzRate: number;
+  manCoverageRate: number;
+  disguiseRate: number;
+  fourthDownAggression: number;
+  adaptation: number;
+}
+
 export interface ProfessionalTeam {
   id: string;
   city: string;
@@ -42,6 +79,8 @@ export interface ProfessionalTeam {
   capSpace: number;
   rosterSize: number;
   needs: Record<FootballPosition, number>;
+  staff?: ProfessionalCoach[] | undefined;
+  tactical?: ProfessionalTacticalIdentity | undefined;
 }
 
 export interface ProfessionalAgent {
@@ -181,6 +220,7 @@ export interface ProfessionalRosterPlayer {
   potential: number;
   health: number;
   form: number;
+  schemeFit: number;
   depthRank: number;
   yearsRemaining: number;
   annualSalary: number;

@@ -352,7 +352,18 @@
 .pro-team-sheet__needs small,
 .pro-team-sheet__roster small { color: var(--muted); }
 .pro-team-sheet__needs,
+.pro-team-sheet__system,
+.pro-team-sheet__staff,
 .pro-team-sheet__roster { display: grid; gap: 7px; }
+.pro-team-sheet__system > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
+.pro-team-sheet__system span { min-height: 50px; padding: 7px; display: grid; align-content: center; gap: 2px; border: 1px solid var(--line); border-radius: 7px; }
+.pro-team-sheet__system strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pro-team-sheet__staff > div { display: grid; gap: 4px; }
+.pro-team-sheet__staff article { min-height: 44px; padding: 6px 8px; display: grid; grid-template-columns: 36px minmax(0,1fr) auto; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.pro-team-sheet__staff article > span { color: var(--accent); font-weight: 900; }
+.pro-team-sheet__staff article > div { min-width: 0; display: grid; }
+.pro-team-sheet__staff article strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pro-team-sheet__staff article em { font-style: normal; font-weight: 900; }
 .pro-team-sheet__needs > div { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 5px; }
 .pro-team-sheet__needs span { padding: 7px 4px; display: grid; place-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 7px; }
 .pro-team-sheet__needs em { color: var(--accent); font-style: normal; }

@@ -47,7 +47,7 @@ const required = [
   ["today", "is-game"],
   ["today", "Матч против"],
   ["repository", "toGameDateKey(current.meta.currentDate)"],
-  ["schema", "CURRENT_SCHEMA_VERSION = 31"],
+  ["schema", "CURRENT_SCHEMA_VERSION = 32"],
   ["migrations", "migrateVersionTwentySix"],
   ["tests", "supports automatic, key-moment and every-snap participation"],
 ];

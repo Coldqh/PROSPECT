@@ -42,7 +42,7 @@ const required = [
   ["dashboard", "professional-standings"],
   ["dashboard", "onAdvanceProfessionalOffseason"],
   ["dashboard", "MatchDashboard"],
-  ["schema", "CURRENT_SCHEMA_VERSION = 31"],
+  ["schema", "CURRENT_SCHEMA_VERSION = 32"],
   ["migrations", "migrateVersionTwentySeven"],
   ["campTests", "persistent roster decision"],
   ["campFreeAgencyTests", "53-player active roster"],

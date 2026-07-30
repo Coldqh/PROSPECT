@@ -603,6 +603,62 @@ describe("migrateCareerSave", () => {
 
 
 
+  it("migrates version thirty-one saves into staff-driven tactics", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const legacyWorld = {
+      ...current.world,
+      moduleVersion: 11 as const,
+      careerRegistry: {
+        ...current.world.careerRegistry,
+        records: current.world.careerRegistry.records.map((record, index) => index === 0
+          ? { ...record, events: record.events.map((event, eventIndex) => eventIndex === 0 ? { ...event, week: 160 } : event) }
+          : record),
+      },
+      coaches: current.world.coaches.map((coach) => {
+        const {
+          tactics: _tactics,
+          adaptability: _adaptability,
+          gameManagement: _gameManagement,
+          temperament: _temperament,
+          offenseSystem: _offenseSystem,
+          defenseSystem: _defenseSystem,
+          specialtyPositions: _specialtyPositions,
+          contractYears: _contractYears,
+          annualSalary: _annualSalary,
+          ...legacyCoach
+        } = coach;
+        return legacyCoach;
+      }),
+    };
+    const legacyTeams = current.football.professional.teams.map(({ staff: _staff, tactical: _tactical, ...team }) => team);
+    const versionThirtyOne = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 31 as const },
+      world: legacyWorld,
+      football: {
+        ...current.football,
+        professional: {
+          ...current.football.professional,
+          teams: legacyTeams,
+          league: {
+            ...current.football.professional.league,
+            roster: current.football.professional.league.roster.map(({ schemeFit: _schemeFit, ...player }) => player),
+            freeAgents: current.football.professional.league.freeAgents.map(({ schemeFit: _schemeFit, ...player }) => player),
+          },
+        },
+      },
+    };
+    const result = migrateCareerSave(versionThirtyOne);
+    expect(result.migratedFrom).toBe(31);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(12);
+    expect(result.save.world.teams.every((team) => team.coachIds.length === 4)).toBe(true);
+    expect(result.save.football.professional.teams.every((team) => team.staff?.length === 4 && Boolean(team.tactical))).toBe(true);
+    expect(result.save.world.careerRegistry.records[0]?.events[0]?.week).toBe(160);
+    expect(result.save.football.professional.league.roster.every((player) => typeof player.schemeFit === "number")).toBe(true);
+    expect(result.save.history.at(-1)?.title).toBe("Тренерские штабы подключены");
+  });
+
   it("migrates version twenty-nine saves into seamless control and career registry", () => {
     const current = migrateCareerSave(legacySave).save;
     const { careerRegistry: _careerRegistry, ...legacyWorld } = current.world;

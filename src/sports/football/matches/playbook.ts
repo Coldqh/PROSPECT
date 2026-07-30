@@ -7,6 +7,8 @@ import type {
   MatchPoint,
   MatchTeamSide,
   MatchUnit,
+  MatchTacticalCall,
+  MatchTacticalProfile,
 } from "./types";
 
 interface PlayDescriptor {
@@ -31,6 +33,12 @@ export interface PlayCallContext {
   quarter: number;
   clockSeconds: number;
   canCheck: boolean;
+}
+
+
+export interface PlayCallStrategy {
+  profile?: MatchTacticalProfile | undefined;
+  recentOffense?: readonly MatchTacticalCall[] | undefined;
 }
 
 interface FormationPlayer {
@@ -87,7 +95,7 @@ function weightedPick<T>(random: SeededRandom, items: readonly T[], weight: (ite
   return items[items.length - 1] ?? items[0]!;
 }
 
-function offenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
+function offenseWeight(play: PlayDescriptor, context: PlayCallContext, strategy?: PlayCallStrategy): number {
   const { down, distance, fieldPosition, scoreMargin, quarter, clockSeconds } = context;
   const passLike = play.playType === "pass" || play.playType === "play-action" || play.playType === "screen";
   let weight = passLike ? 0.72 : 1.35;
@@ -102,10 +110,27 @@ function offenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
   if (quarter === 4 && clockSeconds < 180 && scoreMargin > 0) weight *= play.playType === "run" ? 2.4 : 0.45;
   if (scoreMargin <= -10) weight *= play.aggression >= 60 ? 1.7 : 0.7;
   if (scoreMargin >= 10) weight *= play.aggression <= 55 ? 1.7 : 0.7;
+  const profile = strategy?.profile;
+  if (profile) {
+    if (play.playType === "run") weight *= Math.max(.35, profile.runRate / 48);
+    else weight *= Math.max(.45, (100 - profile.runRate) / 52);
+    if (play.playType === "play-action") weight *= Math.max(.45, profile.playActionRate / 18);
+    if (play.playType === "screen") weight *= Math.max(.45, profile.screenRate / 12);
+    if (play.tags.includes("shot") || play.tags.includes("deep")) weight *= Math.max(.45, profile.deepShotRate / 20);
+    if (profile.offenseSystem === "air-raid") weight *= play.formation === "Empty" || play.formation.startsWith("Gun") ? 1.42 : .78;
+    if (profile.offenseSystem === "west-coast") weight *= play.tags.includes("quick") || play.playType === "screen" ? 1.42 : 1;
+    if (profile.offenseSystem === "power-run") weight *= play.formation === "Singleback Ace" || play.formation === "Goal Line" || play.tags.includes("gap") ? 1.52 : .72;
+    if (profile.offenseSystem === "spread-option") weight *= play.tags.includes("option") || play.tags.includes("rpo") || play.formation === "Pistol Strong" ? 1.58 : .82;
+  }
+  const recent = strategy?.recentOffense ?? [];
+  const sameConcept = recent.slice(-4).filter((item) => item.concept === play.concept).length;
+  if (sameConcept > 0) weight *= Math.max(.28, 1 - sameConcept * .24);
+  const recentSuccess = recent.slice(-6).filter((item) => item.concept === play.concept && item.success).length;
+  if (recentSuccess > 0 && (profile?.adaptation ?? 50) >= 65) weight *= 1 + Math.min(.28, recentSuccess * .09);
   return weight;
 }
 
-function defenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
+function defenseWeight(play: PlayDescriptor, context: PlayCallContext, strategy?: PlayCallStrategy): number {
   let weight = play.playType === "blitz" ? 0.65 : 1.25;
   const { down, distance, fieldPosition, scoreMargin, quarter, clockSeconds } = context;
   if (distance >= 8) weight *= play.tags.includes("long-yardage") || play.tags.includes("two-high") ? 2.7 : 0.45;
@@ -114,6 +139,28 @@ function defenseWeight(play: PlayDescriptor, context: PlayCallContext): number {
   if (fieldPosition >= 90) weight *= play.tags.includes("goal-line") ? 4.4 : 0.32;
   if (quarter === 4 && clockSeconds < 150 && scoreMargin > 0) weight *= play.tags.includes("two-high") ? 2.2 : 0.55;
   if (quarter === 4 && clockSeconds < 150 && scoreMargin < 0) weight *= play.playType === "blitz" ? 1.8 : 0.75;
+  const profile = strategy?.profile;
+  if (profile) {
+    if (play.playType === "blitz") weight *= Math.max(.35, profile.blitzRate / 34);
+    if (play.tags.includes("man")) weight *= Math.max(.45, profile.manCoverageRate / 42);
+    if (play.tags.includes("two-high") || play.tags.includes("zone")) weight *= Math.max(.55, (100 - profile.manCoverageRate) / 58);
+    if (profile.defenseSystem === "quarters-425") weight *= play.formation === "Nickel 4–2–5" || play.tags.includes("two-high") ? 1.48 : .84;
+    if (profile.defenseSystem === "multiple-34") weight *= play.formation === "3–4 Odd" || play.tags.includes("pressure") ? 1.46 : .86;
+    if (profile.defenseSystem === "over-43") weight *= play.formation.startsWith("4–3") ? 1.5 : .86;
+    if (profile.defenseSystem === "nickel-match") weight *= play.formation === "Nickel 4–2–5" || play.formation === "Dime" ? 1.46 : .84;
+    if (profile.defenseSystem === "man-pressure") weight *= play.tags.includes("man") || play.playType === "blitz" ? 1.55 : .78;
+  }
+  const recent = strategy?.recentOffense ?? [];
+  if (recent.length > 0 && (profile?.adaptation ?? 50) >= 45) {
+    const sample = recent.slice(-8);
+    const runRate = sample.filter((item) => item.playType === "run").length / sample.length;
+    const deepRate = sample.filter((item) => item.tags.includes("shot") || item.tags.includes("deep")).length / sample.length;
+    const quickRate = sample.filter((item) => item.tags.includes("quick") || item.playType === "screen").length / sample.length;
+    const strength = .55 + (profile?.adaptation ?? 50) / 100;
+    if (runRate >= .58 && (play.tags.includes("heavy-box") || play.tags.includes("run-support") || play.tags.includes("run-fit"))) weight *= 1 + .42 * strength;
+    if (deepRate >= .28 && play.tags.includes("two-high")) weight *= 1 + .38 * strength;
+    if (quickRate >= .45 && (play.tags.includes("quick-game") || play.tags.includes("trap"))) weight *= 1 + .34 * strength;
+  }
   return weight;
 }
 
@@ -127,11 +174,12 @@ export function callPlay(
   scoreMargin = 0,
   quarter = 1,
   clockSeconds = 720,
+  strategy?: PlayCallStrategy,
 ): MatchPlayCall {
   const random = new SeededRandom(seed);
   const context: PlayCallContext = { down, distance, fieldPosition, scoreMargin, quarter, clockSeconds, canCheck };
   const catalog = unit === "offense" ? offenseCalls : defenseCalls;
-  const selected = weightedPick(random, catalog, (play) => unit === "offense" ? offenseWeight(play, context) : defenseWeight(play, context));
+  const selected = weightedPick(random, catalog, (play) => unit === "offense" ? offenseWeight(play, context, strategy) : defenseWeight(play, context, strategy));
   return {
     id: selected.id,
     formation: selected.formation,
@@ -141,7 +189,7 @@ export function callPlay(
     strength: selected.strength,
     calledBy: unit === "offense" ? "offensive-coordinator" : "defensive-coordinator",
     canCheck,
-    aggression: selected.aggression,
+    aggression: Math.max(0, Math.min(100, Math.round(selected.aggression + ((strategy?.profile?.adaptation ?? 50) - 50) * .05))),
     primarySlot: selected.primarySlot,
     progression: [...(selected.progression ?? [])],
     runLane: selected.runLane,

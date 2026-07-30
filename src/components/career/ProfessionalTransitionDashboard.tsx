@@ -342,7 +342,7 @@ export function ProfessionalTransitionDashboard({
           {positionRoom.length > 0 && (
             <div className="professional-position-room">
               <header><small>POSITION ROOM</small><strong>{save.football.position}</strong></header>
-              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · {player.availability} · {player.age} лет</small></div><em>{Math.round(player.overall)}</em></article>)}
+              {positionRoom.map((player) => <article key={player.id} className={player.isHero ? "is-hero" : ""}><span>#{player.depthRank}</span><div><strong>{player.name}</strong><small>{player.status} · FIT {Math.round(player.schemeFit)} · {player.availability}</small></div><em>{Math.round(player.overall)}</em></article>)}
             </div>
           )}
 

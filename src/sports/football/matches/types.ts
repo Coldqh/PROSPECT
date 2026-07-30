@@ -53,6 +53,35 @@ export type MatchAssignmentKind =
   | "return"
   | "return-coverage";
 
+
+export interface MatchTacticalProfile {
+  offenseSystem: string;
+  defenseSystem: string;
+  runRate: number;
+  playActionRate: number;
+  screenRate: number;
+  deepShotRate: number;
+  blitzRate: number;
+  manCoverageRate: number;
+  disguiseRate: number;
+  fourthDownAggression: number;
+  adaptation: number;
+}
+
+export interface MatchTacticalCall {
+  id: string;
+  concept: string;
+  playType: MatchPlayType;
+  tags: string[];
+  yards: number;
+  success: boolean;
+}
+
+export interface MatchTacticalMemory {
+  heroOffense: MatchTacticalCall[];
+  opponentOffense: MatchTacticalCall[];
+}
+
 export interface MatchDecisionOption {
   id: string;
   label: string;
@@ -326,6 +355,7 @@ export interface FootballMatchState {
   driveYards: number;
   timeoutsHero: number;
   timeoutsOpponent: number;
+  tacticalMemory: MatchTacticalMemory;
   currentEpisode?: MatchEpisode | undefined;
   lastResolvedEpisode?: MatchEpisode | undefined;
   lastResolvedResult?: MatchEpisodeResult | undefined;

@@ -149,12 +149,14 @@ function teamIssues(team: EcosystemTeam, players: EcosystemPlayer[], coaches: Ec
   }
   const teamCoaches = coaches.filter((coach) => coach.teamId === team.id);
   const headCoaches = teamCoaches.filter((coach) => coach.role === "head-coach").length;
-  const coordinators = teamCoaches.filter((coach) => coach.role === "coordinator").length;
-  if (headCoaches !== 1 || coordinators !== 1) {
+  const offensiveCoordinators = teamCoaches.filter((coach) => coach.role === "offensive-coordinator").length;
+  const defensiveCoordinators = teamCoaches.filter((coach) => coach.role === "defensive-coordinator").length;
+  const positionCoaches = teamCoaches.filter((coach) => coach.role === "position-coach").length;
+  if (headCoaches !== 1 || offensiveCoordinators !== 1 || defensiveCoordinators !== 1 || positionCoaches !== 1) {
     issues.push({
       code: "coach-structure",
       scope: team.id,
-      detail: `${team.shortName}: структура штаба нарушена, head-coach ${headCoaches}, coordinator ${coordinators}.`,
+      detail: `${team.shortName}: структура штаба нарушена, HC ${headCoaches}, OC ${offensiveCoordinators}, DC ${defensiveCoordinators}, POS ${positionCoaches}.`,
     });
   }
   if (rosterIds.length > team.compliance.rosterLimit || team.compliance.estimatedRosterSize > team.compliance.rosterLimit) {

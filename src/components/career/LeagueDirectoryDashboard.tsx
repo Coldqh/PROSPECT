@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
-import type { ProfessionalRosterPlayer, ProfessionalTeam } from "../../sports/football/pro/types";
+import type { ProfessionalCoach, ProfessionalRosterPlayer, ProfessionalTeam } from "../../sports/football/pro/types";
+import { defenseSystemLabel, offenseSystemLabel } from "../../sports/football/ecosystem/tactics";
 import { FOOTBALL_ROSTER_POSITIONS } from "../../sports/football/team/positions";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
@@ -11,6 +12,11 @@ interface LeagueDirectoryDashboardProps {
   save: CareerSave;
   onOpenCollegeTeam?(teamId: string): void;
   initialView?: LeagueDirectoryView;
+}
+
+
+function coachRole(role: ProfessionalCoach["role"]): string {
+  return { "head-coach": "HC", "offensive-coordinator": "OC", "defensive-coordinator": "DC", "position-coach": "POS" }[role];
 }
 
 function money(value: number): string {
@@ -108,6 +114,21 @@ function ProTeamSheet({ team, roster, needs }: { team: ProfessionalTeam; roster:
         <span><small>CAP</small><strong>{money(team.capSpace)}</strong></span>
         <span><small>PAYROLL</small><strong>{money(team.payroll)}</strong></span>
       </section>
+      {team.tactical && <section className="pro-team-sheet__system">
+        <header><small>SCHEME</small></header>
+        <div>
+          <span><small>OFF</small><strong>{offenseSystemLabel(team.tactical.offenseSystem)}</strong></span>
+          <span><small>DEF</small><strong>{defenseSystemLabel(team.tactical.defenseSystem)}</strong></span>
+          <span><small>RUN</small><strong>{Math.round(team.tactical.runRate)}</strong></span>
+          <span><small>BLITZ</small><strong>{Math.round(team.tactical.blitzRate)}</strong></span>
+          <span><small>MAN</small><strong>{Math.round(team.tactical.manCoverageRate)}</strong></span>
+          <span><small>ADAPT</small><strong>{Math.round(team.tactical.adaptation)}</strong></span>
+        </div>
+      </section>}
+      <section className="pro-team-sheet__staff">
+        <header><small>STAFF</small></header>
+        <div>{(team.staff ?? []).map((coach) => <article key={coach.id}><span>{coachRole(coach.role)}</span><div><strong>{coach.name}</strong><small>TAC {Math.round(coach.tactics)} · DEV {Math.round(coach.development)}</small></div><em>{coach.contractYears}Y</em></article>)}</div>
+      </section>
       <section className="pro-team-sheet__needs">
         <header><small>NEEDS</small></header>
         <div>{needs.map((item) => <span key={item.position}><strong>{item.position}</strong><em>{item.value}</em></span>)}</div>
@@ -117,7 +138,7 @@ function ProTeamSheet({ team, roster, needs }: { team: ProfessionalTeam; roster:
         {roster.map((player) => (
           <article key={player.id} className={player.isHero ? "is-hero" : ""}>
             <span>{player.position}</span>
-            <div><strong>{player.name}</strong><small>#{player.depthRank} · {player.availability}</small></div>
+            <div><strong>{player.name}</strong><small>#{player.depthRank} · FIT {Math.round(player.schemeFit)} · {player.availability}</small></div>
             <em>{Math.round(player.overall)}</em>
           </article>
         ))}

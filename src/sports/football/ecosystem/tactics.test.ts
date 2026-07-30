@@ -11,31 +11,19 @@ import {
   tacticalRecruitingFit,
 } from "./tactics";
 import type { EcosystemCoach, EcosystemPlayer, EcosystemTeam } from "./types";
+import { createEcosystemCoach } from "./coaching";
 import { createPlayerEligibility, createTeamCompliance } from "./constitution";
 import { createProgramResources } from "./resources";
 import { createEmptyRosterPlan } from "./rosterManagement";
 import { createTalentProfile } from "./talent";
 
 function createCoach(seed: string, teamId: string): EcosystemCoach {
-  return {
-    id: `${teamId}:${seed}`,
-    seed,
-    name: "Test Coach",
-    teamId,
-    role: "head-coach",
-    age: 46,
-    reputation: 74,
-    development: 78,
-    recruiting: 68,
-    pressure: 25,
-    jobSecurity: 82,
-    status: "secure",
-    philosophy: "Стабильная схема и развитие игроков",
-    tenureYears: 4,
-    careerWins: 61,
-    careerLosses: 29,
-    previousTeamIds: [],
-  };
+  return createEcosystemCoach(
+    { id: teamId, level: "college", prestige: 74 },
+    "head-coach",
+    new SeededRandom(seed),
+    "Test Coach",
+  );
 }
 
 function createTeam(seed = "tactical-team", offenseStyle = "Air raid", defenseStyle = "4-2-5 quarters"): EcosystemTeam {

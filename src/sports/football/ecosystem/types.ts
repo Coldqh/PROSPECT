@@ -2,12 +2,13 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballRosterPosition } from "../team/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 11 as const;
+export const ECOSYSTEM_MODULE_VERSION = 12 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
 export type EcosystemPlayerTrajectory = "surging" | "steady" | "slipping";
-export type EcosystemCoachRole = "head-coach" | "coordinator";
+export type EcosystemCoachRole = "head-coach" | "offensive-coordinator" | "defensive-coordinator" | "position-coach";
+export type EcosystemCoachTemperament = "calm" | "demanding" | "volatile" | "player-first";
 export type EcosystemCoachStatus = "secure" | "watched" | "hot-seat";
 export type EcosystemSeasonPhase = "regular-season" | "postseason" | "offseason";
 export type EcosystemTransferStatus = "none" | "portal" | "transferred";
@@ -510,6 +511,18 @@ export interface EcosystemTacticalIdentity {
   continuity: number;
   rotationDepth: number;
   headCoachFingerprint: string;
+  offensiveCoordinatorFingerprint: string;
+  defensiveCoordinatorFingerprint: string;
+  staffFingerprint: string;
+  runRate: number;
+  playActionRate: number;
+  screenRate: number;
+  deepShotRate: number;
+  blitzRate: number;
+  manCoverageRate: number;
+  disguiseRate: number;
+  fourthDownAggression: number;
+  adaptation: number;
   positionRoles: Record<FootballRosterPosition, EcosystemRolePriority>;
 }
 
@@ -600,6 +613,15 @@ export interface EcosystemCoach {
   jobSecurity: number;
   status: EcosystemCoachStatus;
   philosophy: string;
+  tactics: number;
+  adaptability: number;
+  gameManagement: number;
+  temperament: EcosystemCoachTemperament;
+  offenseSystem: EcosystemOffenseSystem;
+  defenseSystem: EcosystemDefenseSystem;
+  specialtyPositions: FootballRosterPosition[];
+  contractYears: number;
+  annualSalary: number;
   tenureYears: number;
   careerWins: number;
   careerLosses: number;
