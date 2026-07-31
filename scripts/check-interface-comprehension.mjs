@@ -17,7 +17,7 @@ const required = [
   [league, "Что происходит", "league overview navigation is missing"],
   [league, "ГЛАВНЫЙ МАТЧ НЕДЕЛИ", "featured game is missing"],
   [league, "Кто проходит сейчас", "professional playoff picture is missing"],
-  [styles, '@import "./league.css";', "league stylesheet is not imported"],
+  [styles, '@import "./management.css";', "management stylesheet is not imported"],
 ];
 for (const [source, token, message] of required) if (!source.includes(token)) errors.push(message);
 

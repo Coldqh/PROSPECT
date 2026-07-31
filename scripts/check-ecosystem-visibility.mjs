@@ -6,7 +6,7 @@ const required = [
   ["src/components/career/CollegeCareerDashboard.tsx", "<MarketDashboard"],
   ["src/components/career/TeamProfileDashboard.tsx", 'id: "planning"'],
   ["src/components/career/TeamProfileDashboard.tsx", 'id: "history"'],
-  ["src/styles/index.css", '@import "./market.css"'],
+  ["src/styles/index.css", '@import "./management.css"'],
 ];
 const forbidden = [
   ["src/sports/football/ecosystem/simulateEcosystem.ts", "function simulateCollegeTeams"],

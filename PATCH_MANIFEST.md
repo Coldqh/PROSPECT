@@ -1,18 +1,18 @@
-# PROSPECT 0.51.0 patch manifest
+# PROSPECT 0.52.0 patch manifest
 
-Base version: `0.50.0`  
-Target version: `0.51.0`  
+Base version: `0.51.0`  
+Target version: `0.52.0`  
 Save schema: `35` (unchanged)  
 Ecosystem module: `14` (unchanged)  
 IndexedDB schema: `2` (unchanged)
 
-## Visual rebuild
+## Full UI replacement
 
-- manager-first desktop operations rail;
-- team identities and color-coded competition rows;
-- broadcast-style featured match and league scoreboards;
-- editorial weekly digest surfaces;
-- dense flat tables with reduced card chrome;
-- responsive mobile fallback without domain changes.
+- remove twenty-two retired stylesheets and the previous visual-workbench checker;
+- replace the visual cascade with nine responsibility modules;
+- use one light browser sports-manager shell on desktop and mobile;
+- migrate every career and match surface into the same system;
+- keep simulation, state and 0.50 information architecture unchanged.
 
-Replacement and new files are listed in `PATCH_FILES_0.51.0.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.52.0.txt`.  
+Removed files are listed in `DELETE_FILES_0.52.0.txt`.

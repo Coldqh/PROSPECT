@@ -61,8 +61,10 @@
 
 `scripts/check-interface-comprehension.mjs` запрещает возврат к синтетическим кодам и модальному сокрытию базового контекста.
 
-## Sports operations presentation
+## Единая система интерфейса
 
-`operations.css` is the final responsibility-based visual layer. It does not own domain data. It converts existing recruiting, market and league projections into a manager workspace: a desktop operations rail, scoreboard mastheads, team-branded rows, editorial weekly summaries and dense flat tables. `teamBrand.ts` deterministically derives presentation-only team colors from stable ids when the domain has no explicit branding fields.
+`src/styles/index.css` подключает только девять модулей ответственности: tokens, foundation, shell, controls, flows, career, management, match и motion. Предыдущие экраны, version layers и финальные override-файлы удалены физически и не могут вернуться через каскад.
 
-Mobile keeps the bottom navigation and collapses master-detail layouts to one column. Save state, simulation decisions and market logic remain outside the presentation layer.
+Система построена как светлый браузерный спортивный менеджер: тёмный masthead, постоянная навигация, белые рабочие поверхности, квадратная геометрия, плотные строки и таблицы. `management.css` оформляет рекрутинг, рынок и центры лиг; `career.css` объединяет остальные карьерные поверхности; `match.css` изолирует матчевый интерфейс. `teamBrand.ts` остаётся presentation-only преобразованием стабильных id в цвета команд.
+
+Mobile использует тот же DOM и тот же визуальный язык, меняя только раскладку. Состояние сохранений, симуляция и решения рынка не зависят от CSS.

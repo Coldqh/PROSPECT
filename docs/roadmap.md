@@ -364,3 +364,13 @@
 - flat dense tables instead of repeated rounded card stacks;
 - responsive mobile fallback using the same information architecture;
 - no save migration or domain-system changes.
+
+## v0.52 — F1 Dynasty style replacement
+
+- delete the complete pre-0.52 visual cascade instead of layering another override;
+- one light browser-manager shell with dark masthead and persistent primary navigation;
+- compact square work surfaces, dense lists and sports-management tables;
+- migrate recruiting, market, league, career, team, season, social, world, draft and match screens;
+- preserve the 0.50 information architecture and all domain state;
+- enforce absence of retired styles through release and UI checks;
+- no save migration or simulation changes.

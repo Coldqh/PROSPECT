@@ -1,0 +1,348 @@
+.compact-section, .data-page, .elite-page, .career-dashboard-shell, .college-career-shell, .college-career-main, .professional-shell, .professional-season-page, .team-profile, .player-profile-page, .social-life-page, .people-dashboard, .season-dashboard, .world-dashboard { min-width: 0; }
+.compact-view, .career-overview-page, .college-home-page, .professional-season, .professional-transition, .profile-section-block, .team-profile__body { display: grid; gap: 12px; }
+.compact-section > * + *, .data-page > * + *, .elite-page > * + * { margin-top: 12px; }
+.compact-section > .compact-page-head + *, .data-page > .data-page-head + *, .elite-page > .elite-page-heading + * { margin-top: 0; }
+
+.today-section { max-width: 1160px; margin-inline: auto; }
+.today-head-actions { display: flex; align-items: center; gap: 8px; }
+.today-head-actions .icon-button--quiet { border-color: var(--line-strong); background: #fff; color: var(--ink); }
+.medical-pill { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; font-weight: 700; }
+.medical-pill--cleared { border-left: 4px solid var(--green); }
+.medical-pill--questionable, .medical-pill--limited { border-left: 4px solid var(--amber); }
+.medical-pill--out { border-left: 4px solid var(--danger); }
+.mini-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: #fff; }
+.mini-week > span { min-height: 58px; display: grid; place-content: center; justify-items: center; gap: 2px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.mini-week > span strong { font-size: 17px; }
+.mini-week > span.is-complete { background: #f0f3f5; color: var(--ink-muted); }
+.mini-week > span.is-current { position: relative; background: var(--header-raised); color: #fff; }
+.mini-week > span.is-current small { color: #c1c9d2; }
+.mini-week > span.is-current::after { content: ""; position: absolute; inset: auto 0 0; height: 3px; background: var(--accent); }
+.mini-week > span.is-game { box-shadow: inset 0 0 0 2px var(--accent); }
+.mini-week em { color: var(--accent); font-size: 13px; font-weight: 800; }
+.vital-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); background: #fff; }
+.vital-row button { position: relative; min-height: 82px; display: grid; align-content: center; gap: 3px; padding: 12px 14px 15px; border: 0; border-right: 1px solid var(--line); background: transparent; cursor: pointer; text-align: left; }
+.vital-row button:last-child { border-right: 0; }
+.vital-row button:hover { background: var(--surface-soft); }
+.vital-row strong { font-size: 22px; }
+.vital-row i { position: absolute; left: 14px; right: 14px; bottom: 9px; height: 5px; background: var(--blue); }
+.relationship-event-teaser, .medical-alert, .next-activity, .today-plan-teaser, .result-teaser, .opponent-card, .next-opponent-card, .active-issue-card {
+  width: 100%;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+.relationship-event-teaser:hover, .medical-alert:hover, .next-activity:hover, .today-plan-teaser:hover, .result-teaser:hover, .opponent-card:hover, .next-opponent-card:hover, .active-issue-card:hover { background: var(--surface-soft); }
+.relationship-event-teaser > span:first-child, .medical-alert > svg, .next-activity > span:first-child, .social-priority-card__icon { flex: 0 0 auto; color: var(--blue); }
+.relationship-event-teaser > div, .medical-alert > div, .next-activity > div, .today-plan-teaser > div, .result-teaser > div { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.medical-alert { border-left-color: var(--danger); }
+.next-activity { border-left-color: var(--accent); }
+.next-activity__icon { width: 40px; height: 40px; display: grid; place-items: center; background: var(--surface-muted); }
+.today-overview { grid-template-columns: minmax(0, 1.45fr) minmax(260px, .75fr); align-items: start; }
+.today-overview .vital-row, .today-overview .relationship-event-teaser, .today-overview .medical-alert, .today-overview .next-activity { grid-column: 1; }
+.today-overview .today-plan-teaser, .today-overview .next-opponent-card, .today-overview .opponent-card { grid-column: 2; }
+.plan-list-compact, .schedule-list-compact, .training-focus-list, .training-focus-list--inline { display: grid; border: 1px solid var(--line); background: #fff; }
+.plan-list-compact button, .schedule-list-compact article, .training-focus-list button, .training-focus-list--inline button { min-height: 58px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; }
+.plan-list-compact button, .training-focus-list button, .training-focus-list--inline button { cursor: pointer; }
+.plan-list-compact button:hover, .training-focus-list button:hover, .training-focus-list--inline button:hover { background: var(--surface-soft); }
+.plan-list-compact button.is-active, .training-focus-list button.is-active, .training-focus-list--inline button.is-active { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+.plan-list-compact__mark { width: 38px; height: 38px; display: grid; place-items: center; background: var(--surface-muted); font-weight: 800; }
+.training-apply-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); background: var(--surface-muted); }
+
+.career-overview-grid, .season-quick-grid, .college-depth-strip, .professional-board, .professional-agent-grid, .professional-focus-grid, .professional-invite-list, .profile-decision-day, .decision-season-line {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+.career-overview-grid > article, .season-quick-grid > article, .college-depth-strip > article, .professional-board > article, .professional-agent-grid > button, .professional-focus-grid > button, .professional-invite-list > button, .profile-decision-day > article, .decision-season-line > article {
+  min-height: 78px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  text-align: left;
+}
+.professional-agent-grid > button, .professional-focus-grid > button, .professional-invite-list > button { cursor: pointer; }
+.professional-agent-grid > button:hover, .professional-focus-grid > button:hover, .professional-invite-list > button:hover { background: var(--surface-soft); }
+.professional-agent-grid > button.is-active { border-top: 3px solid var(--accent); background: var(--accent-soft); }
+.career-overview-grid strong, .season-quick-grid strong, .college-depth-strip strong, .profile-decision-day strong, .decision-season-line strong { font-size: 19px; }
+
+.season-command-card, .season-progress, .season-awards-card, .season-finished-card, .season-history-data, .season-history-list, .schedule-summary, .standings-card, .college-training-card, .college-pro-entry, .professional-section, .professional-contract-card, .professional-camp, .professional-decision, .professional-free-agent-market, .profile-decision-block, .team-plan-summary, .team-profile__planning, .team-profile__resources, .team-profile__history, .team-profile__results, .world-v47-history, .world-v48-agency {
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.season-command-card > header, .season-progress > header, .season-awards-card > header, .season-finished-card > header, .college-training-card > header, .professional-section > header, .professional-camp > header, .team-plan-summary > header, .team-profile__planning > header, .team-profile__resources > header, .team-profile__history > header, .team-profile__results > header, .world-v47-history > header, .world-v48-agency > header, .profile-section-block > header {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  background: var(--surface-muted);
+}
+.season-command-card > div, .season-progress > div, .season-awards-card > div, .season-finished-card > div, .college-training-card > div, .professional-section > div, .team-plan-summary > div, .team-profile__planning > div, .team-profile__resources > div, .team-profile__history > div, .team-profile__results > div, .world-v47-history > div, .world-v48-agency > div { padding: 12px; }
+
+.match-data-list, .standings-data-list, .season-schedule-list, .season-history-list, .professional-draft-feed, .professional-camp-log, .team-market-feed, .world-v27-career-list, .world-v27-feed, .social-event-list, .social-memory-list, .social-relationship-list, .people-list, .profile-skill-list, .team-plan-list, .team-depth-chart, .pro-team-sheet__roster, .pro-team-sheet__staff {
+  display: grid;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.match-data-list > article, .season-schedule-list > article, .season-history-list > article, .professional-draft-feed > article, .professional-camp-log > article, .team-market-feed > article, .world-v27-career-list > article, .world-v27-feed > article, .social-event-list > article, .social-memory-list > article, .social-relationship-list > article, .people-list > article, .profile-skill-list > article, .team-plan-list > article, .team-depth-chart > article, .pro-team-sheet__roster > article, .pro-team-sheet__staff > div > article {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--line);
+}
+.match-data-list > article:last-child, .season-schedule-list > article:last-child, .season-history-list > article:last-child, .professional-draft-feed > article:last-child, .professional-camp-log > article:last-child, .team-market-feed > article:last-child, .world-v27-career-list > article:last-child, .world-v27-feed > article:last-child, .social-event-list > article:last-child, .social-memory-list > article:last-child, .social-relationship-list > article:last-child, .people-list > article:last-child, .profile-skill-list > article:last-child, .team-plan-list > article:last-child, .team-depth-chart > article:last-child, .pro-team-sheet__roster > article:last-child { border-bottom: 0; }
+.match-data-list > article.is-win { border-left: 4px solid var(--green); }
+.match-data-list > article.is-loss { border-left: 4px solid var(--danger); }
+.standings-data-list > header, .standings-data-list > article { display: grid; grid-template-columns: 54px minmax(0, 1fr) 90px 72px; align-items: center; min-height: 44px; padding: 0 10px; border-bottom: 1px solid var(--line); }
+.standings-data-list > header { background: var(--header-raised); color: #fff; font-weight: 700; }
+.standings-data-list > article:nth-child(odd) { background: #f8fafb; }
+.standings-data-list > article.is-hero { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+
+.player-profile-page, .team-profile { display: grid; gap: 12px; }
+.elite-player-card, .elite-team-hero, .player-overlay-profile__hero {
+  min-height: 190px;
+  display: grid;
+  grid-template-columns: minmax(180px, .55fr) minmax(0, 1fr);
+  border: 1px solid #090c10;
+  border-left: 6px solid var(--team-primary);
+  background: linear-gradient(125deg, #131820, #252e38);
+  color: #fff;
+}
+.elite-player-art, .elite-team-crest, .player-overlay-profile__hero > span { display: grid; place-items: center; min-height: 190px; background: color-mix(in srgb, var(--team-primary) 72%, #151a21); color: #fff; }
+.elite-player-card__copy, .elite-team-hero__identity, .player-overlay-profile__hero > div { display: grid; align-content: center; gap: 8px; padding: 22px; }
+.elite-player-card__copy small, .elite-team-hero__identity small, .player-overlay-profile__hero small { color: #bac4cf; }
+.elite-player-card__meta, .elite-player-card__line, .elite-team-hero__facts, .elite-team-rating-strip, .player-overlay-profile__metrics, .player-overlay-profile__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); border-top: 1px solid rgb(255 255 255 / 18%); }
+.elite-player-card__meta > span, .elite-player-card__line > span, .elite-team-hero__facts > span, .elite-team-rating-strip > span, .player-overlay-profile__metrics > span, .player-overlay-profile__facts > span { display: grid; gap: 2px; padding: 10px; border-right: 1px solid rgb(255 255 255 / 15%); }
+.elite-player-card__meta strong, .elite-player-card__line strong, .elite-team-hero__facts strong, .elite-team-rating-strip strong { font-size: 18px; }
+.profile-section-block { border: 1px solid var(--line); background: #fff; }
+.profile-section-block--split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.profile-section-block > div { padding: 12px; }
+.elite-rating-list { display: grid; gap: 9px; }
+.elite-rating-list article { display: grid; grid-template-columns: 120px minmax(0, 1fr) 48px; align-items: center; gap: 10px; }
+.elite-rating-list article i { height: 7px; background: var(--surface-muted); }
+.elite-rating-list article i b { display: block; height: 100%; background: var(--blue); }
+
+.elite-team-overview, .elite-team-tables, .team-profile__metrics, .team-profile__staff, .team-profile__system-title, .elite-team-leaders, .elite-team-next { display: grid; gap: 12px; }
+.elite-team-overview { grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr); }
+.elite-team-rating-strip { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.elite-team-rating-strip > span { border-color: var(--line); }
+.elite-team-rating-strip small { color: var(--ink-muted); }
+.elite-team-tables { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.elite-section, .elite-team-coach, .elite-team-leaders, .elite-team-next, .team-depth-room { border: 1px solid var(--line); background: #fff; }
+.elite-section__head, .elite-team-leaders > header, .elite-team-next > header, .team-depth-room > header { min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 11px; border-bottom: 1px solid var(--line); background: var(--surface-muted); }
+.elite-team-coach { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px; }
+.elite-coach-avatar, .people-avatar, .social-avatar { width: 52px; height: 52px; display: grid; place-items: center; background: var(--header-raised); color: #fff; font-weight: 800; }
+.elite-team-leaders > div, .elite-team-next > div, .team-depth-room > div { padding: 10px; }
+.team-depth-chart__rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.team-depth-room article { min-height: 48px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.team-depth-room article:last-child { border-bottom: 0; }
+
+.social-summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.social-summary-strip > span { display: grid; gap: 3px; padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; }
+.social-contact-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 8px; overflow-x: auto; }
+.social-contact-card, .person-relation-card, .social-priority-card { min-height: 100px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); background: #fff; }
+.social-person-profile, .person-sheet, .player-overlay-profile { display: grid; gap: 12px; }
+.social-person-profile__facts, .person-sheet .sheet-fact-grid { margin-top: 0; }
+.social-relationship-value { height: 7px; background: var(--surface-muted); }
+.social-relationship-value i { display: block; height: 100%; background: var(--blue); }
+
+.world-v27-head { align-items: center; }
+.world-v27-search { min-width: min(360px, 100%); display: flex; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid var(--line-strong); background: #fff; }
+.world-v27-search input { border: 0; }
+.world-v27-ranking { display: grid; border: 1px solid var(--line); background: #fff; }
+.world-v27-ranking article, .world-v27-results article { min-height: 50px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.world-v27-ranking article:last-child, .world-v27-results article:last-child { border-bottom: 0; }
+.world-v27-feed__kind { min-width: 66px; color: var(--accent); font-weight: 800; }
+.world-v48-agency__grid, .world-v48-agency__decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; padding: 10px; }
+.world-v48-agency__grid article, .world-v48-agency__decisions article { padding: 10px; border: 1px solid var(--line); background: var(--surface-soft); }
+
+.college-career-shell, .college-career-shell--v27 { max-width: none; }
+.college-home-game, .college-pro-entry, .college-training-card, .college-orientation-v27, .decision-data-page { border: 1px solid var(--line); background: #fff; }
+.college-home-game { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 14px; border-left: 5px solid var(--team-primary); }
+.college-training-focuses { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; padding: 10px; }
+.college-training-focuses button { min-height: 72px; display: grid; gap: 4px; padding: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.college-training-focuses button:hover { border-color: var(--blue); }
+.college-advance-day { display: flex; justify-content: flex-end; }
+.college-orientation-v27__head, .college-orientation-v27__metrics, .college-orientation-v27__offseason, .college-orientation-v27__priority, .college-orientation-v27__room { padding: 14px; border-bottom: 1px solid var(--line); }
+.college-orientation-v27__metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+
+.professional-shell { display: grid; gap: 12px; }
+.elite-draft-header { min-height: 210px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .42fr); border: 1px solid #07090c; border-left: 6px solid var(--accent); background: linear-gradient(125deg, #11161c, #28313b); color: #fff; }
+.elite-draft-header__title { display: grid; align-content: center; gap: 8px; padding: 24px; }
+.elite-draft-shield, .elite-draft-candidate__art { display: grid; place-items: center; background: #0c1015; color: var(--accent); font-size: 42px; font-weight: 900; }
+.elite-draft-candidate { display: grid; grid-template-columns: 160px minmax(0, 1fr); border: 1px solid var(--line); background: #fff; }
+.elite-draft-candidate__copy { display: grid; align-content: center; gap: 8px; padding: 18px; }
+.professional-decision { padding: 14px; }
+.professional-board > article { grid-template-columns: 36px minmax(0, 1fr) 48px; align-items: center; }
+.professional-contract-card { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1fr); }
+.professional-contract-card > div { display: grid; align-content: center; gap: 4px; padding: 16px; border-right: 1px solid var(--line); background: var(--header-raised); color: #fff; }
+.professional-contract-card > div small { color: #bdc6d0; }
+.professional-contract-card > div strong { font-size: 28px; }
+.professional-contract-card > section { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.professional-contract-card > section span { display: grid; align-content: center; gap: 3px; padding: 12px; border-right: 1px solid var(--line); }
+.professional-camp-track { display: flex; gap: 5px; padding: 12px; }
+.professional-camp-track span { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line-strong); background: #fff; }
+.professional-camp-track span.is-complete { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+.professional-camp-track span.is-current { border-color: var(--accent); background: var(--accent); color: #fff; }
+.professional-next-game { border: 1px solid var(--line); border-left: 5px solid var(--team-primary); background: #fff; }
+.professional-free-agent-market { padding: 12px; }
+
+@media (max-width: 900px) {
+  .today-overview { grid-template-columns: 1fr; }
+  .today-overview .today-plan-teaser, .today-overview .next-opponent-card, .today-overview .opponent-card { grid-column: 1; }
+  .elite-team-overview, .elite-team-tables, .profile-section-block--split { grid-template-columns: 1fr; }
+  .elite-player-card, .elite-team-hero, .player-overlay-profile__hero { grid-template-columns: 140px minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .mini-week > span { min-height: 50px; }
+  .mini-week em { display: none; }
+  .vital-row { grid-template-columns: 1fr; }
+  .vital-row button { min-height: 62px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .vital-row button:last-child { border-bottom: 0; }
+  .career-overview-grid, .season-quick-grid, .college-depth-strip, .professional-board, .professional-agent-grid, .professional-focus-grid, .professional-invite-list, .profile-decision-day, .decision-season-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .elite-player-card, .elite-team-hero, .player-overlay-profile__hero, .elite-draft-header, .elite-draft-candidate, .professional-contract-card { grid-template-columns: 1fr; }
+  .elite-player-art, .elite-team-crest, .player-overlay-profile__hero > span, .elite-draft-shield, .elite-draft-candidate__art { min-height: 120px; }
+  .social-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .professional-contract-card > div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .professional-contract-card > section { grid-template-columns: 1fr; }
+  .professional-contract-card > section span { border-right: 0; border-bottom: 1px solid var(--line); }
+  .standings-data-list > header, .standings-data-list > article { grid-template-columns: 42px minmax(0, 1fr) 70px; }
+  .standings-data-list > header span:last-child, .standings-data-list > article span:last-child { display: none; }
+}
+
+/* Remaining career surfaces migrated from the retired visual stack. */
+.career-overview-next,
+.compact-control-card,
+.decision-signed-card,
+.weekly-training-block,
+.people-pending-strip,
+.person-memory-section,
+.player-overlay-profile__section,
+.professional-draft-stage,
+.relationship-event-sheet,
+.scouting-sheet,
+.world-v27-careers,
+.world-v27-sheet,
+.world-v27-career-sheet {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.career-overview-next,
+.compact-control-card,
+.decision-signed-card,
+.weekly-training-block,
+.people-pending-strip,
+.person-memory-section,
+.player-overlay-profile__section,
+.professional-draft-stage,
+.scouting-sheet,
+.world-v27-sheet,
+.world-v27-career-sheet { padding: 14px; }
+.career-overview-list,
+.leaders-sheet,
+.player-overlay-profile__timeline,
+.player-overlay-profile__bonds,
+.world-v27-career-path { display: grid; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+.career-overview-list > *,
+.leaders-sheet > article,
+.player-overlay-profile__timeline > *,
+.player-overlay-profile__bonds > *,
+.world-v27-career-path > * { min-height: 48px; padding: 10px 12px; background: var(--surface); }
+.compact-forecast,
+.sheet-deltas { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 1px; border: 1px solid var(--line); background: var(--line); }
+.compact-forecast > *,
+.sheet-deltas > * { padding: 10px; background: var(--surface); }
+.compact-head-score,
+.season-week-badge,
+.elite-score-chip,
+.elite-depth-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 3px 8px; border: 1px solid var(--line-strong); background: var(--surface-muted); font-size: 13px; font-weight: 800; }
+.compact-link-card,
+.professional-back-button { min-height: var(--touch); display: flex; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; }
+.compact-link-card:hover,
+.professional-back-button:hover { background: var(--surface-soft); border-color: var(--line-strong); }
+.compact-link-card > div { flex: 1; display: grid; gap: 2px; }
+.compact-note,
+.people-footnote,
+.player-overlay-profile__history,
+.world-v47-history__empty { padding: 10px 12px; border-left: 3px solid var(--line-strong); background: var(--surface-muted); color: var(--ink-soft); }
+.people-copy { min-width: 0; display: grid; gap: 3px; }
+.relationship-event-sheet > header { min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--header); color: #fff; }
+.relationship-event-sheet > header > span { width: 38px; height: 38px; display: grid; place-items: center; background: var(--accent); font-weight: 900; }
+.relationship-event-context { display: grid; gap: 6px; padding: 12px; border-bottom: 1px solid var(--line); }
+.relationship-event-context p { color: var(--ink-soft); }
+.sheet-result { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 12px; align-items: center; }
+.sheet-result__grade { width: 76px; height: 76px; display: grid; place-items: center; background: var(--header); color: #fff; font-size: 32px; font-weight: 900; }
+.eyebrow { color: var(--accent); font-size: 13px; font-weight: 800; }
+.social-avatar--small { width: 34px !important; height: 34px !important; font-size: 13px !important; }
+.vital-row--body { align-items: center; }
+.world-dashboard--v27,
+.world-v27-career-summary { min-width: 0; }
+.world-v27-career-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.college-game-page { display: grid; gap: 12px; }
+.college-training-card--data,
+.college-pro-entry--data { border-radius: 0 !important; }
+.team-depth-chart__unit { min-width: 0; }
+
+.elite-team-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--line); gap: 1px; }
+.elite-team-duo > * { background: var(--surface); }
+.elite-team-hero__record { display: flex; align-items: baseline; gap: 10px; }
+.elite-team-hero__record strong { font-size: clamp(30px, 4vw, 50px); }
+.elite-opponent-mark,
+.next-opponent-card__mark,
+.opponent-card__mark,
+.elite-roster-silhouette,
+.elite-match-player-strip__avatar { display: grid; place-items: center; background: var(--team-primary); color: #fff; font-weight: 900; }
+.elite-opponent-mark,
+.next-opponent-card__mark,
+.opponent-card__mark { width: 52px; height: 52px; }
+.elite-roster-silhouette { width: 56px; height: 64px; }
+.elite-match-player-strip__avatar { width: 38px; height: 38px; }
+.elite-schedule-rail,
+.elite-standings-list { display: grid; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+.elite-schedule-rail > *,
+.elite-standings-list > article { min-height: 42px; display: grid; grid-template-columns: 42px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 7px 9px; background: var(--surface); }
+.elite-standings-list > article.is-current { box-shadow: inset 4px 0 0 var(--team-primary); background: color-mix(in srgb, var(--team-primary) 7%, white); }
+.elite-player-art__halo { position: absolute; inset: 12% 20% auto; height: 42%; border: 1px solid color-mix(in srgb, var(--team-primary) 36%, transparent); border-radius: 50%; }
+.elite-player-art__head { position: relative; z-index: 2; width: 76px; height: 76px; display: grid; place-items: center; margin: 14px auto 0; border: 4px solid #fff; border-radius: 50%; background: var(--team-primary); color: #fff; font-size: 22px; font-weight: 900; }
+.elite-player-art__jersey { position: relative; z-index: 1; width: 118px; height: 92px; display: grid; place-items: start center; margin: -5px auto 0; padding-top: 22px; clip-path: polygon(15% 0, 85% 0, 100% 26%, 88% 100%, 12% 100%, 0 26%); background: var(--team-secondary); color: #fff; font-size: 28px; font-weight: 900; }
+.next-opponent-card__copy { min-width: 0; display: grid; gap: 3px; }
+.match-drive-strip { position: relative; min-height: 44px; }
+.match-drive-strip__first { position: absolute; top: 4px; bottom: 4px; width: 2px; background: var(--amber); }
+
+.is-primary { border-color: var(--accent-dark) !important; background: var(--accent) !important; color: #fff !important; }
+.professional-back-button { margin-bottom: 10px; }
+
+.skeleton-card__visual,
+.skeleton-card__line { display: block; background: linear-gradient(90deg, var(--surface-muted), #fff, var(--surface-muted)); background-size: 200% 100%; animation: shimmer 1.15s linear infinite; }
+.skeleton-card__visual { min-height: 110px; }
+.skeleton-card__line { height: 14px; margin-top: 10px; }
+.skeleton-card__line--title { width: 58%; height: 20px; }
+.skeleton-card__line--short { width: 38%; }
+
+@media (max-width: 720px) {
+  .elite-team-duo { grid-template-columns: 1fr; }
+  .world-v27-career-summary { grid-template-columns: 1fr; }
+  .sheet-result { grid-template-columns: 58px minmax(0, 1fr); }
+  .sheet-result__grade { width: 58px; height: 58px; font-size: 24px; }
+}

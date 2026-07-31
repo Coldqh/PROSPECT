@@ -1,13 +1,6 @@
-/* Short functional motion. */
-@keyframes ui-page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes ui-card-enter { from { opacity: 0; transform: translateY(10px) scale(.992); } to { opacity: 1; transform: none; } }
-@keyframes ui-drawer-enter { from { opacity: .35; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
-@keyframes ui-layer-enter { from { opacity: 0; } to { opacity: 1; } }
-@keyframes ui-sheet-enter { from { opacity: .75; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-@keyframes ui-live-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,62,82,.2); } 50% { box-shadow: 0 0 0 8px rgba(239,62,82,0); } }
-@keyframes ui-route-draw { from { transform: scaleX(0); opacity: .2; } to { transform: scaleX(1); opacity: 1; } }
-@keyframes ui-route-dot { from { transform: scale(.35); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes ui-meter-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes ui-skeleton { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
-
-
+@keyframes page-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes loader-run { from { left: 12%; transform: rotate(-10deg); } to { left: 78%; transform: rotate(10deg); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; }
+}

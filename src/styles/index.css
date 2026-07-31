@@ -1,23 +1,9 @@
 @import "./tokens.css";
 @import "./foundation.css";
-@import "./navigation.css";
+@import "./shell.css";
+@import "./controls.css";
 @import "./flows.css";
-@import "./career-common.css";
-@import "./home.css";
-@import "./profile.css";
-@import "./team.css";
-@import "./social.css";
-@import "./season.css";
-@import "./recruiting.css";
-@import "./world.css";
-@import "./league.css";
-@import "./market.css";
-@import "./college.css";
+@import "./career.css";
+@import "./management.css";
 @import "./match.css";
-@import "./real-time-match.css";
-@import "./professional.css";
 @import "./motion.css";
-
-@import "./compact-ui.css";
-
-@import "./operations.css";

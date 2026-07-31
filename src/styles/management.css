@@ -1,0 +1,197 @@
+.recruiting-hub, .market-hub, .league-hub { display: grid; gap: 12px; }
+.recruiting-hub__head, .market-hub__head, .league-hub__head {
+  min-height: 144px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 24px;
+  padding: 20px 22px;
+  border: 1px solid #080b0f;
+  border-left: 6px solid var(--accent);
+  background: linear-gradient(115deg, #11161c 0%, #252e38 100%);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+}
+.recruiting-hub__title, .market-hub__title, .league-hub__title { display: grid; gap: 5px; }
+.recruiting-hub__title small, .market-hub__title small, .league-hub__title small { color: #b5bfca; font-weight: 800; }
+.recruiting-hub__title h1, .market-hub__title h1, .league-hub__title h1 { font-size: clamp(31px, 4vw, 52px); }
+.recruiting-hub__title p, .market-hub__title p, .league-hub__title p { max-width: 680px; color: #d4dae1; }
+.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard { display: flex; align-items: stretch; border: 1px solid rgb(255 255 255 / 20%); background: rgb(0 0 0 / 18%); }
+.recruiting-hub__scoreboard > span, .market-hub__scoreboard > span, .league-hub__scoreboard > span { min-width: 112px; display: grid; align-content: center; gap: 2px; padding: 12px 14px; border-right: 1px solid rgb(255 255 255 / 18%); }
+.recruiting-hub__scoreboard > span:last-child, .market-hub__scoreboard > span:last-child, .league-hub__scoreboard > span:last-child { border-right: 0; }
+.recruiting-hub__scoreboard small, .market-hub__scoreboard small, .league-hub__scoreboard small { color: #aeb8c3; }
+.recruiting-hub__scoreboard strong, .market-hub__scoreboard strong, .league-hub__scoreboard strong { font-size: 24px; }
+.recruiting-hub__scoreboard em { color: #aeb8c3; font-size: 14px; }
+
+.recruiting-hub__brief, .market-hub__brief { min-height: 82px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 12px 15px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--surface); box-shadow: var(--shadow); }
+.recruiting-hub__brief-copy, .market-hub__brief > div:first-child { display: grid; gap: 2px; }
+.recruiting-hub__brief-copy strong, .market-hub__brief > div:first-child strong { font-size: 18px; }
+.recruiting-hub__brief-copy p, .market-hub__brief p { color: var(--ink-soft); }
+.recruiting-hub__tape, .market-hub__brief-counts { display: flex; border-left: 1px solid var(--line); }
+.recruiting-hub__tape span, .market-hub__brief-counts span { min-width: 88px; display: grid; justify-items: end; gap: 2px; padding: 4px 12px; }
+.recruiting-hub__tape strong, .market-hub__brief-counts strong { font-size: 21px; }
+
+.recruiting-hub__commit, .market-hub__hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-left: 5px solid var(--green); background: var(--green-soft); }
+.recruiting-hub__commit button { min-height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; }
+.market-hub__hero { grid-template-columns: 1fr; border-left-color: var(--blue); background: var(--blue-soft); }
+.market-hub__hero.is-portal { border-left-color: var(--amber); background: var(--amber-soft); }
+.market-hub__hero > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.market-hub__hero-actions, .market-hub__hero-offers { display: grid; gap: 6px; }
+.market-hub__hero-actions > button, .market-hub__hero-offers > button { min-height: 56px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+
+.recruiting-hub__workspace { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(330px, .75fr); align-items: start; gap: 12px; }
+.recruiting-board, .market-table, .market-headlines, .market-needs, .market-negotiations, .market-movement-list, .market-vacancies, .league-featured-game, .league-ranking-panel, .league-movers, .league-races, .league-news, .league-playoff-picture, .league-power-table, .league-team-directory {
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.recruiting-board > header, .market-table > header, .market-headlines > header, .market-needs > header, .market-negotiations > header, .market-movement-list > header, .market-vacancies > header, .league-featured-game > header, .league-ranking-panel > header, .league-movers > header, .league-races > header, .league-news > header, .league-playoff-picture > header, .league-power-table > header, .league-team-directory > header {
+  min-height: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+.recruiting-board > header { display: grid; grid-template-columns: 42px 56px minmax(0, 1fr) 180px; color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+.recruiting-board > button { width: 100%; min-height: 72px; display: grid; grid-template-columns: 42px 56px minmax(0, 1fr) 180px; align-items: center; gap: 8px; padding: 7px 9px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.recruiting-board > button:nth-of-type(even) { background: #f8fafb; }
+.recruiting-board > button:hover { background: #edf3f8; }
+.recruiting-board > button.is-selected { position: relative; background: var(--blue-soft); }
+.recruiting-board > button.is-selected::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--blue); }
+.recruiting-board > button.is-offer { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 45%, transparent); }
+.recruiting-board__rank { color: var(--ink-muted); text-align: center; font-weight: 800; }
+.recruiting-board__mark { width: 42px; height: 42px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-weight: 900; }
+.recruiting-board__program, .recruiting-board__status { min-width: 0; display: grid; gap: 3px; }
+.recruiting-board__program strong { font-size: 15px; }
+.recruiting-board__program small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recruiting-board__status { justify-items: end; text-align: right; }
+.recruiting-board__status strong { color: var(--ink); }
+
+.recruiting-detail { position: sticky; top: calc(var(--header-height) + var(--nav-height) + 12px); display: grid; gap: 0; border: 1px solid var(--line-strong); background: #fff; box-shadow: var(--shadow-lg); }
+.recruiting-detail__mark { min-height: 92px; display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: center; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line); border-top: 5px solid var(--team-primary); background: color-mix(in srgb, var(--team-primary) 8%, white); }
+.recruiting-detail__mark > span { width: 62px; height: 62px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-size: 19px; font-weight: 900; }
+.recruiting-detail__mark > div { min-width: 0; display: grid; gap: 3px; }
+.recruiting-detail__mark h2 { font-size: 24px; }
+.recruiting-detail__context, .recruiting-detail__facts, .recruiting-detail__next, .recruiting-detail__promises, .recruiting-detail__actions { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.recruiting-detail__context { display: grid; gap: 7px; }
+.recruiting-detail__interest { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.recruiting-detail__interest span { display: grid; gap: 2px; padding: 9px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.recruiting-detail__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.recruiting-detail__facts span { display: grid; gap: 3px; padding: 9px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.recruiting-detail__next { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+.recruiting-detail__promises { display: grid; gap: 6px; }
+.recruiting-detail__promises article { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.recruiting-detail__actions { display: grid; gap: 6px; border-bottom: 0; }
+.recruiting-detail__actions button { min-height: 52px; display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.recruiting-detail__actions button:hover { border-color: var(--blue); background: var(--blue-soft); }
+
+.market-hub__overview { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 12px; align-items: start; }
+.market-headlines { grid-column: 1; }
+.market-table { grid-column: 1; }
+.market-needs { grid-column: 2; grid-row: 1 / span 2; }
+.market-headlines > article, .market-headlines > button { min-height: 54px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 11px; border: 0; border-bottom: 1px solid var(--line); background: #fff; text-align: left; }
+.market-headlines > button { cursor: pointer; }
+.market-headlines > button:hover { background: var(--surface-soft); }
+.market-headlines > article > span, .market-headlines > button > span { width: 26px; height: 26px; display: grid; place-items: center; background: var(--header-raised); color: #fff; font-weight: 800; }
+.market-table__head, .market-table > button { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .8fr) 72px; align-items: center; gap: 10px; min-height: 50px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.market-table__head { min-height: 38px; background: var(--header-raised); color: #fff; font-size: 13px; font-weight: 700; }
+.market-table > button { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.market-table > button:hover { background: var(--surface-soft); }
+.market-needs > button, .market-vacancies > button { width: 100%; min-height: 60px; display: grid; grid-template-columns: 42px 50px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.market-needs > button:hover, .market-vacancies > button:hover { background: var(--surface-soft); }
+.market-needs__mark, .market-vacancies__mark { width: 36px; height: 36px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-weight: 900; }
+.market-needs__position { width: 40px; text-align: center; font-weight: 900; }
+.market-hub__players, .market-hub__coaches { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 12px; align-items: start; }
+.market-hub__filters { grid-column: 1 / -1; }
+.market-negotiations > button, .market-movement-list > button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.market-negotiations > button:hover, .market-movement-list > button:hover { background: var(--surface-soft); }
+.market-negotiations > button > span, .market-movement-list > button > span { color: var(--blue); font-weight: 800; }
+.market-negotiations > button p { margin-top: 3px; color: var(--ink-muted); }
+.market-negotiations > button.is-active { border-left: 4px solid var(--green); }
+.market-vacancies { grid-column: 1; }
+.market-hub__coaches .market-movement-list { grid-column: 2; }
+
+.league-hub__sections { display: flex; justify-content: space-between; gap: 10px; }
+.league-hub__search { min-width: min(420px, 100%); display: flex; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid var(--line-strong); background: #fff; }
+.league-hub__search input { border: 0; }
+.league-overview { display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(330px, .78fr); gap: 12px; align-items: start; }
+.league-featured-game { grid-column: 1 / -1; }
+.league-featured-game > header { background: var(--header-raised); color: #fff; }
+.league-featured-game > header small { color: #bdc6d0; }
+.league-featured-game > div { min-height: 132px; display: grid; grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr); align-items: stretch; }
+.league-featured-game > div > button { min-height: 132px; display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px; border: 0; background: color-mix(in srgb, var(--team-primary) 8%, white); cursor: pointer; text-align: left; }
+.league-featured-game > div > button:hover { background: color-mix(in srgb, var(--team-primary) 14%, white); }
+.league-featured-game > div > button > span { width: 58px; height: 58px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-weight: 900; }
+.league-featured-game > div > button strong { font-size: 18px; }
+.league-featured-game > div > button em { font-size: 27px; font-weight: 800; }
+.league-featured-game > div > p { display: grid; place-items: center; padding: 10px; border-right: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--surface-muted); color: var(--ink-soft); text-align: center; }
+.league-ranking-panel, .league-playoff-picture { grid-column: 1; }
+.league-movers, .league-news, .league-news--pro { grid-column: 2; }
+.league-races, .league-power-table { grid-column: 1 / -1; }
+.league-ranking-panel > button, .league-movers > button, .league-power-table > button { width: 100%; min-height: 54px; display: grid; grid-template-columns: 38px 40px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.league-ranking-panel > button:hover, .league-movers > button:hover, .league-power-table > button:hover { background: var(--surface-soft); }
+.league-ranking-panel > button > b, .league-movers > button > b, .league-power-table > button > b { width: 34px; height: 34px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-size: 13px; }
+.league-movers > button { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.league-races { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.league-races > header { grid-column: 1 / -1; }
+.league-races > article { border-right: 1px solid var(--line); }
+.league-races > article > header { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-bottom: 1px solid var(--line); background: #f6f8fa; }
+.league-races > article > button { width: 100%; min-height: 45px; display: grid; grid-template-columns: 30px 34px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 5px 8px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; }
+.league-races > article > button b { width: 30px; height: 30px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-size: 13px; }
+.league-news > article { min-height: 58px; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.league-playoff-picture > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.league-playoff-picture > div > section { border-right: 1px solid var(--line); }
+.league-playoff-picture > div > section:last-child { border-right: 0; }
+.league-playoff-picture > div > section > header { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-bottom: 1px solid var(--line); background: #f6f8fa; }
+.league-playoff-picture > div > section > button { width: 100%; min-height: 46px; display: grid; grid-template-columns: 30px 34px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 5px 8px; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; }
+.league-playoff-picture > div > section > button b { width: 30px; height: 30px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-size: 13px; }
+.league-team-directory > header, .league-team-directory > button { display: grid; grid-template-columns: minmax(240px, 1.2fr) minmax(220px, .9fr) 90px 70px; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.league-team-directory > header { min-height: 40px; background: var(--header-raised); color: #fff; font-size: 13px; font-weight: 700; }
+.league-team-directory > button { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.league-team-directory > button:nth-of-type(even) { background: #f8fafb; }
+.league-team-directory > button:hover { background: var(--blue-soft); }
+.league-team-directory > button > div { display: flex; align-items: center; gap: 9px; }
+.league-team-directory > button > div > span { width: 34px; height: 34px; display: grid; place-items: center; background: var(--team-primary); color: #fff; font-weight: 900; }
+
+.pro-team-sheet { display: grid; gap: 12px; }
+.pro-team-sheet__system, .pro-team-sheet__staff, .pro-team-sheet__needs, .pro-team-sheet__roster { border: 1px solid var(--line); background: #fff; }
+.pro-team-sheet__system > header, .pro-team-sheet__staff > header, .pro-team-sheet__needs > header, .pro-team-sheet__roster > header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--surface-muted); }
+.pro-team-sheet__system > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.pro-team-sheet__system > div > span { display: grid; gap: 2px; padding: 9px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.pro-team-sheet__needs > div { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px; }
+.pro-team-sheet__needs > div > span { min-width: 82px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); background: var(--surface-soft); }
+
+@media (max-width: 1000px) {
+  .recruiting-hub__workspace, .market-hub__overview, .market-hub__players, .market-hub__coaches, .league-overview { grid-template-columns: 1fr; }
+  .recruiting-detail { position: static; }
+  .market-headlines, .market-table, .market-needs, .market-vacancies, .market-hub__coaches .market-movement-list, .league-ranking-panel, .league-movers, .league-news, .league-news--pro, .league-races, .league-playoff-picture, .league-power-table { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 720px) {
+  .recruiting-hub__head, .market-hub__head, .league-hub__head { min-height: 0; grid-template-columns: 1fr; align-items: start; padding: 16px; }
+  .recruiting-hub__title h1, .market-hub__title h1, .league-hub__title h1 { font-size: 30px; }
+  .recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard { width: 100%; }
+  .recruiting-hub__scoreboard > span, .market-hub__scoreboard > span, .league-hub__scoreboard > span { min-width: 0; flex: 1; padding: 8px 10px; }
+  .recruiting-hub__brief, .market-hub__brief { grid-template-columns: 1fr; }
+  .recruiting-hub__tape, .market-hub__brief-counts { border-top: 1px solid var(--line); border-left: 0; }
+  .recruiting-hub__tape span, .market-hub__brief-counts span { justify-items: start; padding: 8px 12px 0 0; }
+  .recruiting-board > header { display: none; }
+  .recruiting-board > button { grid-template-columns: 34px 46px minmax(0, 1fr); min-height: 78px; }
+  .recruiting-board__status { grid-column: 3; justify-items: start; text-align: left; }
+  .recruiting-board__program small { white-space: normal; }
+  .market-table__head { display: none; }
+  .market-table > button { grid-template-columns: 1fr auto; }
+  .market-table > button > span { grid-column: 1; color: var(--ink-muted); }
+  .market-needs > button, .market-vacancies > button { grid-template-columns: 38px 44px minmax(0, 1fr); }
+  .market-needs > button em, .market-vacancies > button em { grid-column: 3; justify-self: start; }
+  .league-featured-game > div { grid-template-columns: 1fr; }
+  .league-featured-game > div > p { min-height: 42px; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .league-playoff-picture > div { grid-template-columns: 1fr; }
+  .league-playoff-picture > div > section { border-right: 0; border-bottom: 1px solid var(--line); }
+  .league-team-directory > header { display: none; }
+  .league-team-directory > button { grid-template-columns: minmax(0, 1fr) auto; min-height: 64px; }
+  .league-team-directory > button small { grid-column: 1; }
+  .league-team-directory > button b { display: none; }
+}

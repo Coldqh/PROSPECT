@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.52.0 — F1 DYNASTY STYLE REPLACEMENT
+
+### Full replacement
+
+- twenty-two legacy and versioned stylesheets are removed instead of overridden;
+- one light browser-manager system owns shell, controls, career surfaces, management hubs and match presentation;
+- the product uses a dark masthead, white work surfaces, compact navigation, square panels and dense data rows;
+- recruiting, market, College and PRO keep the 0.50 information architecture but no longer inherit the old visual language;
+- profile, team, season, social, world, draft and match surfaces are migrated into the same system;
+- desktop and mobile share one responsive design rather than parallel legacy fallbacks.
+
+### Verification
+
+- retired stylesheet absence is enforced by UI architecture and release checks;
+- a dedicated F1-Dynasty-style invariant verifies the light manager shell, dense management hubs and migrated career surfaces;
+- no save migration or domain-system changes.
+
 ## 0.51.0 — SPORTS OPERATIONS VISUAL REBUILD
 
 ### Visual system
