@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.50.0 — INTERFACE COMPREHENSION REBUILD
+
+### Recruiting
+
+- recruiting is a persistent board with the selected program visible beside it instead of a metric wall and modal;
+- every school explains current status, projected role, reason for interest, depth competition and the next useful contact;
+- raw FIT / NEED / DEPTH / INTEREST codes are replaced by football language;
+- offers, visits and weekly action budget remain visible without opening another screen.
+
+### Market and leagues
+
+- the market opens with a weekly digest, recent player decisions and concrete team needs;
+- synthetic PORT / MOVE / OFFR codes are removed from the visible interface;
+- the League destination becomes a season center for College and PRO;
+- College exposes the featured game, national ranking movement, conference races and current stories;
+- PRO exposes the featured game, AFC/NFC playoff picture, transactions and league power table;
+- the full team directory remains available as a secondary view.
+
+### Verification
+
+- 193 tests across 46 files;
+- dedicated interface-comprehension invariant;
+- TypeScript, UI architecture, release integrity and functional-copy checks cover the rebuilt surfaces;
+- save schema 35, ecosystem module 14 and IndexedDB schema 2 remain unchanged.
+
 ## 0.49.0 — SIMULATION QUALITY & SYSTEM REPAIR
 
 ### Existing-system repairs

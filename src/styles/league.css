@@ -1,0 +1,76 @@
+/* College and professional season comprehension hubs. */
+.league-hub { width: min(100%, 1120px); margin: 0 auto; display: grid; gap: 14px; }
+.league-hub__head { min-height: 58px; padding-bottom: 12px; display: flex; align-items: end; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+.league-hub__head small { color: var(--muted); font-weight: 800; }
+.league-hub__head h1 { margin: 2px 0 0; font-size: var(--type-page-size); line-height: var(--type-page-line); }
+.league-hub__head > span { color: var(--muted); font-weight: 800; }
+.league-hub__levels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); }
+.league-hub__levels button { min-height: 42px; border: 0; background: transparent; color: var(--muted); font-weight: 800; }
+.league-hub__levels button + button { border-left: 1px solid var(--line); }
+.league-hub__levels button.is-active { background: var(--surface); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.league-hub__sections { display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+.league-hub__sections button { min-height: 42px; padding: 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 700; }
+.league-hub__sections button.is-active { border-bottom-color: var(--accent); color: var(--text); }
+.league-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.league-featured-game, .league-ranking-panel, .league-movers, .league-races, .league-news, .league-playoff-picture, .league-power-table { min-width: 0; display: grid; align-content: start; border-top: 1px solid var(--line); }
+.league-featured-game > header, .league-ranking-panel > header, .league-movers > header, .league-races > header, .league-news > header, .league-playoff-picture > header, .league-power-table > header { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.league-featured-game > header small, .league-ranking-panel > header small, .league-movers > header small, .league-races > header small, .league-news > header small, .league-playoff-picture > header small, .league-power-table > header small { color: var(--muted); font-weight: 800; }
+.league-featured-game > header span, .league-ranking-panel > header span, .league-movers > header span, .league-races > header span, .league-news > header span, .league-playoff-picture > header span { color: var(--muted); text-align: right; }
+.league-ranking-panel > header h2, .league-movers > header h2, .league-races > header h2, .league-news > header h2, .league-playoff-picture > header h2, .league-power-table > header h2 { margin: 2px 0 0; font-size: var(--type-section-size); }
+.league-power-table > header button { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--text); }
+.league-featured-game > div { min-height: 150px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; background: var(--surface); }
+.league-featured-game > div > button { min-width: 0; padding: 0; display: grid; justify-items: center; gap: 6px; border: 0; background: transparent; color: var(--text); text-align: center; }
+.league-featured-game > div > button span { width: 48px; height: 48px; display: grid; place-items: center; background: var(--surface-3); color: var(--accent); font-weight: 900; }
+.league-featured-game > div > button strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.league-featured-game > div > button em { color: var(--text-secondary); font-size: var(--type-number-size); font-style: normal; font-weight: 900; }
+.league-featured-game > div > p { margin: 0; color: var(--muted); text-align: center; }
+.league-ranking-panel > button, .league-power-table > button { min-height: 56px; padding: 8px 4px; display: grid; grid-template-columns: 36px minmax(0, 1fr) 72px; align-items: center; gap: 10px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.league-ranking-panel > button > span, .league-power-table > button > span { color: var(--muted); font-weight: 900; text-align: center; }
+.league-ranking-panel > button div, .league-power-table > button div { min-width: 0; }
+.league-ranking-panel > button strong, .league-ranking-panel > button small, .league-power-table > button strong, .league-power-table > button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.league-ranking-panel > button small, .league-power-table > button small { margin-top: 3px; color: var(--muted); }
+.league-ranking-panel > button em, .league-power-table > button em { font-style: normal; font-weight: 800; text-align: right; }
+.league-ranking-panel > button em.is-up, .league-movers span.is-up { color: var(--success); }
+.league-ranking-panel > button em.is-down, .league-movers span.is-down { color: var(--accent); }
+.league-movers > button { min-height: 54px; padding: 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.league-movers > button div { min-width: 0; }
+.league-movers > button strong, .league-movers > button small { display: block; }
+.league-movers > button small { margin-top: 3px; color: var(--muted); }
+.league-movers > button span { text-align: right; }
+.league-races { grid-column: 1 / -1; }
+.league-races > article { min-height: 58px; padding: 8px 0; display: grid; grid-template-columns: 150px repeat(2, minmax(0, 1fr)); align-items: center; gap: 10px; border-top: 1px solid var(--line); }
+.league-races > article > header { display: grid; gap: 3px; }
+.league-races > article > header span { color: var(--muted); }
+.league-races > article > button { min-height: 42px; padding: 0 10px; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; border: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.league-races > article > button span { color: var(--muted); }
+.league-races > article > button em { font-style: normal; text-align: right; }
+.league-news > article { min-height: 64px; padding: 9px 0; display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-top: 1px solid var(--line); }
+.league-news > article > span { color: var(--accent); font-weight: 900; }
+.league-news > article div { min-width: 0; }
+.league-news > article strong, .league-news > article small { display: block; }
+.league-news > article small { margin-top: 3px; display: -webkit-box; overflow: hidden; color: var(--muted); line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.league-news > article em { color: var(--muted); font-style: normal; }
+.league-playoff-picture { grid-column: 1 / -1; }
+.league-playoff-picture > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.league-playoff-picture > div > section { border-top: 1px solid var(--line); }
+.league-playoff-picture > div > section > header { min-height: 40px; display: flex; align-items: center; justify-content: space-between; }
+.league-playoff-picture > div > section > header span { color: var(--muted); }
+.league-playoff-picture > div > section > button { width: 100%; min-height: 46px; padding: 0 6px; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.league-playoff-picture > div > section > button span { color: var(--muted); text-align: center; }
+.league-playoff-picture > div > section > button em { font-style: normal; }
+.league-hub__search { min-height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); background: var(--surface); }
+.league-hub__search svg { color: var(--muted); }
+.league-hub__search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
+.league-team-directory { border-top: 1px solid var(--line); }
+.league-team-directory > header { min-height: 38px; padding: 0 8px; display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(150px, 1fr) 70px 58px; align-items: center; gap: 10px; color: var(--muted); font-size: var(--type-caption-size); font-weight: 800; }
+.league-team-directory > button { width: 100%; min-height: 58px; padding: 8px; display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(150px, 1fr) 70px 58px; align-items: center; gap: 10px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.league-team-directory > button:hover { background: var(--surface); }
+.league-team-directory > button > div { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.league-team-directory > button > div span { width: 40px; height: 40px; display: grid; place-items: center; background: var(--surface-3); color: var(--accent); font-weight: 900; }
+.league-team-directory > button > div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.league-team-directory > button small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.league-team-directory > button em { font-style: normal; }
+.league-team-directory > button b { text-align: right; }
+@media (max-width: 860px) { .league-overview { grid-template-columns: 1fr; } .league-races, .league-playoff-picture { grid-column: auto; } .league-races > article { grid-template-columns: 120px repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .league-races > article { grid-template-columns: 1fr; } .league-races > article > header { grid-template-columns: 1fr auto; } .league-playoff-picture > div { grid-template-columns: 1fr; } .league-team-directory > header { display: none; } .league-team-directory > button { grid-template-columns: minmax(0, 1fr) auto auto; } .league-team-directory > button > small { grid-column: 1; padding-left: 50px; } .league-team-directory > button > em { grid-column: 2; grid-row: 1 / span 2; } .league-team-directory > button > b { grid-column: 3; grid-row: 1 / span 2; } }
+@media (max-width: 430px) { .league-hub__head { align-items: start; } .league-featured-game > div { padding: 12px 8px; gap: 8px; } .league-featured-game > div > button span { width: 42px; height: 42px; } .league-news > article { grid-template-columns: 40px minmax(0, 1fr); } .league-news > article em { grid-column: 2; } .league-team-directory > button { grid-template-columns: minmax(0, 1fr) auto; } .league-team-directory > button > b { display: none; } }

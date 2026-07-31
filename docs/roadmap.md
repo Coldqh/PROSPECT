@@ -345,4 +345,12 @@
 - agency stories and transactions coalesce into one immutable world fact;
 - long-run audits detect depth gaps, repeated incidents, semantic fact duplicates and actor-season conflict duplicates;
 - schema 35 and ecosystem module 14 remain unchanged.
+## v0.50 — Interface comprehension rebuild
 
+- one recruiting board with persistent selected-program context;
+- explicit status, role path, reason for interest and next contact for every program;
+- weekly market digest, player movement table and concrete roster openings;
+- College season center with featured game, ranking movement, conference races and real stories;
+- PRO season center with featured game, conference playoff picture, transactions and power table;
+- raw interface codes replaced by football language;
+- no domain-state or save-schema changes.
