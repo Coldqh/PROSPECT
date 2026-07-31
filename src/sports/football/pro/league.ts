@@ -1268,11 +1268,14 @@ export function finalizeProfessionalMatch(save: CareerSave): CareerSave {
 }
 
 export function advanceProfessionalWeek(save: CareerSave): CareerSave {
+  const inactiveForCurrentWeek = save.football.professional.heroCareer?.role === "inactive";
   const unresolvedPlan = save.football.professional.heroCareer?.weeklyPlan;
-  if (unresolvedPlan && !unresolvedPlan.resolved && save.football.professional.heroCareer?.teamId) return advanceProfessionalWeek(setProfessionalWeekFocus(save, unresolvedPlan.focus));
+  if (unresolvedPlan && !unresolvedPlan.resolved && save.football.professional.heroCareer?.teamId) {
+    save = setProfessionalWeekFocus(save, unresolvedPlan.focus);
+  }
   const state = save.football.professional;
   if (save.meta.phase !== "professional-career" || state.league.phase === "complete") throw new Error("Professional season cannot advance");
-  if (isProfessionalMatchAwaitingResolution(save)) throw new Error("The hero game must be played first");
+  if (!inactiveForCurrentWeek && isProfessionalMatchAwaitingResolution(save)) throw new Error("The hero game must be played first");
   const league = state.league;
   const resolvedSchedule = league.schedule.map((game) => game.week === league.week && game.status === "scheduled" ? resolveScheduledGame(save.meta.worldSeed, game, state.teams) : game);
   let teams = applyGameRecords(state.teams, resolvedSchedule);
