@@ -1,5 +1,6 @@
 import { SeededRandom } from "../../../core/random/SeededRandom";
 import type { GameDate } from "../../../core/calendar/types";
+import { POSITION_STARTER_TARGETS } from "../team/positions";
 import type {
   EcosystemAgencyDecision,
   EcosystemAgencyState,
@@ -53,7 +54,10 @@ function canOpenConflict(
   const latest = conflicts
     .filter((conflict) => conflict.actorKind === actorKind && conflict.actorId === actorId)
     .sort((left, right) => ordinal(right.lastSeasonYear, right.lastWeek) - ordinal(left.lastSeasonYear, left.lastWeek))[0];
-  return !latest || ordinal(seasonYear, week) - ordinal(latest.lastSeasonYear, latest.lastWeek) >= 4;
+  if (!latest) return true;
+  if (latest.createdSeasonYear === seasonYear) return false;
+  const cooldown = actorKind === "player" ? 6 : 10;
+  return ordinal(seasonYear, week) - ordinal(latest.lastSeasonYear, latest.lastWeek) >= cooldown;
 }
 
 function initialConflict(input: {
@@ -86,6 +90,26 @@ function initialConflict(input: {
   };
 }
 
+function compactConflicts(conflicts: EcosystemConflict[]): EcosystemConflict[] {
+  const retained: EcosystemConflict[] = [];
+  const historicalKeys = new Set<string>();
+  const activeActors = new Set<string>();
+  for (const conflict of [...conflicts].reverse()) {
+    const actorKey = `${conflict.actorKind}:${conflict.actorId}`;
+    if (conflict.stage !== "resolved") {
+      if (activeActors.has(actorKey)) continue;
+      activeActors.add(actorKey);
+      retained.push(conflict);
+      continue;
+    }
+    const historicalKey = `${actorKey}:${conflict.createdSeasonYear}`;
+    if (historicalKeys.has(historicalKey)) continue;
+    historicalKeys.add(historicalKey);
+    retained.push(conflict);
+  }
+  return retained.reverse().slice(-MAX_CONFLICTS);
+}
+
 export function createAgencyState(seasonYear: number, week: number): EcosystemAgencyState {
   return {
     version: 1,
@@ -98,16 +122,51 @@ export function createAgencyState(seasonYear: number, week: number): EcosystemAg
   };
 }
 
-function playerPressure(player: EcosystemPlayer, team: EcosystemTeam, social: EcosystemSocialState): number {
+function playerEvaluation(player: EcosystemPlayer): number {
+  return player.overall * 0.5
+    + player.form * 0.18
+    + player.health * 0.07
+    + player.tactical.schemeFit * 0.15
+    + player.tactical.roleFit * 0.1;
+}
+
+function playerHasAgencyLeverage(player: EcosystemPlayer, players: EcosystemPlayer[]): boolean {
+  if (player.isHero) return true;
+  const starterCount = POSITION_STARTER_TARGETS[player.position];
+  if (player.depthRank <= starterCount + 3) return true;
+  const room = players
+    .filter((item) => item.teamId === player.teamId && item.position === player.position && item.transferStatus === "none")
+    .sort((left, right) => left.depthRank - right.depthRank || playerEvaluation(right) - playerEvaluation(left));
+  const starterCutoff = room[Math.max(0, starterCount - 1)];
+  if (!starterCutoff) return true;
+  return playerEvaluation(player) >= playerEvaluation(starterCutoff) - 6 || player.potential >= starterCutoff.potential + 5;
+}
+
+function playerPressure(player: EcosystemPlayer, team: EcosystemTeam, social: EcosystemSocialState, players: EcosystemPlayer[]): number {
   const culture = social.teamCultures.find((item) => item.teamId === team.id);
-  const rolePressure = player.status === "backup" ? 34 : player.status === "rotation" ? 16 : 0;
+  const starterCount = POSITION_STARTER_TARGETS[player.position];
+  const room = players
+    .filter((item) => item.teamId === player.teamId && item.position === player.position && item.id !== player.id && item.transferStatus === "none")
+    .sort((left, right) => left.depthRank - right.depthRank || playerEvaluation(right) - playerEvaluation(left));
+  const playerAhead = [...room].filter((item) => item.depthRank < player.depthRank).sort((left, right) => right.depthRank - left.depthRank)[0];
+  const meritGap = playerAhead ? playerEvaluation(player) - playerEvaluation(playerAhead) : 0;
+  const roleMismatch = player.usagePlan === "starter" && player.depthRank > starterCount
+    ? 30
+    : player.usagePlan === "rotation" && player.depthRank > starterCount + 2
+      ? 18
+      : player.status === "backup" && player.depthRank <= starterCount + 3
+        ? 12
+        : 0;
+  const careerUrgency = player.classYear === "Senior" ? 8 : player.classYear === "Junior" ? 5 : 1;
   return clamp(
-    rolePressure
-      + Math.max(0, player.depthRank - 1) * 5.2
+    roleMismatch
+      + Math.max(0, meritGap) * 1.8
+      + Math.max(0, starterCount + 4 - player.depthRank) * 2.8
       + Math.max(0, 60 - player.tactical.schemeFit) * 0.72
       + Math.max(0, 55 - player.form) * 0.34
       + (culture?.conflict ?? 45) * 0.2
       + Math.max(0, 55 - (culture?.coachTrust ?? 55)) * 0.35
+      + careerUrgency
       + (team.losses > team.wins ? 6 : 0),
   );
 }
@@ -141,6 +200,67 @@ function playerConflictKind(player: EcosystemPlayer, social: EcosystemSocialStat
   if (player.tactical.schemeFit < 48) return "scheme-fit";
   if ((culture?.coachTrust ?? 55) < 42) return "trust";
   return "role";
+}
+
+function statusForDepth(player: EcosystemPlayer, depthRank: number): EcosystemPlayer["status"] {
+  if (player.status === "injured") return "injured";
+  const starterCount = POSITION_STARTER_TARGETS[player.position];
+  if (depthRank <= starterCount) return "starter";
+  if (depthRank <= starterCount + 2) return "rotation";
+  return "backup";
+}
+
+function usageForDepth(player: EcosystemPlayer, depthRank: number): EcosystemPlayer["usagePlan"] {
+  const starterCount = POSITION_STARTER_TARGETS[player.position];
+  if (depthRank <= starterCount) return "starter";
+  if (depthRank <= starterCount + 2) return "rotation";
+  if (player.usagePlan === "redshirt") return "redshirt";
+  if (depthRank === starterCount + 3 && player.form >= 62 && player.health >= 72) return "special-teams";
+  return "developmental";
+}
+
+function promotePlayerOneSlot(players: EcosystemPlayer[], playerId: string): {
+  players: EcosystemPlayer[];
+  oldRank: number;
+  newRank: number;
+  displacedPlayerId?: string | undefined;
+} {
+  const player = players.find((item) => item.id === playerId);
+  if (!player) return { players, oldRank: 0, newRank: 0 };
+  const room = players
+    .filter((item) => item.teamId === player.teamId && item.position === player.position)
+    .sort((left, right) => left.depthRank - right.depthRank || playerEvaluation(right) - playerEvaluation(left) || left.id.localeCompare(right.id));
+  const currentIndex = room.findIndex((item) => item.id === playerId);
+  if (currentIndex < 0) return { players, oldRank: player.depthRank, newRank: player.depthRank };
+  const ordered = [...room];
+  let displacedPlayerId: string | undefined;
+  if (currentIndex > 0) {
+    const displaced = ordered[currentIndex - 1];
+    const promoted = ordered[currentIndex];
+    if (displaced && promoted) {
+      ordered[currentIndex - 1] = promoted;
+      ordered[currentIndex] = displaced;
+      displacedPlayerId = displaced.id;
+    }
+  }
+  const updates = new Map(ordered.map((item, index) => {
+    const depthRank = index + 1;
+    return [item.id, {
+      ...item,
+      depthRank,
+      status: statusForDepth(item, depthRank),
+      usagePlan: usageForDepth(item, depthRank),
+      form: item.id === playerId ? clamp(item.form + 2) : item.form,
+    } satisfies EcosystemPlayer];
+  }));
+  const nextPlayers = players.map((item) => updates.get(item.id) ?? item);
+  const promoted = updates.get(playerId) ?? player;
+  return {
+    players: nextPlayers,
+    oldRank: player.depthRank,
+    newRank: promoted.depthRank,
+    ...(displacedPlayerId ? { displacedPlayerId } : {}),
+  };
 }
 
 function teamConflictKind(team: EcosystemTeam): EcosystemConflictKind {
@@ -323,22 +443,17 @@ function applyDecision(context: ApplyDecisionContext): ApplyDecisionResult {
         }),
       };
     }
-    const nextDepth = Math.max(1, player.depthRank - 1);
-    const nextUsage = nextDepth === 1 ? "starter" : nextDepth <= 2 ? "rotation" : player.usagePlan;
-    players = players.map((item) => item.id === player.id ? {
-      ...item,
-      depthRank: nextDepth,
-      usagePlan: nextUsage,
-      status: item.health < 62 ? "injured" : nextDepth === 1 ? "starter" : nextDepth <= 3 ? "rotation" : "backup",
-      form: clamp(item.form + 2),
-    } : item);
+    const promotion = promotePlayerOneSlot(players, player.id);
+    players = promotion.players;
+    const promoted = players.find((item) => item.id === player.id) ?? player;
+    const displaced = promotion.displacedPlayerId ? players.find((item) => item.id === promotion.displacedPlayerId) : undefined;
     social = applyCultureImpact(social, player.teamId, { conflict: -3, accountability: 3, coachTrust: 2 });
     return {
       teams,
       players,
       coaches,
       social,
-      resolvesConflict: nextDepth === 1,
+      resolvesConflict: promoted.status === "starter",
       decision: decisionBase({
         kind: "player-role-push",
         conflict,
@@ -346,9 +461,11 @@ function applyDecision(context: ApplyDecisionContext): ApplyDecisionResult {
         week,
         date,
         title: `${player.name} добился пересмотра роли`,
-        detail: "Игрок потребовал конкретных тренировочных репов и новой оценки в depth chart.",
-        consequence: `Глубина изменена с ${player.depthRank} на ${nextDepth}; план использования — ${nextUsage}.`,
-        playerIds: [player.id],
+        detail: "Игрок потребовал конкретных тренировочных репов и новой оценки в depth chart; штаб пересобрал всю позиционную комнату без дублирующихся мест.",
+        consequence: promotion.newRank < promotion.oldRank
+          ? `Глубина изменена с ${promotion.oldRank} на ${promotion.newRank}; ${displaced ? `${displaced.name} опустился на ${displaced.depthRank}.` : "соседняя роль пересчитана."}`
+          : "После проверки depth chart остался без изменения; игрок получил только расширенные тренировочные повторы.",
+        playerIds: [player.id, ...(displaced ? [displaced.id] : [])],
         objective,
       }),
     };
@@ -576,10 +693,15 @@ export function advanceWorldAgency(input: AdvanceWorldAgencyInput): AdvanceWorld
 
   for (const team of teams.filter((item) => item.level === "college")) {
     const candidate = players
-      .filter((player) => player.teamId === team.id && player.level === "college" && player.transferStatus === "none" && player.status !== "injured")
-      .map((player) => ({ player, pressure: playerPressure(player, team, social) }))
+      .filter((player) => player.teamId === team.id
+        && player.level === "college"
+        && player.transferStatus === "none"
+        && player.status !== "injured"
+        && player.eligibilityYears > 1
+        && playerHasAgencyLeverage(player, players))
+      .map((player) => ({ player, pressure: playerPressure(player, team, social, players) }))
       .sort((left, right) => right.pressure - left.pressure || right.player.overall - left.player.overall)[0];
-    if (candidate && candidate.pressure >= 58 && !activeKeys.has(`player:${candidate.player.id}`) && canOpenConflict(conflicts, "player", candidate.player.id, input.seasonYear, input.week)) {
+    if (candidate && candidate.pressure >= 64 && !activeKeys.has(`player:${candidate.player.id}`) && canOpenConflict(conflicts, "player", candidate.player.id, input.seasonYear, input.week)) {
       conflicts.push(initialConflict({
         actorKind: "player",
         actorId: candidate.player.id,
@@ -646,7 +768,7 @@ export function advanceWorldAgency(input: AdvanceWorldAgencyInput): AdvanceWorld
       ? (() => {
           const player = players.find((item) => item.id === original.actorId);
           const team = player ? teams.find((item) => item.id === player.teamId) : undefined;
-          return player && team ? playerPressure(player, team, social) : 0;
+          return player && team ? playerPressure(player, team, social, players) : 0;
         })()
       : original.actorKind === "team"
         ? (() => {
@@ -701,10 +823,14 @@ export function advanceWorldAgency(input: AdvanceWorldAgencyInput): AdvanceWorld
     updatedConflicts.push(conflict);
   }
 
-  const decisions = [...input.agency.decisions, ...newDecisions].slice(-MAX_DECISIONS);
+  const compactedConflicts = compactConflicts(updatedConflicts);
+  const retainedConflictIds = new Set(compactedConflicts.map((conflict) => conflict.id));
+  const decisions = [...input.agency.decisions, ...newDecisions]
+    .filter((decision) => retainedConflictIds.has(decision.conflictId))
+    .slice(-MAX_DECISIONS);
   const retainedDecisionIds = new Set(decisions.map((decision) => decision.id));
   const retainedFactIds = new Set(input.history.facts.map((fact) => fact.id));
-  const boundedConflicts = updatedConflicts.slice(-MAX_CONFLICTS).map((conflict) => ({
+  const boundedConflicts = compactedConflicts.map((conflict) => ({
     ...conflict,
     evidenceFactIds: conflict.evidenceFactIds.filter((id) => retainedFactIds.has(id)),
     decisionIds: conflict.decisionIds.filter((id) => retainedDecisionIds.has(id)),
@@ -731,7 +857,9 @@ export function advanceWorldAgency(input: AdvanceWorldAgencyInput): AdvanceWorld
       lastProcessedWeek: input.week,
       conflicts: boundedConflicts,
       decisions,
-      processedDecisionKeys: [...processed].slice(-MAX_PROCESSED_DECISION_KEYS),
+      processedDecisionKeys: [...processed]
+        .filter((key) => boundedConflicts.some((conflict) => key.startsWith(`${conflict.id}:`)))
+        .slice(-MAX_PROCESSED_DECISION_KEYS),
       digest,
     },
   };

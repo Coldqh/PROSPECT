@@ -46,6 +46,21 @@ describe("football social ecosystem", () => {
     );
     expect(result.social.incidents.some((incident) => incident.kind === "locker-room-conflict" && incident.teamId === target?.teamId)).toBe(true);
     expect(result.stories.some((story) => story.kind === "locker-room-conflict")).toBe(true);
+
+    const nextWeek = simulateSocialWeek(
+      result.social,
+      world.teams.map((team) => team.id === target?.teamId ? { ...team, trend: "falling" as const } : team),
+      result.players,
+      world.coaches,
+      world.seasonYear,
+      3,
+      14,
+      new SeededRandom("social-conflict:next-week"),
+    );
+    const repeated = nextWeek.social.incidents.filter((incident) => incident.kind === "locker-room-conflict"
+      && incident.teamId === target?.teamId
+      && incident.participantIds.slice().sort().join(":") === [target?.entityAId, target?.entityBId].filter(Boolean).sort().join(":"));
+    expect(repeated).toHaveLength(1);
   });
 
   it("support improves development while isolation raises transfer pressure", () => {

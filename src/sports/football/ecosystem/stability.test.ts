@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { historyFactSemanticKey } from "./history";
 import { inspectEcosystemInvariants, runAutonomousStabilitySimulation } from "./stability";
 import { createStabilitySave } from "./stabilityTestUtils";
 
@@ -33,9 +34,11 @@ describe("full-roster autonomous stability", () => {
     expect(save.world.worldHistory.objectives.some((objective) => objective.status === "active")).toBe(true);
     expect(save.world.worldHistory.arcs.length).toBeGreaterThan(0);
     expect(save.world.agency.decisions.length).toBeGreaterThan(0);
-    expect(save.world.agency.conflicts.length).toBeLessThanOrEqual(320);
-    expect(save.world.agency.decisions.length).toBeLessThanOrEqual(600);
+    expect(save.world.agency.conflicts.length).toBeLessThan(320);
+    expect(save.world.agency.decisions.length).toBeLessThan(500);
     expect(save.world.agency.processedDecisionKeys.length).toBeLessThanOrEqual(900);
+    expect(new Set(save.world.worldHistory.facts.map(historyFactSemanticKey)).size).toBe(save.world.worldHistory.facts.length);
+    expect(new Set(save.world.agency.conflicts.map((conflict) => `${conflict.actorKind}:${conflict.actorId}:${conflict.createdSeasonYear}`)).size).toBe(save.world.agency.conflicts.length);
     expect(report.snapshots.every((snapshot) => snapshot.historyFacts <= 1_200)).toBe(true);
     expect(report.snapshots.every((snapshot) => snapshot.activeObjectives <= 420)).toBe(true);
     expect(report.snapshots.every((snapshot) => snapshot.activeStoryArcs <= 180)).toBe(true);

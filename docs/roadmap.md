@@ -335,4 +335,14 @@
 - active conflicts and recent decisions in the World feed;
 - schema 35 migration and module 14 ecosystem upgrade;
 - three-season and twenty-season invariant coverage.
+## v0.49 — Simulation quality and system repair
+
+- social incidents use participant, team and incident-type cooldowns;
+- conflict eruptions release tension instead of recursively creating more conflict pressure;
+- player agency requires real merit, career leverage and position-room context;
+- role reviews preserve contiguous unique depth ranks and aligned usage plans;
+- one actor can open only one conflict per season;
+- agency stories and transactions coalesce into one immutable world fact;
+- long-run audits detect depth gaps, repeated incidents, semantic fact duplicates and actor-season conflict duplicates;
+- schema 35 and ecosystem module 14 remain unchanged.
 

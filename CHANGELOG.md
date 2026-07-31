@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.49.0 — SIMULATION QUALITY & SYSTEM REPAIR
+
+### Existing-system repairs
+
+- repeated locker-room incidents now respect participant and team cooldowns instead of firing every week;
+- negative incidents release accumulated tension and reconciliation produces a stronger recovery;
+- weak deep reserves no longer open agency conflicts without real roster leverage;
+- one actor can open only one conflict per season and resolved history is compacted safely;
+- role-review decisions normalize the complete position room instead of creating duplicate depth ranks;
+- agency stories and transactions coalesce into one world fact with deterministic source handling.
+
+### Invariants and efficiency
+
+- depth-chart continuity, repeated social incidents, semantic fact duplicates and actor-season conflict duplicates are audited;
+- decision history is retained only while its conflict remains addressable;
+- social incidents and resolved conflicts are compacted with bounded histories;
+- save schema 35 and ecosystem module 14 remain unchanged.
+
+### Verification
+
+- 193 tests across 46 files;
+- three-season quality audit verifies bounded conflict and decision volume;
+- twenty-season autonomous audit validates references, identities, depth charts and final save schema.
+
 ## 0.48.0 — AUTONOMOUS AGENCY & CONSEQUENCES
 
 ### Decisions

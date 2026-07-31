@@ -1,5 +1,7 @@
 import type { GameDate } from "../../../core/calendar/types";
+import { FOOTBALL_ROSTER_POSITIONS } from "../team/positions";
 import { addGameDays } from "./constitution";
+import { historyFactSemanticKey } from "./history";
 import { advanceFootballEcosystem } from "./simulateEcosystem";
 import type { EcosystemCoach, EcosystemPlayer, EcosystemTeam, FootballEcosystemState } from "./types";
 
@@ -19,6 +21,8 @@ export type EcosystemInvariantCode =
   | "competition-balance"
   | "competition-reference"
   | "social-reference"
+  | "depth-chart"
+  | "simulation-quality"
   | "history-bound";
 
 export interface EcosystemInvariantIssue {
@@ -265,6 +269,19 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     for (const id of team.coachIds) {
       if (!coachIds.has(id)) issues.push({ code: "missing-reference", scope: team.id, detail: `${team.shortName}: отсутствует тренер ${id}.` });
     }
+    for (const position of FOOTBALL_ROSTER_POSITIONS) {
+      const room = world.players
+        .filter((player) => player.teamId === team.id && player.position === position)
+        .sort((left, right) => left.depthRank - right.depthRank || left.id.localeCompare(right.id));
+      const malformed = room.some((player, index) => player.depthRank !== index + 1);
+      if (malformed) {
+        issues.push({
+          code: "depth-chart",
+          scope: `${team.id}:${position}`,
+          detail: `${team.shortName} ${position}: depth chart содержит дубликаты или пропуски мест.`,
+        });
+      }
+    }
   }
 
   const collegeTeams = world.teams.filter((team) => team.level === "college");
@@ -351,8 +368,24 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
       if (issue) issues.push(issue);
     }
   }
+  const recentIncidentKeys = new Map<string, number>();
+  for (const incident of [...world.social.incidents].sort((left, right) =>
+    left.seasonYear - right.seasonYear || left.week - right.week || left.id.localeCompare(right.id))) {
+    const key = `${incident.teamId}:${incident.kind}:${[...incident.participantIds].sort().join("+")}`;
+    const current = incident.seasonYear * 32 + incident.week;
+    const previous = recentIncidentKeys.get(key);
+    if (previous !== undefined && current - previous < 4) {
+      issues.push({
+        code: "simulation-quality",
+        scope: incident.id,
+        detail: `${incident.id}: одинаковый социальный инцидент повторился раньше четырёх недель.`,
+      });
+    }
+    recentIncidentKeys.set(key, current);
+  }
 
   const historyFactIds = new Set(world.worldHistory.facts.map((fact) => fact.id));
+  const semanticFactKeys = new Set<string>();
   const knownHistoricalPlayerIds = new Set([
     ...playerIds,
     ...world.careerRegistry.records.map((record) => record.playerId),
@@ -361,6 +394,11 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     if (fact.teamIds.some((id) => !teamIds.has(id)) || fact.playerIds.some((id) => !knownHistoricalPlayerIds.has(id))) {
       issues.push({ code: "missing-reference", scope: fact.id, detail: `${fact.id}: исторический факт ссылается на неизвестную команду или игрока.` });
     }
+    const semanticKey = historyFactSemanticKey(fact);
+    if (semanticFactKeys.has(semanticKey)) {
+      issues.push({ code: "simulation-quality", scope: fact.id, detail: `${fact.id}: событие повторно записано в историю как отдельный факт.` });
+    }
+    semanticFactKeys.add(semanticKey);
   }
   for (const objective of world.worldHistory.objectives) {
     const ownerExists = objective.ownerKind === "team"
@@ -384,6 +422,8 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
   }
 
   const agencyDecisionIds = new Set(world.agency.decisions.map((decision) => decision.id));
+  const agencyConflictIds = new Set(world.agency.conflicts.map((conflict) => conflict.id));
+  const actorSeasonKeys = new Set<string>();
   for (const conflict of world.agency.conflicts) {
     const actorExists = conflict.actorKind === "team"
       ? teamIds.has(conflict.actorId)
@@ -401,6 +441,11 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     }
     const pressureIssue = rangeIssue(conflict.pressure, 0, 100, `${conflict.id}.pressure`);
     if (pressureIssue) issues.push(pressureIssue);
+    const actorSeasonKey = `${conflict.actorKind}:${conflict.actorId}:${conflict.createdSeasonYear}`;
+    if (actorSeasonKeys.has(actorSeasonKey)) {
+      issues.push({ code: "simulation-quality", scope: conflict.id, detail: `${conflict.id}: участник открыл несколько конфликтов в одном сезоне.` });
+    }
+    actorSeasonKeys.add(actorSeasonKey);
   }
   for (const decision of world.agency.decisions) {
     if (!teamIds.has(decision.teamId) || decision.teamIds.some((id) => !teamIds.has(id))) {
@@ -408,6 +453,9 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     }
     if (decision.playerIds.some((id) => !knownHistoricalPlayerIds.has(id))) {
       issues.push({ code: "missing-reference", scope: decision.id, detail: `${decision.id}: решение ссылается на неизвестного игрока.` });
+    }
+    if (!agencyConflictIds.has(decision.conflictId)) {
+      issues.push({ code: "missing-reference", scope: decision.id, detail: `${decision.id}: решение потеряло конфликт ${decision.conflictId}.` });
     }
   }
 

@@ -166,6 +166,49 @@ function factFromTransaction(transaction: EcosystemTransaction): EcosystemHistor
   };
 }
 
+export function historyFactSemanticKey(fact: EcosystemHistoryFact): string {
+  const agencyDecisionId = fact.sourceId.match(/^agency-(?:story|transaction):(decision:.+)$/)?.[1];
+  if (agencyDecisionId) return `agency:${agencyDecisionId}`;
+  const date = `${fact.createdOn.year}-${fact.createdOn.month}-${fact.createdOn.day}`;
+  const teams = [...fact.teamIds].sort().join("+");
+  const players = [...fact.playerIds].sort().join("+");
+  const coaches = [...fact.coachIds].sort().join("+");
+  return `${date}|${fact.title.trim()}|${fact.detail.trim()}|${teams}|${players}|${coaches}`;
+}
+
+function preferredFact(left: EcosystemHistoryFact, right: EcosystemHistoryFact): EcosystemHistoryFact {
+  if (left.sourceType !== right.sourceType) return right.sourceType === "transaction" ? right : left;
+  if (right.importance !== left.importance) return right.importance > left.importance ? right : left;
+  return right.id.localeCompare(left.id) > 0 ? right : left;
+}
+
+function dedupeFacts(facts: EcosystemHistoryFact[]): EcosystemHistoryFact[] {
+  const result: EcosystemHistoryFact[] = [];
+  const semanticIndexes = new Map<string, number>();
+  const idIndexes = new Map<string, number>();
+  for (const fact of facts) {
+    const key = historyFactSemanticKey(fact);
+    const existingIndex = idIndexes.get(fact.id) ?? semanticIndexes.get(key);
+    if (existingIndex === undefined) {
+      semanticIndexes.set(key, result.length);
+      idIndexes.set(fact.id, result.length);
+      result.push(fact);
+      continue;
+    }
+    const existing = result[existingIndex];
+    if (existing) {
+      const preferred = preferredFact(existing, fact);
+      result[existingIndex] = preferred;
+      semanticIndexes.set(historyFactSemanticKey(existing), existingIndex);
+      semanticIndexes.set(key, existingIndex);
+      idIndexes.set(existing.id, existingIndex);
+      idIndexes.set(fact.id, existingIndex);
+      idIndexes.set(preferred.id, existingIndex);
+    }
+  }
+  return result;
+}
+
 function objectiveOwnerMatches(objective: EcosystemObjective, fact: EcosystemHistoryFact): boolean {
   if (objective.ownerKind === "team") return fact.teamIds.includes(objective.ownerId);
   if (objective.ownerKind === "player") return fact.playerIds.includes(objective.ownerId);
@@ -350,21 +393,25 @@ export function advanceWorldHistory(input: AdvanceWorldHistoryInput): { history:
     ...input.stories.map(factFromStory).filter((fact): fact is EcosystemHistoryFact => Boolean(fact)),
     ...input.transactions.map(factFromTransaction),
   ];
-  const pending = new Map<string, EcosystemHistoryFact>();
+  const pendingSources: EcosystemHistoryFact[] = [];
   for (const fact of candidateFacts) {
     const key = `${fact.sourceType}:${fact.sourceId}`;
-    if (!processed.has(key)) pending.set(key, fact);
+    if (!processed.has(key)) pendingSources.push(fact);
   }
-  const newFacts = [...pending.values()].sort((left, right) => {
+  const existingFacts = dedupeFacts(input.history.facts);
+  const existingFactIds = new Set(existingFacts.map((fact) => fact.id));
+  const existingSemanticKeys = new Set(existingFacts.map(historyFactSemanticKey));
+  const pendingFacts = dedupeFacts(pendingSources);
+  const newFacts = pendingFacts.filter((fact) => !existingFactIds.has(fact.id) && !existingSemanticKeys.has(historyFactSemanticKey(fact))).sort((left, right) => {
     const leftDate = left.createdOn.year * 10_000 + left.createdOn.month * 100 + left.createdOn.day;
     const rightDate = right.createdOn.year * 10_000 + right.createdOn.month * 100 + right.createdOn.day;
     return leftDate - rightDate || left.week - right.week || left.id.localeCompare(right.id);
   });
-  const facts = [...input.history.facts, ...newFacts].slice(-MAX_FACTS);
+  const facts = dedupeFacts([...existingFacts, ...newFacts]).slice(-MAX_FACTS);
   const retainedFactIds = new Set(facts.map((fact) => fact.id));
   const processedSourceIds = [
     ...input.history.processedSourceIds,
-    ...newFacts.map((fact) => `${fact.sourceType}:${fact.sourceId}`),
+    ...pendingSources.map((fact) => `${fact.sourceType}:${fact.sourceId}`),
   ].slice(-MAX_PROCESSED_SOURCES);
   const currentObjectives = ensureCurrentObjectives(input.history.objectives, input.teams, input.players, input.coaches, input.seasonYear, input.week);
   const objectives = currentObjectives

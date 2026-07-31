@@ -13,8 +13,8 @@ function stressedCulture(social: EcosystemSocialState, teamId: string): Ecosyste
     ...social,
     teamCultures: social.teamCultures.map((culture) => culture.teamId === teamId ? {
       ...culture,
-      conflict: 94,
-      coachTrust: 18,
+      conflict: 100,
+      coachTrust: 5,
       morale: 28,
       stability: 24,
     } : culture),
@@ -24,11 +24,13 @@ function stressedCulture(social: EcosystemSocialState, teamId: string): Ecosyste
 function stressedPlayer(player: EcosystemPlayer): EcosystemPlayer {
   return {
     ...player,
-    depthRank: Math.max(6, player.depthRank),
+    depthRank: 4,
+    overall: Math.max(84, player.overall),
+    potential: Math.max(92, player.potential),
     status: "backup",
     usagePlan: "developmental",
-    form: 38,
-    tactical: { ...player.tactical, schemeFit: 22, roleFit: 30 },
+    form: 10,
+    tactical: { ...player.tactical, schemeFit: 5, roleFit: 10 },
     transferStatus: "none",
     eligibilityYears: Math.max(2, player.eligibilityYears),
   };
@@ -83,11 +85,33 @@ describe("autonomous agency and consequences", () => {
     agency = meeting.agency; teams = meeting.teams; players = meeting.players; coaches = meeting.coaches; social = meeting.social;
     expect(meeting.agency.decisions.some((decision) => decision.actorId === player.id && decision.kind === "player-role-push")).toBe(true);
     expect(meeting.players.find((item) => item.id === player.id)?.depthRank).toBe(player.depthRank - 1);
+    const roomRanks = meeting.players
+      .filter((item) => item.teamId === player.teamId && item.position === player.position)
+      .map((item) => item.depthRank)
+      .sort((left, right) => left - right);
+    expect(roomRanks).toEqual(roomRanks.map((_, index) => index + 1));
 
     const ultimatum = run(4);
     expect(ultimatum.agency.decisions.some((decision) => decision.actorId === player.id && decision.kind === "player-portal-entry")).toBe(true);
     expect(ultimatum.players.find((item) => item.id === player.id)?.transferStatus).toBe("portal");
     expect(ultimatum.transactions.some((transaction) => transaction.kind === "portal-entry" && transaction.playerId === player.id)).toBe(true);
+
+    let sameSeason = ultimatum;
+    for (const week of [5, 6, 7, 8]) {
+      sameSeason = advanceWorldAgency({
+        agency: sameSeason.agency,
+        history: save.world.worldHistory,
+        teams: sameSeason.teams,
+        players: sameSeason.players,
+        coaches: sameSeason.coaches,
+        social: sameSeason.social,
+        seasonYear: 2026,
+        week,
+        date: date(week),
+        worldSeed: save.meta.worldSeed,
+      });
+    }
+    expect(sameSeason.agency.conflicts.filter((conflict) => conflict.actorId === player.id && conflict.createdSeasonYear === 2026)).toHaveLength(1);
   });
 
   it("forces losing programs to change roster strategy and tactics", () => {

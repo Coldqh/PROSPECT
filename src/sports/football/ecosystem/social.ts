@@ -15,6 +15,14 @@ import type {
 
 const MAX_INACTIVE_BONDS = 700;
 const MAX_INCIDENTS = 180;
+const INCIDENT_COOLDOWN_WEEKS: Record<EcosystemSocialIncidentKind, number> = {
+  mentorship: 8,
+  "locker-room-conflict": 6,
+  leadership: 6,
+  reconciliation: 4,
+  "staff-friction": 6,
+  "broken-promise": 5,
+};
 
 interface BondDraft {
   entityAId: string;
@@ -77,6 +85,61 @@ function socialLookup(social: EcosystemSocialState): SocialLookup {
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
+}
+
+function socialOrdinal(seasonYear: number, week: number): number {
+  return seasonYear * 32 + week;
+}
+
+function participantKey(participantIds: string[]): string {
+  return [...participantIds].sort().join("+");
+}
+
+function incidentCooldownActive(
+  incidents: EcosystemSocialIncident[],
+  kind: EcosystemSocialIncidentKind,
+  teamId: string,
+  participantIds: string[],
+  seasonYear: number,
+  week: number,
+): boolean {
+  const key = participantKey(participantIds);
+  const current = socialOrdinal(seasonYear, week);
+  const cooldown = INCIDENT_COOLDOWN_WEEKS[kind];
+  return incidents.some((incident) => incident.kind === kind
+    && incident.teamId === teamId
+    && participantKey(incident.participantIds) === key
+    && current - socialOrdinal(incident.seasonYear, incident.week) < cooldown);
+}
+
+function recentNegativeTeamIncident(
+  incidents: EcosystemSocialIncident[],
+  teamId: string,
+  seasonYear: number,
+  week: number,
+): boolean {
+  const current = socialOrdinal(seasonYear, week);
+  return incidents.some((incident) => incident.teamId === teamId
+    && incident.impact < 0
+    && current - socialOrdinal(incident.seasonYear, incident.week) < 2);
+}
+
+function compactIncidents(incidents: EcosystemSocialIncident[]): EcosystemSocialIncident[] {
+  const retained: EcosystemSocialIncident[] = [];
+  for (const incident of [...incidents].sort((left, right) =>
+    socialOrdinal(left.seasonYear, left.week) - socialOrdinal(right.seasonYear, right.week)
+    || left.id.localeCompare(right.id))) {
+    if (incidentCooldownActive(
+      retained,
+      incident.kind,
+      incident.teamId,
+      incident.participantIds,
+      incident.seasonYear,
+      incident.week,
+    )) continue;
+    retained.push(incident);
+  }
+  return retained.slice(-MAX_INCIDENTS);
 }
 
 function pairId(left: string, right: string): string {
@@ -460,6 +523,7 @@ function chooseIncident(
   team: EcosystemTeam,
   bonds: EcosystemSocialBond[],
   culture: EcosystemTeamCulture,
+  incidents: EcosystemSocialIncident[],
   players: EcosystemPlayer[],
   coaches: EcosystemCoach[],
   seasonYear: number,
@@ -478,12 +542,52 @@ function chooseIncident(
     .filter((player) => player.teamId === team.id && (player.classYear === "Senior" || player.depthRank === 1))
     .sort((left, right) => right.overall - left.overall)[0];
 
-  if (worst && worst.tension >= 82) return createIncident("locker-room-conflict", team, [worst.entityAId, worst.entityBId], seasonYear, week, day, players, coaches);
-  if (broken && random.chance(0.7)) return createIncident("broken-promise", team, [entityPlayer(broken, players)?.id ?? broken.entityAId, ...bondCoaches(broken, coaches).map((coach) => coach.id)].slice(0, 2), seasonYear, week, day, players, coaches);
-  if (staff && staff.tension >= 67 && random.chance(0.65)) return createIncident("staff-friction", team, [staff.entityAId, staff.entityBId], seasonYear, week, day, players, coaches);
-  if (mentor && mentor.trust >= 72 && mentor.respect >= 70 && random.chance(0.36)) return createIncident("mentorship", team, [mentor.entityAId, mentor.entityBId], seasonYear, week, day, players, coaches);
-  if (culture.leadership >= 70 && culture.cohesion >= 62 && leader && random.chance(0.28)) return createIncident("leadership", team, [leader.id], seasonYear, week, day, players, coaches);
-  if (worst && worst.tension >= 58 && worst.tension <= 72 && worst.trust >= 48 && random.chance(0.22)) return createIncident("reconciliation", team, [worst.entityAId, worst.entityBId], seasonYear, week, day, players, coaches);
+  const negativeBlocked = recentNegativeTeamIncident(incidents, team.id, seasonYear, week);
+  if (worst && worst.tension >= 82) {
+    const participants = [worst.entityAId, worst.entityBId];
+    if (!negativeBlocked
+      && !incidentCooldownActive(incidents, "locker-room-conflict", team.id, participants, seasonYear, week)
+      && random.chance(0.45)) {
+      return createIncident("locker-room-conflict", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
+  if (broken) {
+    const participants = [entityPlayer(broken, players)?.id ?? broken.entityAId, ...bondCoaches(broken, coaches).map((coach) => coach.id)].slice(0, 2);
+    if (!negativeBlocked
+      && !incidentCooldownActive(incidents, "broken-promise", team.id, participants, seasonYear, week)
+      && random.chance(0.55)) {
+      return createIncident("broken-promise", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
+  if (staff && staff.tension >= 67) {
+    const participants = [staff.entityAId, staff.entityBId];
+    if (!negativeBlocked
+      && !incidentCooldownActive(incidents, "staff-friction", team.id, participants, seasonYear, week)
+      && random.chance(0.45)) {
+      return createIncident("staff-friction", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
+  if (mentor && mentor.trust >= 72 && mentor.respect >= 70) {
+    const participants = [mentor.entityAId, mentor.entityBId];
+    if (!incidentCooldownActive(incidents, "mentorship", team.id, participants, seasonYear, week)
+      && random.chance(0.26)) {
+      return createIncident("mentorship", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
+  if (culture.leadership >= 70 && culture.cohesion >= 62 && leader) {
+    const participants = [leader.id];
+    if (!incidentCooldownActive(incidents, "leadership", team.id, participants, seasonYear, week)
+      && random.chance(0.2)) {
+      return createIncident("leadership", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
+  if (worst && worst.tension >= 54 && worst.tension <= 82 && worst.trust >= 38) {
+    const participants = [worst.entityAId, worst.entityBId];
+    if (!incidentCooldownActive(incidents, "reconciliation", team.id, participants, seasonYear, week)
+      && random.chance(0.28)) {
+      return createIncident("reconciliation", team, participants, seasonYear, week, day, players, coaches);
+    }
+  }
   return undefined;
 }
 
@@ -491,11 +595,14 @@ function applyIncidentToBonds(bonds: EcosystemSocialBond[], incident: EcosystemS
   const ids = new Set(incident.participantIds);
   return bonds.map((bond) => {
     if (!ids.has(bond.entityAId) || (!ids.has(bond.entityBId) && incident.participantIds.length > 1)) return bond;
-    if (incident.kind === "locker-room-conflict" || incident.kind === "staff-friction" || incident.kind === "broken-promise") {
-      return { ...bond, trust: clamp(bond.trust - 5), chemistry: clamp(bond.chemistry - 4), tension: clamp(bond.tension + 6) };
+    if (incident.kind === "locker-room-conflict") {
+      return { ...bond, trust: clamp(bond.trust - 6), chemistry: clamp(bond.chemistry - 5), tension: clamp(bond.tension - 22) };
+    }
+    if (incident.kind === "staff-friction" || incident.kind === "broken-promise") {
+      return { ...bond, trust: clamp(bond.trust - 5), chemistry: clamp(bond.chemistry - 4), tension: clamp(bond.tension + 3) };
     }
     if (incident.kind === "reconciliation") {
-      return { ...bond, trust: clamp(bond.trust + 5), chemistry: clamp(bond.chemistry + 4), tension: clamp(bond.tension - 12) };
+      return { ...bond, trust: clamp(bond.trust + 7), chemistry: clamp(bond.chemistry + 6), tension: clamp(bond.tension - 20) };
     }
     return { ...bond, trust: clamp(bond.trust + 3), respect: clamp(bond.respect + 3), chemistry: clamp(bond.chemistry + 3), tension: clamp(bond.tension - 2) };
   });
@@ -564,11 +671,23 @@ export function simulateSocialWeek(
     seasonYear,
     week,
   ));
+  const priorIncidents = compactIncidents(social.incidents);
   const newIncidents: EcosystemSocialIncident[] = [];
   for (const team of teams) {
     const culture = cultures.find((item) => item.teamId === team.id);
     if (!culture) continue;
-    const incident = chooseIncident(team, bonds, culture, players, coaches, seasonYear, week, day, random.fork(`incident:${team.id}`));
+    const incident = chooseIncident(
+      team,
+      bonds,
+      culture,
+      [...priorIncidents, ...newIncidents],
+      players,
+      coaches,
+      seasonYear,
+      week,
+      day,
+      random.fork(`incident:${team.id}`),
+    );
     if (!incident) continue;
     newIncidents.push(incident);
     bonds = applyIncidentToBonds(bonds, incident);
@@ -594,7 +713,7 @@ export function simulateSocialWeek(
     lastProcessedDay: day,
     bonds,
     teamCultures: cultures,
-    incidents: [...social.incidents, ...newIncidents].slice(-MAX_INCIDENTS),
+    incidents: compactIncidents([...priorIncidents, ...newIncidents]),
     digest: [
       `${bonds.filter((bond) => bond.active).length} активных связей, ${bonds.filter((bond) => bond.active && bond.tension >= 70).length} острых конфликтов.`,
       `${cultures.filter((culture) => culture.cohesion >= 70).length} команд имеют сильную раздевалку; ${cultures.filter((culture) => culture.conflict >= 65).length} расколоты.`,

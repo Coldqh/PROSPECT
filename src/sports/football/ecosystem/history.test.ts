@@ -85,4 +85,52 @@ describe("world history and emergent storylines", () => {
     expect(new Set(objectives.map((item) => item.id)).size).toBe(objectives.length);
     expect(objectives.length).toBeLessThanOrEqual(420);
   });
+
+  it("records one fact when a real move is emitted as both story and transaction", () => {
+    const save = createStabilitySave("world-history-semantic-dedupe");
+    const player = save.world.players.find((item) => item.level === "college" && !item.isHero)!;
+    const team = save.world.teams.find((item) => item.id === player.teamId)!;
+    const decisionId = "decision:player-portal-entry:test";
+    const title = `${player.name} выходит в трансферный портал`;
+    const story: EcosystemStory = {
+      id: `agency-story:${decisionId}`,
+      kind: "transfer",
+      createdOn: save.meta.currentDate,
+      week: 4,
+      title,
+      detail: "Игрок потребовал смену роли. Статус изменён на portal.",
+      importance: 4,
+      teamIds: [team.id],
+      playerIds: [player.id],
+      coachIds: [],
+      relatedToHero: false,
+    };
+    const transaction: EcosystemTransaction = {
+      id: `agency-transaction:${decisionId}`,
+      kind: "portal-entry",
+      seasonYear: save.world.seasonYear,
+      week: 4,
+      createdOn: save.meta.currentDate,
+      title,
+      detail: "Статус изменён на portal.",
+      playerId: player.id,
+      fromTeamId: team.id,
+      relatedToHero: false,
+    };
+    const result = advanceWorldHistory({
+      history: save.world.worldHistory,
+      teams: save.world.teams,
+      players: save.world.players,
+      coaches: save.world.coaches,
+      stories: [story],
+      transactions: [transaction],
+      seasonYear: save.world.seasonYear,
+      week: 4,
+      date: save.meta.currentDate,
+    });
+    expect(result.history.facts).toHaveLength(1);
+    expect(result.history.facts[0]?.sourceType).toBe("transaction");
+    expect(result.history.processedSourceIds).toContain(`story:${story.id}`);
+    expect(result.history.processedSourceIds).toContain(`transaction:${transaction.id}`);
+  });
 });
