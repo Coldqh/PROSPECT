@@ -24,6 +24,7 @@ export function resolveHeroParticipationRole(save: CareerSave, match: FootballMa
   if (rank <= 1) return "starter";
   if (rank === 2) return "rotation";
   if (rank === 3) return "special-teams";
+  if (save.meta.phase === "high-school-preseason") return "developmental";
   return "inactive";
 }
 

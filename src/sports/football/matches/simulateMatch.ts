@@ -1304,6 +1304,30 @@ function advanceToSpecialOpportunity(save: CareerSave, match: FootballMatchState
     safety += 1;
   }
 
+  if (match.completedEpisodes.length === 0) {
+    const gameClockSeconds = Math.max(1, next.gameClockSeconds);
+    const clock = clockParts(gameClockSeconds);
+    const fieldPosition = position === "K" ? 62 : 55;
+    const driveStartFieldPosition = Math.max(1, fieldPosition - 8);
+    return {
+      ...next,
+      possession: "hero",
+      quarter: clock.quarter,
+      clockSeconds: clock.clockSeconds,
+      gameClockSeconds,
+      driveDown: 4,
+      driveDistance: position === "K" ? 6 : 8,
+      driveFieldPosition: fieldPosition,
+      driveNumber,
+      currentDriveId: `${match.gameId}-drive-${driveNumber}`,
+      driveStartQuarter: clock.quarter,
+      driveStartClockSeconds: clock.clockSeconds,
+      driveStartFieldPosition,
+      drivePlays: 3,
+      driveYards: fieldPosition - driveStartFieldPosition,
+    };
+  }
+
   return next;
 }
 
@@ -1965,7 +1989,7 @@ export function startMatch(
   if (participationMode === "auto") started = advanceAutomatic(started, false);
   if (participationMode === "every-snap") started = advancePastBenchSnaps(started);
   if (participationMode === "key-moments") {
-    started = advanceAutomatic(started, true);
+    started = advancePastBenchSnaps(started);
     if (started.football.match.status === "in-progress") {
       started = {
         ...started,
