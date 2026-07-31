@@ -19,7 +19,8 @@ import { activateCollegeHeroCareer } from "../../sports/football/college/heroCar
 import { createFootballEcosystem } from "../../sports/football/ecosystem/createEcosystem";
 import { createCareerRegistry } from "../../sports/football/ecosystem/lifecycle";
 import { createWorldHistory } from "../../sports/football/ecosystem/history";
-import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, upgradeFootballEcosystemV11, upgradeFootballEcosystemV12, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10, type LegacyFootballEcosystemStateV12 } from "../../sports/football/ecosystem/upgradeEcosystem";
+import { createAgencyState } from "../../sports/football/ecosystem/agency";
+import { upgradeFootballEcosystemV1, upgradeFootballEcosystemV2, upgradeFootballEcosystemV3, upgradeFootballEcosystemV4, upgradeFootballEcosystemV5, upgradeFootballEcosystemV6, upgradeFootballEcosystemV7, upgradeFootballEcosystemV8, upgradeFootballEcosystemV9, upgradeFootballEcosystemV10, upgradeFootballEcosystemV11, upgradeFootballEcosystemV12, upgradeFootballEcosystemV13, type LegacyFootballEcosystemStateV1, type LegacyFootballEcosystemStateV2, type LegacyFootballEcosystemStateV3, type LegacyFootballEcosystemStateV4, type LegacyFootballEcosystemStateV5, type LegacyFootballEcosystemStateV6, type LegacyFootballEcosystemStateV7, type LegacyFootballEcosystemStateV8, type LegacyFootballEcosystemStateV9, type LegacyFootballEcosystemStateV10, type LegacyFootballEcosystemStateV12, type LegacyFootballEcosystemStateV13 } from "../../sports/football/ecosystem/upgradeEcosystem";
 import { applyProfessionalSchemeFit, ensureProfessionalCoaching } from "../../sports/football/pro/coaching";
 import type { FootballRecruitingState, RecruitingProgram } from "../../sports/football/recruiting/types";
 import { careerSaveSchema, CURRENT_SCHEMA_VERSION, type CareerSave } from "./schema";
@@ -216,13 +217,24 @@ interface LegacyProfessionalLeagueSave {
   history: HistoryEntry[];
 }
 
-type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistry" | "worldHistory"> & {
+type LegacyWorldWithoutCareerRegistry = Omit<CareerSave["world"], "careerRegistry" | "worldHistory" | "agency"> & {
   careerRegistry?: CareerSave["world"]["careerRegistry"];
   worldHistory?: CareerSave["world"]["worldHistory"];
+  agency?: CareerSave["world"]["agency"];
 };
 type LegacyMatchWithHeroControl = CareerSave["football"]["match"] & { heroControlMode: "assisted" | "manual" | "spectator" };
 type LegacyFootballWithHeroControl = Omit<CareerSave["football"], "match"> & { match: LegacyMatchWithHeroControl };
 
+
+interface LegacyAgencySave {
+  meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 34 };
+  character: CareerSave["character"];
+  life: CareerSave["life"];
+  football: CareerSave["football"];
+  relationships: CareerSave["relationships"];
+  world: LegacyFootballEcosystemStateV13;
+  history: HistoryEntry[];
+}
 
 interface LegacyWorldHistorySave {
   meta: Omit<CareerSave["meta"], "schemaVersion"> & { schemaVersion: 33 };
@@ -497,7 +509,7 @@ function parseMigratedSave(input: {
   football: FootballCareerState;
   history: HistoryEntry[];
   relationships?: CareerSave["relationships"];
-  world?: CareerSave["world"] | LegacyWorldWithoutCareerRegistry | LegacyFootballEcosystemStateV12;
+  world?: CareerSave["world"] | LegacyWorldWithoutCareerRegistry | LegacyFootballEcosystemStateV12 | LegacyFootballEcosystemStateV13;
 }): CareerSave {
   const football = withProfessionalState(input.football, input.meta.worldSeed, input.meta.currentDate.year + 4);
   const sourceWorld = input.world ?? createFootballEcosystem(
@@ -507,14 +519,19 @@ function parseMigratedSave(input: {
     input.meta.currentDate,
     input.life.completedDays,
   );
-  const upgradedWorld = sourceWorld.moduleVersion === 12
-    ? upgradeFootballEcosystemV12(sourceWorld, input.meta.currentDate)
-    : ("worldHistory" in sourceWorld && sourceWorld.worldHistory
-      ? sourceWorld
-      : {
-          ...sourceWorld,
-          worldHistory: createWorldHistory(sourceWorld.teams, sourceWorld.players, sourceWorld.coaches, sourceWorld.seasonYear, Math.max(1, sourceWorld.seasonWeek)),
-        });
+  const upgradedWorld = sourceWorld.moduleVersion === 13
+    ? upgradeFootballEcosystemV13(sourceWorld, input.meta.currentDate)
+    : sourceWorld.moduleVersion === 12
+      ? upgradeFootballEcosystemV12(sourceWorld, input.meta.currentDate)
+      : ("worldHistory" in sourceWorld && sourceWorld.worldHistory && "agency" in sourceWorld && sourceWorld.agency
+        ? sourceWorld
+        : {
+            ...sourceWorld,
+            worldHistory: "worldHistory" in sourceWorld && sourceWorld.worldHistory
+              ? sourceWorld.worldHistory
+              : createWorldHistory(sourceWorld.teams, sourceWorld.players, sourceWorld.coaches, sourceWorld.seasonYear, Math.max(1, sourceWorld.seasonWeek)),
+            agency: createAgencyState(sourceWorld.seasonYear, Math.max(1, sourceWorld.seasonWeek)),
+          });
   const world = upgradedWorld.careerRegistry?.records.length
     ? upgradedWorld
     : { ...upgradedWorld, careerRegistry: createCareerRegistry(upgradedWorld.players, upgradedWorld.teams, upgradedWorld.seasonYear) };
@@ -589,6 +606,24 @@ function upgradeProfessionalVersionOne(state: LegacyProfessionalStateV1, worldSe
 }
 
 
+
+function migrateVersionThirtyFour(input: LegacyAgencySave): CareerSave {
+  return parseMigratedSave({
+    ...input,
+    meta: { ...input.meta, schemaVersion: CURRENT_SCHEMA_VERSION },
+    world: upgradeFootballEcosystemV13(input.world, input.meta.currentDate),
+    history: [
+      ...input.history,
+      {
+        id: `migration-${input.meta.id}-v35`,
+        occurredAt: input.meta.updatedAt,
+        type: "save-migrated",
+        title: "Автономные решения подключены",
+        description: "Игроки, штабы и программы теперь развивают конфликты и применяют реальные последствия к роли, рынку, плану состава и тактике.",
+      },
+    ],
+  });
+}
 
 function migrateVersionThirtyThree(input: LegacyWorldHistorySave): CareerSave {
   return parseMigratedSave({
@@ -1441,6 +1476,7 @@ export function migrateCareerSave(input: unknown): MigrationResult {
   const schemaVersion = (input as { meta?: { schemaVersion?: unknown } }).meta?.schemaVersion;
 
   if (schemaVersion === CURRENT_SCHEMA_VERSION) return { save: careerSaveSchema.parse(input) };
+  if (schemaVersion === 34) return migratedResult(migrateVersionThirtyFour(input as LegacyAgencySave), 34);
   if (schemaVersion === 33) return migratedResult(migrateVersionThirtyThree(input as LegacyWorldHistorySave), 33);
   if (schemaVersion === 32) return migratedResult(migrateVersionThirtyTwo(input as LegacyUsageSave), 32);
   if (schemaVersion === 31) return migratedResult(migrateVersionThirtyOne(input as LegacyTacticalStaffSave), 31);

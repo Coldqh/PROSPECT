@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.48.0 — AUTONOMOUS AGENCY & CONSEQUENCES
+
+### Decisions
+
+- players, programs and head coaches evaluate role, trust, scheme fit, results and financial pressure;
+- conflicts move through concern, meeting, ultimatum and resolved stages;
+- NPC players can force a role review or enter the transfer portal;
+- programs can reset roster strategy and change tactical direction;
+- staffs can receive contract ultimatums and reshuffle coordinator responsibilities;
+- the hero is never moved into the portal without an explicit player decision.
+
+### Persistence and stability
+
+- conflicts and decisions persist in save schema 35 and ecosystem module 14;
+- schema 34 saves receive a deterministic empty agency state without regenerating the world;
+- conflict cooldowns prevent repeated same-week decisions;
+- agency collections and source references are bounded and cleaned after history compaction;
+- the World feed exposes active conflicts and recent consequences.
+
+### Verification
+
+- 192 tests across 46 files;
+- deterministic player, team and coach decision coverage;
+- three-season and twenty-season autonomous invariant audits;
+- save-schema validation after the long-run simulation.
+
 ## 0.47.0 — WORLD HISTORY & EMERGENT STORIES
 
 ### Autonomous history

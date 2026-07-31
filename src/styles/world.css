@@ -446,3 +446,72 @@
   .league-directory__mark { width: 38px; height: 38px; }
   .pro-team-sheet__needs > div { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
+
+/* v0.48 autonomous agency */
+.world-v48-agency {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-raised);
+}
+
+.world-v48-agency > header,
+.world-v48-agency > header > div,
+.world-v48-agency__grid article,
+.world-v48-agency__decisions p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.world-v48-agency > header > div,
+.world-v48-agency__grid article > div,
+.world-v48-agency__decisions p {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.world-v48-agency small {
+  color: var(--text-muted);
+  font-size: var(--font-caption);
+}
+
+.world-v48-agency__grid {
+  display: grid;
+  gap: 8px;
+}
+
+.world-v48-agency__grid article {
+  padding: 11px 12px;
+  border-left: 2px solid var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.world-v48-agency__grid article.is-relevant {
+  border-left-color: var(--accent);
+}
+
+.world-v48-agency__grid article > span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.world-v48-agency__decisions {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.world-v48-agency__decisions p {
+  margin: 0;
+}
+
+.world-v48-agency__decisions span {
+  color: var(--text-muted);
+  line-height: 1.35;
+}

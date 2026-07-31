@@ -603,6 +603,23 @@ describe("migrateCareerSave", () => {
 
 
 
+  it("migrates version thirty-four saves into autonomous agency", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { agency: _agency, ...legacyWorld } = current.world;
+    const versionThirtyFour = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 34 as const },
+      world: { ...legacyWorld, moduleVersion: 13 as const },
+    };
+    const result = migrateCareerSave(versionThirtyFour);
+    expect(result.migratedFrom).toBe(34);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    expect(result.save.world.agency.version).toBe(1);
+    expect(result.save.world.agency.conflicts).toHaveLength(0);
+    expect(result.save.history.at(-1)?.title).toBe("Автономные решения подключены");
+  });
+
   it("migrates version thirty-three saves into persistent world history", () => {
     const current = migrateCareerSave(legacySave).save;
     const { worldHistory: _worldHistory, ...legacyWorld } = current.world;

@@ -325,3 +325,14 @@
 - schema 34 migration and module 13 ecosystem upgrade;
 - hard history bounds and 20-season invariant coverage.
 
+## v0.48 — Autonomous agency and consequences
+
+- persistent player, team and coach conflicts driven by role, trust, scheme fit, results and finances;
+- concern, meeting, ultimatum and resolved stages with deterministic escalation;
+- real role changes, portal entries, roster-plan resets, tactical shifts and staff reshuffles;
+- hero protection from automatic irreversible transfer decisions;
+- conflict cooldowns, unique identities and bounded decision history;
+- active conflicts and recent decisions in the World feed;
+- schema 35 migration and module 14 ecosystem upgrade;
+- three-season and twenty-season invariant coverage.
+

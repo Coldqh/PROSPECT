@@ -22,6 +22,7 @@ import { createSocialEcosystem } from "./social";
 import { completeCoachingStaff, coachingStaffForTeam } from "./coaching";
 import { reevaluatePlayerTacticalProfile } from "./tactics";
 import { createWorldHistory } from "./history";
+import { createAgencyState } from "./agency";
 
 type LegacyTeam = Omit<
   EcosystemTeam,
@@ -47,7 +48,7 @@ type LegacyV2Market = Omit<
 
 export interface LegacyFootballEcosystemStateV2 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "constitution" | "cycle" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory"
+  "moduleVersion" | "constitution" | "cycle" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory" | "agency"
 > {
   moduleVersion: 2;
   teams: LegacyV2Team[];
@@ -64,7 +65,7 @@ type LegacyV3Market = Omit<
 
 export interface LegacyFootballEcosystemStateV3 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory"
+  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory" | "agency"
 > {
   moduleVersion: 3;
   teams: LegacyV3Team[];
@@ -81,7 +82,7 @@ type LegacyV4Market = Omit<
 
 export interface LegacyFootballEcosystemStateV4 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory"
+  "moduleVersion" | "teams" | "players" | "market" | "talentPipeline" | "competition" | "social" | "worldHistory" | "agency"
 > {
   moduleVersion: 4;
   teams: LegacyV4Team[];
@@ -95,7 +96,7 @@ type LegacyV5Market = Omit<FootballEcosystemState["market"], "plannedClassSpots"
 
 export interface LegacyFootballEcosystemStateV5 extends Omit<
   FootballEcosystemState,
-  "moduleVersion" | "teams" | "players" | "market" | "competition" | "social" | "worldHistory"
+  "moduleVersion" | "teams" | "players" | "market" | "competition" | "social" | "worldHistory" | "agency"
 > {
   moduleVersion: 5;
   teams: LegacyV5Team[];
@@ -103,29 +104,29 @@ export interface LegacyFootballEcosystemStateV5 extends Omit<
   market: LegacyV5Market;
 }
 
-export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "movementMarket" | "market" | "competition" | "social" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV6 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "movementMarket" | "market" | "competition" | "social" | "worldHistory" | "agency"> {
   moduleVersion: 6;
   teams: Array<Omit<EcosystemTeam, "tactical">>;
   players: Array<Omit<EcosystemPlayer, "tactical">>;
   market: Omit<FootballEcosystemState["market"], "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 }
 
-export interface LegacyFootballEcosystemStateV7 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "competition" | "social" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV7 extends Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "competition" | "social" | "worldHistory" | "agency"> {
   moduleVersion: 7;
   teams: Array<Omit<EcosystemTeam, "tactical">>;
   players: Array<Omit<EcosystemPlayer, "tactical">>;
   market: Omit<FootballEcosystemState["market"], "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
 }
 
-export interface LegacyFootballEcosystemStateV8 extends Omit<FootballEcosystemState, "moduleVersion" | "competition" | "social" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV8 extends Omit<FootballEcosystemState, "moduleVersion" | "competition" | "social" | "worldHistory" | "agency"> {
   moduleVersion: 8;
 }
 
-export interface LegacyFootballEcosystemStateV9 extends Omit<FootballEcosystemState, "moduleVersion" | "social" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV9 extends Omit<FootballEcosystemState, "moduleVersion" | "social" | "worldHistory" | "agency"> {
   moduleVersion: 9;
 }
 
-export interface LegacyFootballEcosystemStateV10 extends Omit<FootballEcosystemState, "moduleVersion" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV10 extends Omit<FootballEcosystemState, "moduleVersion" | "worldHistory" | "agency"> {
   moduleVersion: 10;
 }
 
@@ -150,7 +151,7 @@ export interface LegacyFootballEcosystemStateV1 {
 const CLASS_INDEX = { Freshman: 0, Sophomore: 1, Junior: 2, Senior: 3 } as const;
 
 type PreRosterMarket = Omit<FootballEcosystemState["market"], "plannedClassSpots" | "developmentalPlayers" | "plannedPositionChanges" | "activeNegotiations" | "withdrawnOffers" | "transferCandidates" | "lowSchemeFitPlayers" | "programsInstallingNewSystems">;
-type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition" | "social" | "careerRegistry" | "worldHistory"> & {
+type PreRosterWorld = Omit<FootballEcosystemState, "moduleVersion" | "teams" | "players" | "market" | "movementMarket" | "competition" | "social" | "careerRegistry" | "worldHistory" | "agency"> & {
   teams: Array<Omit<EcosystemTeam, "rosterPlan" | "tactical">>;
   players: Array<Omit<EcosystemPlayer, "usagePlan" | "positionHistory" | "tactical">>;
   market: PreRosterMarket;
@@ -359,7 +360,7 @@ function normalizeFullRosterWorld(input: LegacyFootballEcosystemStateV10 | Footb
   const movementMarket = createUnifiedMovementMarket(compliantTeams, planned.players, input.seasonYear);
   return {
     ...input,
-    moduleVersion: 13,
+    moduleVersion: 14,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
     teams: compliantTeams,
     players: planned.players,
@@ -378,6 +379,8 @@ function normalizeFullRosterWorld(input: LegacyFootballEcosystemStateV10 | Footb
     social: createSocialEcosystem(compliantTeams, planned.players, coaches, input.seasonYear, new SeededRandom(`upgrade:social:full-rosters:${input.seasonYear}`), input.lastSimulatedDay),
     worldHistory: (input as Partial<FootballEcosystemState>).worldHistory
       ?? createWorldHistory(compliantTeams, planned.players, coaches, input.seasonYear, Math.max(1, input.seasonWeek)),
+    agency: (input as Partial<FootballEcosystemState>).agency
+      ?? createAgencyState(input.seasonYear, Math.max(1, input.seasonWeek)),
   };
 }
 
@@ -409,7 +412,7 @@ export function upgradeFootballEcosystemV11(
   });
   return {
     ...world,
-    moduleVersion: 13,
+    moduleVersion: 14,
     cycle: world.cycle ?? resolveWorldCycle(currentDate),
     teams,
     players,
@@ -425,10 +428,11 @@ export function upgradeFootballEcosystemV11(
     },
     social: createSocialEcosystem(teams, players, completed.coaches, world.seasonYear, new SeededRandom(`upgrade:social:staff-v12:${world.seasonYear}`), world.lastSimulatedDay),
     worldHistory: createWorldHistory(teams, players, completed.coaches, world.seasonYear, Math.max(1, world.seasonWeek)),
+    agency: createAgencyState(world.seasonYear, Math.max(1, world.seasonWeek)),
   };
 }
 
-export interface LegacyFootballEcosystemStateV12 extends Omit<FootballEcosystemState, "moduleVersion" | "worldHistory"> {
+export interface LegacyFootballEcosystemStateV12 extends Omit<FootballEcosystemState, "moduleVersion" | "worldHistory" | "agency"> {
   moduleVersion: 12;
 }
 
@@ -438,9 +442,26 @@ export function upgradeFootballEcosystemV12(
 ): FootballEcosystemState {
   return {
     ...input,
-    moduleVersion: 13,
+    moduleVersion: 14,
     cycle: input.cycle ?? resolveWorldCycle(currentDate),
     worldHistory: createWorldHistory(input.teams, input.players, input.coaches, input.seasonYear, Math.max(1, input.seasonWeek)),
+    agency: createAgencyState(input.seasonYear, Math.max(1, input.seasonWeek)),
+  };
+}
+
+export interface LegacyFootballEcosystemStateV13 extends Omit<FootballEcosystemState, "moduleVersion" | "agency"> {
+  moduleVersion: 13;
+}
+
+export function upgradeFootballEcosystemV13(
+  input: LegacyFootballEcosystemStateV13,
+  currentDate: GameDate,
+): FootballEcosystemState {
+  return {
+    ...input,
+    moduleVersion: 14,
+    cycle: input.cycle ?? resolveWorldCycle(currentDate),
+    agency: createAgencyState(input.seasonYear, Math.max(1, input.seasonWeek)),
   };
 }
 

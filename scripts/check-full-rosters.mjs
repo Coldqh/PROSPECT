@@ -23,8 +23,8 @@ for (const position of positions) {
 const requiredTokens = [
   ["positions", "POSITION_ROOM_TARGETS"],
   ["positions", "POSITION_STARTER_TARGETS"],
-  ["ecosystemTypes", "export const ECOSYSTEM_MODULE_VERSION = 13"],
-  ["schema", "export const CURRENT_SCHEMA_VERSION = 34"],
+  ["ecosystemTypes", "export const ECOSYSTEM_MODULE_VERSION = 14"],
+  ["schema", "export const CURRENT_SCHEMA_VERSION = 35"],
   ["migrations", "migrateVersionTwentyFour"],
   ["upgrade", "upgradeFootballEcosystemV10"],
   ["upgrade", "normalizeFullRosterWorld"],

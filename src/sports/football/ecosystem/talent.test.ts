@@ -12,6 +12,7 @@ import { createTalentPipeline, createTalentProfile, processAnnualTalentFlow, sim
 import { createPlayerTacticalProfile, createTacticalIdentity } from "./tactics";
 import type { EcosystemPlayer, EcosystemTeam, FootballEcosystemState } from "./types";
 import { createWorldHistory } from "./history";
+import { createAgencyState } from "./agency";
 
 function createTeam(id: string, level: EcosystemTeam["level"], stateCode: string): EcosystemTeam {
   const random = new SeededRandom(id);
@@ -138,6 +139,7 @@ function createWorld(team: EcosystemTeam, college: EcosystemTeam, senior: Ecosys
     social: createSocialEcosystem([team, college], [senior], [], 2026, new SeededRandom("talent-test:social")),
     careerRegistry: { version: 1, records: [], draftPoolIds: [], retiredIds: [], lastSyncedSeasonYear: 2026 },
     worldHistory: createWorldHistory([team, college], [senior], [], 2026, 1),
+    agency: createAgencyState(2026, 1),
   };
 }
 

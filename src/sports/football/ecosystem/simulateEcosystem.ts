@@ -25,6 +25,7 @@ import { addGameDays, advanceAcademicWeek, createPlayerEligibility, isPlayerAvai
 import { createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
 import { syncCareerRegistry } from "./lifecycle";
 import { advanceWorldHistory } from "./history";
+import { advanceWorldAgency } from "./agency";
 import {
   availableNilCapacity,
   availableRecruitingBudget,
@@ -1399,6 +1400,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   let competition = world.competition;
   let social = world.social;
   let worldHistory = world.worldHistory;
+  let agency = world.agency;
   const generatedStories: EcosystemStory[] = [];
   const generatedTransactions: EcosystemTransaction[] = [];
   const targetDay = save.life.completedDays;
@@ -1612,6 +1614,26 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
         social = world.social;
         conferences = world.conferences;
       }
+
+      const agencyResult = advanceWorldAgency({
+        agency,
+        history: worldHistory,
+        teams,
+        players,
+        coaches,
+        social,
+        seasonYear: world.seasonYear,
+        week: Math.max(1, world.seasonWeek),
+        date: simulatedDate,
+        worldSeed: save.meta.worldSeed,
+      });
+      agency = agencyResult.agency;
+      teams = agencyResult.teams;
+      players = agencyResult.players;
+      coaches = agencyResult.coaches;
+      social = agencyResult.social;
+      generatedStories.push(...agencyResult.stories);
+      generatedTransactions.push(...agencyResult.transactions);
     }
 
     world = {
@@ -1628,6 +1650,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
       movementMarket,
       competition,
       social,
+      agency,
       market: market(players, coaches, teams, talentPipeline, movementMarket),
     };
   }
@@ -1664,6 +1687,16 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     date: world.lastUpdatedOn,
   });
   worldHistory = historyResult.history;
+  const retainedAgencyFactIds = new Set(worldHistory.facts.map((fact) => fact.id));
+  const retainedAgencyDecisionIds = new Set(agency.decisions.map((decision) => decision.id));
+  agency = {
+    ...agency,
+    conflicts: agency.conflicts.map((conflict) => ({
+      ...conflict,
+      evidenceFactIds: conflict.evidenceFactIds.filter((id) => retainedAgencyFactIds.has(id)),
+      decisionIds: conflict.decisionIds.filter((id) => retainedAgencyDecisionIds.has(id)),
+    })),
+  };
   const stories = [...sourceStories, ...historyResult.stories].slice(-90);
   const digestSource = [...generatedStories, ...historyResult.stories];
   world = {
@@ -1672,6 +1705,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     transactions,
     careerRegistry,
     worldHistory,
+    agency,
     digest: historyResult.history.digest.length > 0
       ? historyResult.history.digest
       : buildDigest(digestSource.length > 0 ? digestSource : world.stories.slice(-12), world),

@@ -112,6 +112,19 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
     () => world.worldHistory.objectives.filter((objective) => objective.status === "active").length,
     [world.worldHistory.objectives],
   );
+  const activeConflicts = useMemo(
+    () => [...world.agency.conflicts]
+      .filter((conflict) => conflict.stage !== "resolved")
+      .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.pressure - left.pressure || right.lastWeek - left.lastWeek)
+      .slice(0, 4),
+    [world.agency.conflicts],
+  );
+  const recentDecisions = useMemo(
+    () => [...world.agency.decisions]
+      .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.seasonYear - left.seasonYear || right.week - left.week)
+      .slice(0, 3),
+    [world.agency.decisions],
+  );
   const rankings = useMemo(
     () => [...world.competition.rankings].sort((left, right) => left.rank - right.rank).slice(0, 25),
     [world.competition.rankings],
@@ -193,6 +206,33 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
         </section>
       ) : selectedView === "feed" ? (
         <>
+          <section className="world-v48-agency" aria-label="Автономные решения">
+            <header>
+              <div><small>ДАВЛЕНИЕ И РЕШЕНИЯ</small><strong>{activeConflicts.length} открыто</strong></div>
+              <span>{recentDecisions.length} последних</span>
+            </header>
+            <div className="world-v48-agency__grid">
+              {activeConflicts.map((conflict) => {
+                const actor = conflict.actorKind === "team"
+                  ? world.teams.find((team) => team.id === conflict.actorId)?.shortName
+                  : conflict.actorKind === "player"
+                    ? world.players.find((player) => player.id === conflict.actorId)?.name
+                    : world.coaches.find((coach) => coach.id === conflict.actorId)?.name;
+                return (
+                  <article key={conflict.id} className={conflict.relatedToHero ? "is-relevant" : ""}>
+                    <div><small>{conflict.stage.toUpperCase()} · {conflict.kind}</small><strong>{actor ?? conflict.actorId}</strong></div>
+                    <span>{Math.round(conflict.pressure)}</span>
+                  </article>
+                );
+              })}
+              {activeConflicts.length === 0 && <p>Открытых конфликтов нет.</p>}
+            </div>
+            {recentDecisions.length > 0 && (
+              <div className="world-v48-agency__decisions">
+                {recentDecisions.map((decision) => <p key={decision.id}><strong>{decision.title}</strong><span>{decision.consequence}</span></p>)}
+              </div>
+            )}
+          </section>
           <section className="world-v47-history" aria-label="История мира">
             <header><div><small>ЖИВОЙ МИР</small><strong>{activeArcs.length} линий</strong></div><span>{activeObjectives} целей</span></header>
             {activeArcs.map((arc) => (

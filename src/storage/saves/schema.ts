@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 34;
+export const CURRENT_SCHEMA_VERSION = 35;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -1736,7 +1736,7 @@ const ecosystemSocialSchema = z.object({
 const ecosystemCareerEventSchema = z.object({
   id: z.string().min(1),
   seasonYear: z.number().int().min(2020).max(2200),
-  week: z.number().int().min(0).max(400),
+  week: z.number().int().min(0).max(10000),
   kind: z.enum(["created", "enrolled", "transferred", "position-change", "graduated", "declared", "drafted", "signed", "released", "retired"]),
   detail: z.string().min(2),
   fromTeamId: z.string().min(1).optional(),
@@ -1774,7 +1774,7 @@ const ecosystemHistoryFactSchema = z.object({
   sourceType: z.enum(["story", "transaction"]),
   sourceId: z.string().min(1),
   seasonYear: z.number().int().min(2020).max(2200),
-  week: z.number().int().min(1).max(400),
+  week: z.number().int().min(1).max(10000),
   createdOn: gameDateSchema,
   kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl", "mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise", "storyline", "portal-entry", "coach-fired", "coach-hired", "recruit-enrolled", "facility-investment", "budget-cut", "nil-commitment", "juco-entry", "walk-on-entry", "talent-enrolled", "scholarship-awarded", "redshirt-assigned", "offer-issued"]),
   title: z.string().min(2),
@@ -1793,7 +1793,7 @@ const ecosystemObjectiveSchema = z.object({
   kind: z.enum(["win-target", "rebuild-program", "protect-job", "build-program", "earn-starting-role", "breakout-season"]),
   status: z.enum(["active", "achieved", "failed"]),
   createdSeasonYear: z.number().int().min(2020).max(2200),
-  createdWeek: z.number().int().min(1).max(400),
+  createdWeek: z.number().int().min(1).max(10000),
   targetSeasonYear: z.number().int().min(2020).max(2200),
   progress: z.number().min(0).max(1000),
   target: z.number().min(0).max(1000),
@@ -1801,7 +1801,7 @@ const ecosystemObjectiveSchema = z.object({
   detail: z.string().min(2),
   evidenceFactIds: z.array(z.string().min(1)).max(16),
   completedSeasonYear: z.number().int().min(2020).max(2200).optional(),
-  completedWeek: z.number().int().min(1).max(400).optional(),
+  completedWeek: z.number().int().min(1).max(10000).optional(),
 });
 
 const ecosystemStoryArcSchema = z.object({
@@ -1814,9 +1814,9 @@ const ecosystemStoryArcSchema = z.object({
   playerIds: z.array(z.string().min(1)),
   coachIds: z.array(z.string().min(1)),
   startedSeasonYear: z.number().int().min(2020).max(2200),
-  startedWeek: z.number().int().min(1).max(400),
+  startedWeek: z.number().int().min(1).max(10000),
   lastSeasonYear: z.number().int().min(2020).max(2200),
-  lastWeek: z.number().int().min(1).max(400),
+  lastWeek: z.number().int().min(1).max(10000),
   momentum: z.number().min(-100).max(100),
   chapters: z.number().int().nonnegative().max(1000),
   factIds: z.array(z.string().min(1)).max(16),
@@ -1826,7 +1826,7 @@ const ecosystemStoryArcSchema = z.object({
 const ecosystemWorldHistorySchema = z.object({
   version: z.literal(1),
   lastProcessedSeasonYear: z.number().int().min(2020).max(2200),
-  lastProcessedWeek: z.number().int().min(1).max(400),
+  lastProcessedWeek: z.number().int().min(1).max(10000),
   processedSourceIds: z.array(z.string().min(1)).max(1800),
   facts: z.array(ecosystemHistoryFactSchema).max(1200),
   objectives: z.array(ecosystemObjectiveSchema).max(420),
@@ -1834,8 +1834,57 @@ const ecosystemWorldHistorySchema = z.object({
   digest: z.array(z.string().min(2)).max(6),
 });
 
+const ecosystemConflictSchema = z.object({
+  id: z.string().min(1),
+  actorKind: z.enum(["team", "player", "coach"]),
+  actorId: z.string().min(1),
+  teamId: z.string().min(1),
+  kind: z.enum(["role", "scheme-fit", "trust", "results", "finances", "staff-direction"]),
+  stage: z.enum(["concern", "meeting", "ultimatum", "resolved"]),
+  pressure: z.number().min(0).max(100),
+  createdSeasonYear: z.number().int().min(2020).max(2200),
+  createdWeek: z.number().int().min(1).max(10000),
+  lastSeasonYear: z.number().int().min(2020).max(2200),
+  lastWeek: z.number().int().min(1).max(10000),
+  evidenceFactIds: z.array(z.string().min(1)).max(8),
+  decisionIds: z.array(z.string().min(1)).max(6),
+  relatedToHero: z.boolean(),
+  resolvedSeasonYear: z.number().int().min(2020).max(2200).optional(),
+  resolvedWeek: z.number().int().min(1).max(10000).optional(),
+});
+
+const ecosystemAgencyDecisionSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["player-role-push", "player-portal-entry", "team-roster-reset", "team-tactical-shift", "coach-staff-reshuffle", "coach-contract-ultimatum"]),
+  actorKind: z.enum(["team", "player", "coach"]),
+  actorId: z.string().min(1),
+  teamId: z.string().min(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  week: z.number().int().min(1).max(10000),
+  createdOn: gameDateSchema,
+  conflictId: z.string().min(1),
+  sourceObjectiveId: z.string().min(1).optional(),
+  title: z.string().min(2),
+  detail: z.string().min(2),
+  consequence: z.string().min(2),
+  teamIds: z.array(z.string().min(1)),
+  playerIds: z.array(z.string().min(1)),
+  coachIds: z.array(z.string().min(1)),
+  relatedToHero: z.boolean(),
+});
+
+const ecosystemAgencySchema = z.object({
+  version: z.literal(1),
+  lastProcessedSeasonYear: z.number().int().min(2020).max(2200),
+  lastProcessedWeek: z.number().int().min(1).max(10000),
+  conflicts: z.array(ecosystemConflictSchema).max(320),
+  decisions: z.array(ecosystemAgencyDecisionSchema).max(600),
+  processedDecisionKeys: z.array(z.string().min(1)).max(900),
+  digest: z.array(z.string().min(2)).max(6),
+});
+
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(13),
+  moduleVersion: z.literal(14),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -2011,6 +2060,7 @@ const footballEcosystemSchema = z.object({
   social: ecosystemSocialSchema,
   careerRegistry: ecosystemCareerRegistrySchema,
   worldHistory: ecosystemWorldHistorySchema,
+  agency: ecosystemAgencySchema,
 });
 
 const careerMetaSchema = z.object({

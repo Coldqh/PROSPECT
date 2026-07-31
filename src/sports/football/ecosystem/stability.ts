@@ -239,6 +239,8 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
   issues.push(...uniqueIssues(world.worldHistory.facts, (fact) => fact.id, "worldHistory.facts"));
   issues.push(...uniqueIssues(world.worldHistory.objectives, (objective) => objective.id, "worldHistory.objectives"));
   issues.push(...uniqueIssues(world.worldHistory.arcs, (arc) => arc.id, "worldHistory.arcs"));
+  issues.push(...uniqueIssues(world.agency.conflicts, (conflict) => conflict.id, "agency.conflicts"));
+  issues.push(...uniqueIssues(world.agency.decisions, (decision) => decision.id, "agency.decisions"));
 
   for (const player of world.players) {
     if (!teamIds.has(player.teamId)) {
@@ -381,6 +383,34 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     if (momentumIssue) issues.push(momentumIssue);
   }
 
+  const agencyDecisionIds = new Set(world.agency.decisions.map((decision) => decision.id));
+  for (const conflict of world.agency.conflicts) {
+    const actorExists = conflict.actorKind === "team"
+      ? teamIds.has(conflict.actorId)
+      : conflict.actorKind === "player"
+        ? playerIds.has(conflict.actorId)
+        : coachIds.has(conflict.actorId);
+    if (conflict.stage !== "resolved" && !actorExists) {
+      issues.push({ code: "missing-reference", scope: conflict.id, detail: `${conflict.id}: активный конфликт потерял участника ${conflict.actorId}.` });
+    }
+    if (!teamIds.has(conflict.teamId)) {
+      issues.push({ code: "missing-reference", scope: conflict.id, detail: `${conflict.id}: конфликт потерял команду ${conflict.teamId}.` });
+    }
+    if (conflict.stage !== "resolved" && (conflict.evidenceFactIds.some((id) => !historyFactIds.has(id)) || conflict.decisionIds.some((id) => !agencyDecisionIds.has(id)))) {
+      issues.push({ code: "missing-reference", scope: conflict.id, detail: `${conflict.id}: активный конфликт содержит потерянное доказательство или решение.` });
+    }
+    const pressureIssue = rangeIssue(conflict.pressure, 0, 100, `${conflict.id}.pressure`);
+    if (pressureIssue) issues.push(pressureIssue);
+  }
+  for (const decision of world.agency.decisions) {
+    if (!teamIds.has(decision.teamId) || decision.teamIds.some((id) => !teamIds.has(id))) {
+      issues.push({ code: "missing-reference", scope: decision.id, detail: `${decision.id}: решение ссылается на неизвестную команду.` });
+    }
+    if (decision.playerIds.some((id) => !knownHistoricalPlayerIds.has(id))) {
+      issues.push({ code: "missing-reference", scope: decision.id, detail: `${decision.id}: решение ссылается на неизвестного игрока.` });
+    }
+  }
+
   const collegeWins = collegeTeams.reduce((sum, team) => sum + team.wins, 0);
   const collegeLosses = collegeTeams.reduce((sum, team) => sum + team.losses, 0);
   if (collegeWins !== collegeLosses) {
@@ -406,6 +436,9 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     [world.worldHistory.objectives.length, 420, "worldHistory.objectives"],
     [world.worldHistory.arcs.length, 180, "worldHistory.arcs"],
     [world.worldHistory.processedSourceIds.length, 1800, "worldHistory.processedSourceIds"],
+    [world.agency.conflicts.length, 320, "agency.conflicts"],
+    [world.agency.decisions.length, 600, "agency.decisions"],
+    [world.agency.processedDecisionKeys.length, 900, "agency.processedDecisionKeys"],
   ];
   for (const [actual, maximum, scope] of bounds) {
     if (actual > maximum) {

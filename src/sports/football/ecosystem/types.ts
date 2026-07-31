@@ -2,7 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballRosterPosition } from "../team/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 13 as const;
+export const ECOSYSTEM_MODULE_VERSION = 14 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -715,6 +715,66 @@ export interface EcosystemHistoryState {
   digest: string[];
 }
 
+export type EcosystemAgencyActorKind = "team" | "player" | "coach";
+export type EcosystemConflictKind = "role" | "scheme-fit" | "trust" | "results" | "finances" | "staff-direction";
+export type EcosystemConflictStage = "concern" | "meeting" | "ultimatum" | "resolved";
+export type EcosystemDecisionKind =
+  | "player-role-push"
+  | "player-portal-entry"
+  | "team-roster-reset"
+  | "team-tactical-shift"
+  | "coach-staff-reshuffle"
+  | "coach-contract-ultimatum";
+
+export interface EcosystemConflict {
+  id: string;
+  actorKind: EcosystemAgencyActorKind;
+  actorId: string;
+  teamId: string;
+  kind: EcosystemConflictKind;
+  stage: EcosystemConflictStage;
+  pressure: number;
+  createdSeasonYear: number;
+  createdWeek: number;
+  lastSeasonYear: number;
+  lastWeek: number;
+  evidenceFactIds: string[];
+  decisionIds: string[];
+  relatedToHero: boolean;
+  resolvedSeasonYear?: number | undefined;
+  resolvedWeek?: number | undefined;
+}
+
+export interface EcosystemAgencyDecision {
+  id: string;
+  kind: EcosystemDecisionKind;
+  actorKind: EcosystemAgencyActorKind;
+  actorId: string;
+  teamId: string;
+  seasonYear: number;
+  week: number;
+  createdOn: GameDate;
+  conflictId: string;
+  sourceObjectiveId?: string | undefined;
+  title: string;
+  detail: string;
+  consequence: string;
+  teamIds: string[];
+  playerIds: string[];
+  coachIds: string[];
+  relatedToHero: boolean;
+}
+
+export interface EcosystemAgencyState {
+  version: 1;
+  lastProcessedSeasonYear: number;
+  lastProcessedWeek: number;
+  conflicts: EcosystemConflict[];
+  decisions: EcosystemAgencyDecision[];
+  processedDecisionKeys: string[];
+  digest: string[];
+}
+
 export interface EcosystemTeamSeasonRecord {
   id: string;
   seasonYear: number;
@@ -854,5 +914,6 @@ export interface FootballEcosystemState {
   social: EcosystemSocialState;
   careerRegistry: EcosystemCareerRegistry;
   worldHistory: EcosystemHistoryState;
+  agency: EcosystemAgencyState;
 }
 
