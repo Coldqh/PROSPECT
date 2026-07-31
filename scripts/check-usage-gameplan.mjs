@@ -26,7 +26,7 @@ const required = [
   ["simulation", "usageDeltaForSnap"],
   ["dashboard", "OPEN TGT"],
   ["dashboard", "MISSED"],
-  ["schema", "CURRENT_SCHEMA_VERSION = 33"],
+  ["schema", "CURRENT_SCHEMA_VERSION = 34"],
   ["migrations", "migrateVersionThirtyTwo"],
   ["proLeague", "usage: match.finalResult.usage ?? match.usageStats"],
   ["schema", "usage: matchUsageStatLineSchema.optional()"],

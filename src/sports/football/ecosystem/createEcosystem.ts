@@ -22,6 +22,7 @@ import { careerArchetypeRole, createPlayerTacticalProfile, createTacticalIdentit
 import { createCompetitionState } from "./competition";
 import { createSocialEcosystem } from "./social";
 import { createCareerRegistry } from "./lifecycle";
+import { createWorldHistory } from "./history";
 
 const FIRST_NAMES = [
   "Andre", "Cam", "Dylan", "Elijah", "Isaiah", "Jalen", "Jordan", "Malik", "Micah", "Noah",
@@ -471,7 +472,7 @@ export function createFootballEcosystem(
   const heroContext = `${character.identity.fullName} входит в сезон как ${football.position}, но рынок уже движется без него.`;
   const talentPipeline = createTalentPipeline(players, cycle.seasonYear);
   return {
-    moduleVersion: 12,
+    moduleVersion: 13,
     constitution,
     cycle,
     lastSimulatedDay: completedDays,
@@ -499,5 +500,6 @@ export function createFootballEcosystem(
     competition: createCompetitionState(cycle.seasonYear, conferenceSetup.conferences, teams, new SeededRandom(`${worldSeed}:competition:${cycle.seasonYear}`)),
     social: createSocialEcosystem(teams, players, coaches, cycle.seasonYear, new SeededRandom(`${worldSeed}:social:${cycle.seasonYear}`), completedDays),
     careerRegistry: createCareerRegistry(players, teams, cycle.seasonYear),
+    worldHistory: createWorldHistory(teams, players, coaches, cycle.seasonYear, Math.max(1, football.season.week)),
   };
 }

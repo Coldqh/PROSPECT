@@ -32,7 +32,7 @@ const required = [
   ["proCoaching", "professionalSchemeFit"],
   ["proLeague", "player.schemeFit * 0.12"],
   ["proLeague", "professionalTacticalModifier(home, away)"],
-  ["schema", "CURRENT_SCHEMA_VERSION = 33"],
+  ["schema", "CURRENT_SCHEMA_VERSION = 34"],
   ["migrations", "migrateVersionThirtyOne"],
   ["teams", "worldTeam.tactical.adaptation"],
   ["leagues", "team.staff ?? []"],

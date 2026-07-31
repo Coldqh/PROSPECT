@@ -59,6 +59,9 @@ export interface EcosystemSeasonSnapshot {
   activeSocialBonds: number;
   strainedSocialBonds: number;
   fracturedTeams: number;
+  historyFacts: number;
+  activeObjectives: number;
+  activeStoryArcs: number;
 }
 
 export interface EcosystemStabilityReport {
@@ -233,6 +236,9 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
   issues.push(...uniqueIssues(world.competition.schedule, (game) => game.id, "competition.schedule"));
   issues.push(...uniqueIssues(world.social.bonds, (bond) => bond.id, "social.bonds"));
   issues.push(...uniqueIssues(world.social.incidents, (incident) => incident.id, "social.incidents"));
+  issues.push(...uniqueIssues(world.worldHistory.facts, (fact) => fact.id, "worldHistory.facts"));
+  issues.push(...uniqueIssues(world.worldHistory.objectives, (objective) => objective.id, "worldHistory.objectives"));
+  issues.push(...uniqueIssues(world.worldHistory.arcs, (arc) => arc.id, "worldHistory.arcs"));
 
   for (const player of world.players) {
     if (!teamIds.has(player.teamId)) {
@@ -344,6 +350,37 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     }
   }
 
+  const historyFactIds = new Set(world.worldHistory.facts.map((fact) => fact.id));
+  const knownHistoricalPlayerIds = new Set([
+    ...playerIds,
+    ...world.careerRegistry.records.map((record) => record.playerId),
+  ]);
+  for (const fact of world.worldHistory.facts) {
+    if (fact.teamIds.some((id) => !teamIds.has(id)) || fact.playerIds.some((id) => !knownHistoricalPlayerIds.has(id))) {
+      issues.push({ code: "missing-reference", scope: fact.id, detail: `${fact.id}: исторический факт ссылается на неизвестную команду или игрока.` });
+    }
+  }
+  for (const objective of world.worldHistory.objectives) {
+    const ownerExists = objective.ownerKind === "team"
+      ? teamIds.has(objective.ownerId)
+      : objective.ownerKind === "player"
+        ? playerIds.has(objective.ownerId)
+        : coachIds.has(objective.ownerId);
+    if (objective.status === "active" && !ownerExists) {
+      issues.push({ code: "missing-reference", scope: objective.id, detail: `${objective.id}: активная цель потеряла владельца ${objective.ownerId}.` });
+    }
+    if (objective.evidenceFactIds.some((id) => !historyFactIds.has(id))) {
+      issues.push({ code: "missing-reference", scope: objective.id, detail: `${objective.id}: цель содержит отсутствующий факт.` });
+    }
+  }
+  for (const arc of world.worldHistory.arcs) {
+    if (arc.factIds.some((id) => !historyFactIds.has(id))) {
+      issues.push({ code: "missing-reference", scope: arc.id, detail: `${arc.id}: сюжетная линия содержит отсутствующий факт.` });
+    }
+    const momentumIssue = rangeIssue(arc.momentum, -100, 100, `${arc.id}.momentum`);
+    if (momentumIssue) issues.push(momentumIssue);
+  }
+
   const collegeWins = collegeTeams.reduce((sum, team) => sum + team.wins, 0);
   const collegeLosses = collegeTeams.reduce((sum, team) => sum + team.losses, 0);
   if (collegeWins !== collegeLosses) {
@@ -365,6 +402,10 @@ export function inspectEcosystemInvariants(world: FootballEcosystemState): Ecosy
     [world.movementMarket.coachVacancies.length, 60, "movementMarket.coachVacancies"],
     [world.social.bonds.length, 12000, "social.bonds"],
     [world.social.incidents.length, 180, "social.incidents"],
+    [world.worldHistory.facts.length, 1200, "worldHistory.facts"],
+    [world.worldHistory.objectives.length, 420, "worldHistory.objectives"],
+    [world.worldHistory.arcs.length, 180, "worldHistory.arcs"],
+    [world.worldHistory.processedSourceIds.length, 1800, "worldHistory.processedSourceIds"],
   ];
   for (const [actual, maximum, scope] of bounds) {
     if (actual > maximum) {
@@ -412,6 +453,9 @@ function snapshot(
     activeSocialBonds: world.social.bonds.filter((bond) => bond.active).length,
     strainedSocialBonds: world.social.bonds.filter((bond) => bond.active && bond.tension >= 70).length,
     fracturedTeams: world.social.teamCultures.filter((culture) => culture.conflict >= 65).length,
+    historyFacts: world.worldHistory.facts.length,
+    activeObjectives: world.worldHistory.objectives.filter((objective) => objective.status === "active").length,
+    activeStoryArcs: world.worldHistory.arcs.filter((arc) => arc.status !== "resolved").length,
   };
 }
 

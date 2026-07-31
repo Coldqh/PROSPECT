@@ -2,7 +2,7 @@ import type { GameDate } from "../../../core/calendar/types";
 import type { FootballRosterPosition } from "../team/types";
 import type { EcosystemPlayerEligibility, EcosystemTeamCompliance, WorldConstitution, WorldCycleState } from "./constitution";
 
-export const ECOSYSTEM_MODULE_VERSION = 12 as const;
+export const ECOSYSTEM_MODULE_VERSION = 13 as const;
 
 export type EcosystemLevel = "high-school" | "college";
 export type EcosystemPlayerStatus = "starter" | "rotation" | "backup" | "injured";
@@ -86,7 +86,8 @@ export type EcosystemStoryKind =
   | "leadership"
   | "reconciliation"
   | "staff-friction"
-  | "broken-promise";
+  | "broken-promise"
+  | "storyline";
 
 export type EcosystemTransactionKind =
   | "portal-entry"
@@ -642,6 +643,78 @@ export interface EcosystemStory {
   relatedToHero: boolean;
 }
 
+export type EcosystemHistorySourceType = "story" | "transaction";
+export type EcosystemObjectiveOwnerKind = "team" | "player" | "coach";
+export type EcosystemObjectiveKind = "win-target" | "rebuild-program" | "protect-job" | "build-program" | "earn-starting-role" | "breakout-season";
+export type EcosystemObjectiveStatus = "active" | "achieved" | "failed";
+export type EcosystemStoryArcKind = "player-rise" | "career-crossroads" | "coach-tenure" | "team-run" | "rivalry-era" | "program-rebuild";
+export type EcosystemStoryArcStatus = "emerging" | "active" | "resolved";
+
+export interface EcosystemHistoryFact {
+  id: string;
+  sourceType: EcosystemHistorySourceType;
+  sourceId: string;
+  seasonYear: number;
+  week: number;
+  createdOn: GameDate;
+  kind: EcosystemStoryKind | EcosystemTransactionKind;
+  title: string;
+  detail: string;
+  importance: 1 | 2 | 3 | 4 | 5;
+  teamIds: string[];
+  playerIds: string[];
+  coachIds: string[];
+  relatedToHero: boolean;
+}
+
+export interface EcosystemObjective {
+  id: string;
+  ownerKind: EcosystemObjectiveOwnerKind;
+  ownerId: string;
+  kind: EcosystemObjectiveKind;
+  status: EcosystemObjectiveStatus;
+  createdSeasonYear: number;
+  createdWeek: number;
+  targetSeasonYear: number;
+  progress: number;
+  target: number;
+  title: string;
+  detail: string;
+  evidenceFactIds: string[];
+  completedSeasonYear?: number | undefined;
+  completedWeek?: number | undefined;
+}
+
+export interface EcosystemStoryArc {
+  id: string;
+  kind: EcosystemStoryArcKind;
+  status: EcosystemStoryArcStatus;
+  title: string;
+  summary: string;
+  teamIds: string[];
+  playerIds: string[];
+  coachIds: string[];
+  startedSeasonYear: number;
+  startedWeek: number;
+  lastSeasonYear: number;
+  lastWeek: number;
+  momentum: number;
+  chapters: number;
+  factIds: string[];
+  relatedToHero: boolean;
+}
+
+export interface EcosystemHistoryState {
+  version: 1;
+  lastProcessedSeasonYear: number;
+  lastProcessedWeek: number;
+  processedSourceIds: string[];
+  facts: EcosystemHistoryFact[];
+  objectives: EcosystemObjective[];
+  arcs: EcosystemStoryArc[];
+  digest: string[];
+}
+
 export interface EcosystemTeamSeasonRecord {
   id: string;
   seasonYear: number;
@@ -780,5 +853,6 @@ export interface FootballEcosystemState {
   competition: EcosystemCompetitionState;
   social: EcosystemSocialState;
   careerRegistry: EcosystemCareerRegistry;
+  worldHistory: EcosystemHistoryState;
 }
 

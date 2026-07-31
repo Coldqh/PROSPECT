@@ -248,6 +248,72 @@
   line-height: var(--type-page-line);
   letter-spacing: 0;
 }
+
+.world-v47-history {
+  display: grid;
+  gap: 0;
+  margin: 0 0 18px;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+.world-v47-history > header {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.world-v47-history > header div { display: grid; gap: 2px; }
+.world-v47-history > header small,
+.world-v47-history article small {
+  color: var(--muted-2);
+  font-size: var(--type-caption-size);
+  font-weight: 700;
+}
+.world-v47-history > header strong { font-size: var(--type-body-size); }
+.world-v47-history > header > span {
+  color: var(--accent);
+  font-size: var(--type-caption-size);
+  font-weight: 700;
+}
+.world-v47-history article {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 4px 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.world-v47-history article:last-of-type { border-bottom: 0; }
+.world-v47-history article.is-relevant { box-shadow: inset 2px 0 0 var(--accent); padding-left: 10px; }
+.world-v47-history article div { min-width: 0; display: grid; gap: 4px; }
+.world-v47-history article strong,
+.world-v47-history article p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.world-v47-history article strong { font-size: var(--type-body-size); }
+.world-v47-history article p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+}
+.world-v47-history article > span {
+  align-self: center;
+  color: var(--accent);
+  font-size: var(--type-number-size);
+  font-weight: 700;
+  text-align: right;
+}
+.world-v47-history__empty {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--muted);
+  font-size: var(--type-caption-size);
+}
 @media (max-width: 820px) {
   .world-command-bar .section-tabs { order: -1; }
 }

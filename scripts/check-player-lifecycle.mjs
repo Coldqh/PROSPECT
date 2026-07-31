@@ -13,7 +13,7 @@ const required = [
   ["src/sports/football/pro/league.ts", "function runLifecycleRookieDraft"],
   ["src/sports/football/pro/league.ts", "function advanceBackgroundWorld"],
   ["src/components/career/WorldDashboard.tsx", 'setInternalView("careers")'],
-  ["src/storage/saves/schema.ts", "CURRENT_SCHEMA_VERSION = 33"],
+  ["src/storage/saves/schema.ts", "CURRENT_SCHEMA_VERSION = 34"],
 ];
 for (const [path, token] of required) {
   if (!read(path).includes(token)) throw new Error(`${path}: missing ${token}`);

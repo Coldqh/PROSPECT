@@ -54,7 +54,7 @@ const required = [
   ["matchUi", 'case "EDGE"'],
   ["profile", 'case "S"'],
   ["professional", "CAREER_FOOTBALL_POSITIONS"],
-  ["schema", "export const CURRENT_SCHEMA_VERSION = 33"],
+  ["schema", "export const CURRENT_SCHEMA_VERSION = 34"],
   ["schema", 'heroUnit: z.enum(["offense", "defense", "special"])'],
   ["migrations", "migrateVersionTwentyFive"],
   ["tests", "CAREER_FOOTBALL_POSITIONS"],

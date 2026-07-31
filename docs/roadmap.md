@@ -314,3 +314,14 @@
 - professional career header no longer remains in draft mode;
 - inactive professional weeks cannot deadlock;
 - save schema 33, IndexedDB schema 2.
+
+## v0.47 — World history and emergent stories
+
+- immutable facts sourced from real simulation stories and transactions;
+- autonomous seasonal objectives for programs, head coaches and notable players;
+- persistent player-rise, career-crossroads, coach-tenure, team-run, rivalry and rebuild arcs;
+- milestone storyline entries generated only from accumulated facts;
+- visible active arcs in the World feed;
+- schema 34 migration and module 13 ecosystem upgrade;
+- hard history bounds and 20-season invariant coverage.
+

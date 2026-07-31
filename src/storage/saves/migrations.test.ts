@@ -603,6 +603,23 @@ describe("migrateCareerSave", () => {
 
 
 
+  it("migrates version thirty-three saves into persistent world history", () => {
+    const current = migrateCareerSave(legacySave).save;
+    const { worldHistory: _worldHistory, ...legacyWorld } = current.world;
+    const versionThirtyThree = {
+      ...current,
+      meta: { ...current.meta, schemaVersion: 33 as const },
+      world: { ...legacyWorld, moduleVersion: 12 as const },
+    };
+    const result = migrateCareerSave(versionThirtyThree);
+    expect(result.migratedFrom).toBe(33);
+    expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
+    expect(result.save.world.worldHistory.version).toBe(1);
+    expect(result.save.world.worldHistory.objectives.length).toBeGreaterThan(0);
+    expect(result.save.history.at(-1)?.title).toBe("История мира подключена");
+  });
+
   it("migrates version thirty-two saves into match usage plans", () => {
     const current = migrateCareerSave(legacySave).save;
     const { usagePlan: _usagePlan, usageStats: _usageStats, ...legacyMatch } = current.football.match;
@@ -667,7 +684,7 @@ describe("migrateCareerSave", () => {
     const result = migrateCareerSave(versionThirtyOne);
     expect(result.migratedFrom).toBe(31);
     expect(result.save.meta.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.save.world.moduleVersion).toBe(12);
+    expect(result.save.world.moduleVersion).toBe(ECOSYSTEM_MODULE_VERSION);
     expect(result.save.world.teams.every((team) => team.coachIds.length === 4)).toBe(true);
     expect(result.save.football.professional.teams.every((team) => team.staff?.length === 4 && Boolean(team.tactical))).toBe(true);
     expect(result.save.world.careerRegistry.records[0]?.events[0]?.week).toBe(160);

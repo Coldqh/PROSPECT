@@ -66,6 +66,7 @@ function storyKindLabel(kind: EcosystemStory["kind"]): string {
     reconciliation: "Раздевалка",
     "staff-friction": "Штаб",
     "broken-promise": "Обещание",
+    storyline: "История",
   }[kind];
 }
 
@@ -99,6 +100,17 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
       .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.week - left.week || right.importance - left.importance)
       .slice(0, 40),
     [world.stories],
+  );
+  const activeArcs = useMemo(
+    () => [...world.worldHistory.arcs]
+      .filter((arc) => arc.status !== "resolved")
+      .sort((left, right) => Number(right.relatedToHero) - Number(left.relatedToHero) || right.momentum - left.momentum || right.lastWeek - left.lastWeek)
+      .slice(0, 4),
+    [world.worldHistory.arcs],
+  );
+  const activeObjectives = useMemo(
+    () => world.worldHistory.objectives.filter((objective) => objective.status === "active").length,
+    [world.worldHistory.objectives],
   );
   const rankings = useMemo(
     () => [...world.competition.rankings].sort((left, right) => left.rank - right.rank).slice(0, 25),
@@ -180,7 +192,19 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
           {searchTeams.length + searchPlayers.length + searchCareers.length + searchStories.length === 0 && <div className="data-empty">Нет совпадений</div>}
         </section>
       ) : selectedView === "feed" ? (
-        <section className="world-v27-feed">
+        <>
+          <section className="world-v47-history" aria-label="История мира">
+            <header><div><small>ЖИВОЙ МИР</small><strong>{activeArcs.length} линий</strong></div><span>{activeObjectives} целей</span></header>
+            {activeArcs.map((arc) => (
+              <article key={arc.id} className={arc.relatedToHero ? "is-relevant" : ""}>
+                <div><small>{arc.status === "active" ? "РАЗВИВАЕТСЯ" : "ЗАРОЖДАЕТСЯ"} · {arc.chapters} гл.</small><strong>{arc.title}</strong></div>
+                <p>{arc.summary || "История только начала складываться."}</p>
+                <span>{Math.round(arc.momentum)}</span>
+              </article>
+            ))}
+            {activeArcs.length === 0 && <p className="world-v47-history__empty">Долгие линии появятся после связанных событий симуляции.</p>}
+          </section>
+          <section className="world-v27-feed">
           {stories.map((story) => {
             const team = teamForStory(story, world.teams);
             return (
@@ -192,7 +216,8 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
             );
           })}
           {stories.length === 0 && <div className="data-empty">Нет событий</div>}
-        </section>
+          </section>
+        </>
       ) : selectedView === "rankings" ? (
         <section className="world-v27-ranking">
           {rankings.map((ranking) => {

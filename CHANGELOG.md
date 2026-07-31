@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.47.0 — WORLD HISTORY & EMERGENT STORIES
+
+### Autonomous history
+
+- stories and transactions emitted by the simulation become immutable, deduplicated world facts;
+- facts accumulate into persistent player, coach, team, rivalry and rebuild arcs;
+- storyline news appears only at real arc milestones instead of being fabricated independently;
+- college programs, head coaches and notable players carry measurable seasonal objectives;
+- offseason transactions are ingested together with weekly events.
+
+### Persistence and interface
+
+- world history is persisted in save schema 34 and ecosystem module 13;
+- schema 33 saves receive deterministic objectives and an empty fact ledger without regenerating the world;
+- the World feed exposes active arcs and the count of unresolved objectives;
+- facts, objectives, arcs and processed sources have hard bounds and reference invariants.
+
+### Verification
+
+- dedicated fact, deduplication, objective and storyline tests;
+- migration coverage from schema 33;
+- autonomous stability audit includes world-history bounds, identities and references.
+
 ## 0.46.0 — CORE CONSOLIDATION
 
 ### Persistence

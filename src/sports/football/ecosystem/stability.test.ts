@@ -29,5 +29,11 @@ describe("full-roster autonomous stability", () => {
     expect(save.world.social.incidents.length).toBeLessThanOrEqual(180);
     expect(save.world.competition.programLegacies).toHaveLength(24);
     expect(save.world.talentPipeline.classHistory).toHaveLength(Math.min(20, 1 + report.completedSeasons));
+    expect(save.world.worldHistory.facts.length).toBeGreaterThan(0);
+    expect(save.world.worldHistory.objectives.some((objective) => objective.status === "active")).toBe(true);
+    expect(save.world.worldHistory.arcs.length).toBeGreaterThan(0);
+    expect(report.snapshots.every((snapshot) => snapshot.historyFacts <= 1_200)).toBe(true);
+    expect(report.snapshots.every((snapshot) => snapshot.activeObjectives <= 420)).toBe(true);
+    expect(report.snapshots.every((snapshot) => snapshot.activeStoryArcs <= 180)).toBe(true);
   }, 90_000);
 });

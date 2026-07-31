@@ -24,6 +24,7 @@ import type {
 import { addGameDays, advanceAcademicWeek, createPlayerEligibility, isPlayerAvailable, refreshTeamCompliance, resolveWorldCycle, rollEligibilityIntoNextSeason } from "./constitution";
 import { createTalentProfile, processAnnualTalentFlow, simulateTalentCamps } from "./talent";
 import { syncCareerRegistry } from "./lifecycle";
+import { advanceWorldHistory } from "./history";
 import {
   availableNilCapacity,
   availableRecruitingBudget,
@@ -1270,7 +1271,7 @@ function processOffseason(
     players,
     coaches: carousel.coaches,
     teams,
-    stories: [...world.stories, ...stories].slice(-120),
+    stories: [...world.stories, ...stories].slice(-90),
     transactions: [...world.transactions, ...transactions].slice(-800),
     teamHistory: [...world.teamHistory, ...archived].slice(-240),
     lastOffseasonYear: seasonYear,
@@ -1397,6 +1398,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
   let movementMarket = world.movementMarket;
   let competition = world.competition;
   let social = world.social;
+  let worldHistory = world.worldHistory;
   const generatedStories: EcosystemStory[] = [];
   const generatedTransactions: EcosystemTransaction[] = [];
   const targetDay = save.life.completedDays;
@@ -1640,7 +1642,7 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     world,
     save.meta.currentDate,
   );
-  const stories = [...world.stories, ...generatedStories].slice(-90);
+  const sourceStories = [...world.stories, ...generatedStories];
   const transactions = [...world.transactions, ...generatedTransactions].slice(-800);
   const careerRegistry = syncCareerRegistry(
     world.careerRegistry,
@@ -1650,8 +1652,31 @@ export function advanceFootballEcosystem<T extends EcosystemCareerState>(save: T
     world.seasonYear,
     Math.max(1, world.seasonWeek),
   );
-  world = { ...world, stories, transactions, careerRegistry, digest: buildDigest(generatedStories.length > 0 ? generatedStories : world.stories.slice(-12), world) };
-  const important = generatedStories.filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
+  const historyResult = advanceWorldHistory({
+    history: worldHistory,
+    teams: world.teams,
+    players: world.players,
+    coaches: world.coaches,
+    stories: sourceStories,
+    transactions,
+    seasonYear: world.seasonYear,
+    week: Math.max(1, world.seasonWeek),
+    date: world.lastUpdatedOn,
+  });
+  worldHistory = historyResult.history;
+  const stories = [...sourceStories, ...historyResult.stories].slice(-90);
+  const digestSource = [...generatedStories, ...historyResult.stories];
+  world = {
+    ...world,
+    stories,
+    transactions,
+    careerRegistry,
+    worldHistory,
+    digest: historyResult.history.digest.length > 0
+      ? historyResult.history.digest
+      : buildDigest(digestSource.length > 0 ? digestSource : world.stories.slice(-12), world),
+  };
+  const important = [...generatedStories, ...historyResult.stories].filter((item) => item.relatedToHero && item.importance >= 4).slice(-3);
 
   return {
     ...save,

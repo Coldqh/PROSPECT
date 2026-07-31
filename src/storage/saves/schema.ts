@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CURRENT_SCHEMA_VERSION = 33;
+export const CURRENT_SCHEMA_VERSION = 34;
 
 const gameDateSchema = z.object({
   year: z.number().int().min(1900).max(2200),
@@ -1769,8 +1769,73 @@ const ecosystemCareerRegistrySchema = z.object({
   lastSyncedSeasonYear: z.number().int().min(2020).max(2200),
 }).default({ version: 1, records: [], draftPoolIds: [], retiredIds: [], lastSyncedSeasonYear: 2020 });
 
+const ecosystemHistoryFactSchema = z.object({
+  id: z.string().min(1),
+  sourceType: z.enum(["story", "transaction"]),
+  sourceId: z.string().min(1),
+  seasonYear: z.number().int().min(2020).max(2200),
+  week: z.number().int().min(1).max(400),
+  createdOn: gameDateSchema,
+  kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl", "mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise", "storyline", "portal-entry", "coach-fired", "coach-hired", "recruit-enrolled", "facility-investment", "budget-cut", "nil-commitment", "juco-entry", "walk-on-entry", "talent-enrolled", "scholarship-awarded", "redshirt-assigned", "offer-issued"]),
+  title: z.string().min(2),
+  detail: z.string().min(2),
+  importance: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  teamIds: z.array(z.string().min(1)),
+  playerIds: z.array(z.string().min(1)),
+  coachIds: z.array(z.string().min(1)),
+  relatedToHero: z.boolean(),
+});
+
+const ecosystemObjectiveSchema = z.object({
+  id: z.string().min(1),
+  ownerKind: z.enum(["team", "player", "coach"]),
+  ownerId: z.string().min(1),
+  kind: z.enum(["win-target", "rebuild-program", "protect-job", "build-program", "earn-starting-role", "breakout-season"]),
+  status: z.enum(["active", "achieved", "failed"]),
+  createdSeasonYear: z.number().int().min(2020).max(2200),
+  createdWeek: z.number().int().min(1).max(400),
+  targetSeasonYear: z.number().int().min(2020).max(2200),
+  progress: z.number().min(0).max(1000),
+  target: z.number().min(0).max(1000),
+  title: z.string().min(2),
+  detail: z.string().min(2),
+  evidenceFactIds: z.array(z.string().min(1)).max(16),
+  completedSeasonYear: z.number().int().min(2020).max(2200).optional(),
+  completedWeek: z.number().int().min(1).max(400).optional(),
+});
+
+const ecosystemStoryArcSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["player-rise", "career-crossroads", "coach-tenure", "team-run", "rivalry-era", "program-rebuild"]),
+  status: z.enum(["emerging", "active", "resolved"]),
+  title: z.string().min(2),
+  summary: z.string(),
+  teamIds: z.array(z.string().min(1)),
+  playerIds: z.array(z.string().min(1)),
+  coachIds: z.array(z.string().min(1)),
+  startedSeasonYear: z.number().int().min(2020).max(2200),
+  startedWeek: z.number().int().min(1).max(400),
+  lastSeasonYear: z.number().int().min(2020).max(2200),
+  lastWeek: z.number().int().min(1).max(400),
+  momentum: z.number().min(-100).max(100),
+  chapters: z.number().int().nonnegative().max(1000),
+  factIds: z.array(z.string().min(1)).max(16),
+  relatedToHero: z.boolean(),
+});
+
+const ecosystemWorldHistorySchema = z.object({
+  version: z.literal(1),
+  lastProcessedSeasonYear: z.number().int().min(2020).max(2200),
+  lastProcessedWeek: z.number().int().min(1).max(400),
+  processedSourceIds: z.array(z.string().min(1)).max(1800),
+  facts: z.array(ecosystemHistoryFactSchema).max(1200),
+  objectives: z.array(ecosystemObjectiveSchema).max(420),
+  arcs: z.array(ecosystemStoryArcSchema).max(180),
+  digest: z.array(z.string().min(2)).max(6),
+});
+
 const footballEcosystemSchema = z.object({
-  moduleVersion: z.literal(12),
+  moduleVersion: z.literal(13),
   constitution: worldConstitutionSchema,
   cycle: worldCycleSchema,
   lastSimulatedDay: z.number().int().nonnegative(),
@@ -1877,7 +1942,7 @@ const footballEcosystemSchema = z.object({
   })).min(10),
   stories: z.array(z.object({
     id: z.string().min(1),
-    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl", "mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise"]),
+    kind: z.enum(["breakout", "injury", "depth-change", "commitment", "coach-pressure", "coach-move", "upset", "market-shift", "conference-race", "championship", "transfer", "graduation", "enrollment", "investment", "budget-crunch", "nil-battle", "resource-shift", "talent-class", "camp-breakout", "juco-route", "walk-on-route", "roster-plan", "position-change", "redshirt", "scholarship", "offer", "offer-withdrawn", "market-chain", "coach-vacancy", "tactical-change", "scheme-fit", "ranking", "playoff", "award", "rivalry", "bowl", "mentorship", "locker-room-conflict", "leadership", "reconciliation", "staff-friction", "broken-promise", "storyline"]),
     createdOn: gameDateSchema,
     week: z.number().int().min(1),
     title: z.string().min(2),
@@ -1945,6 +2010,7 @@ const footballEcosystemSchema = z.object({
   competition: ecosystemCompetitionSchema,
   social: ecosystemSocialSchema,
   careerRegistry: ecosystemCareerRegistrySchema,
+  worldHistory: ecosystemWorldHistorySchema,
 });
 
 const careerMetaSchema = z.object({
