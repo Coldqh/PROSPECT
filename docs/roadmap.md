@@ -374,3 +374,13 @@
 - preserve the 0.50 information architecture and all domain state;
 - enforce absence of retired styles through release and UI checks;
 - no save migration or simulation changes.
+
+## v0.53 — Reference screen replacement
+
+- remove the old React compositions from season home, team and player profile;
+- introduce dark layered management surfaces and team-colored mastheads;
+- use large OVR shields, player cards, role/status pills and semantic progress bars;
+- rebuild roster browsing around position rooms with readable depth and role context;
+- keep mobile and desktop on the same component hierarchy;
+- prohibit the retired screen class names through automated UI checks;
+- no save migration or domain-system changes.

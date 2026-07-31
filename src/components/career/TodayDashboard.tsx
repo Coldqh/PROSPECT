@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Icon, type IconName } from "../ui/Icon";
 import { BottomSheet } from "../ui/BottomSheet";
 import { addGameDays, formatGameDate, formatWeekday, toGameDateKey } from "../../core/calendar/types";
@@ -13,6 +13,7 @@ import type { ScheduleActivityType, TrainingIntensity, WeeklyPlanTemplateId } fr
 import { getTrainingFocus, getTrainingFocusCatalog } from "../../sports/football/training/catalog";
 import type { MedicalStatus, TrainingFocusId } from "../../sports/football/training/types";
 import type { CareerSave } from "../../storage/saves/schema";
+import { teamBrandStyle } from "./teamBrand";
 
 const activityIcons: Record<ScheduleActivityType, IconName> = {
   school: "book",
@@ -130,187 +131,133 @@ export function TodayDashboard({
     if (trainingPlanChanged) await onUpdateTrainingPlan(selectedTrainingFocus, selectedIntensity);
   }
 
+  const currentTeamName = football.professional.contract?.teamName ?? football.college.program?.shortName ?? football.school.shortName;
+  const currentRole = football.college.heroCareer?.role ?? football.depthChart.projectedRole;
+  const seasonRecord = football.professional.league && football.professional.contract
+    ? (() => { const team = football.professional.teams.find((item) => item.id === football.professional.contract?.teamId); return team ? `${team.wins}–${team.losses}` : "0–0"; })()
+    : football.college.heroCareer?.teamId
+      ? (() => { const team = save.world.teams.find((item) => item.id === football.college.heroCareer?.teamId); return team ? `${team.wins}–${team.losses}` : "0–0"; })()
+      : `${football.season.wins}–${football.season.losses}`;
+  const pageStyle = football.college.program || football.professional.contract
+    ? teamBrandStyle(football.college.program?.id ?? football.professional.contract?.teamId ?? currentTeamName)
+    : ({
+      "--team-primary": football.school.primaryColor,
+      "--team-secondary": football.school.secondaryColor,
+      "--team-ink": "#ffffff",
+      "--team-hue": "354",
+    } as CSSProperties);
+  const weekProgress = Math.round(((life.dayIndex + 1) / 7) * 100);
+
   return (
-    <div className="compact-section today-section">
-      <header className="compact-page-head">
-        <div>
-          <span>{formatWeekday(save.meta.currentDate)} · неделя {life.weekNumber}</span>
-          <h2>{formatGameDate(save.meta.currentDate)}</h2>
-        </div>
-        <div className="today-head-actions">
-          <button type="button" className="icon-button icon-button--quiet" aria-label="Настроить недельный режим" onClick={() => setView("plan")}><Icon name="calendar" size={17} /></button>
-          <button type="button" className={`medical-pill medical-pill--${body.medicalStatus}`} onClick={() => setSheet("medical")}>
-            {medicalLabel(body.medicalStatus)} <Icon name="chevron-down" size={15} />
-          </button>
-        </div>
+    <div className="dynasty-page dynasty-home-page" style={pageStyle}>
+      <header className="dynasty-page-head">
+        <div className="dynasty-page-head__badge">WK</div>
+        <div><strong>{view === "overview" ? "Сегодня" : view === "plan" ? "План недели" : "Расписание"}</strong><small>{formatWeekday(save.meta.currentDate).toUpperCase()} · НЕДЕЛЯ {life.weekNumber}</small></div>
+        {view !== "overview" && <button type="button" className="dynasty-head-action" onClick={() => setView("overview")} aria-label="Вернуться к сводке"><Icon name="arrow-left" /></button>}
       </header>
 
-      <div className="mini-week" aria-label="Текущая игровая неделя">
-        {weekdayLabels.map((label, index) => {
-          const date = addGameDays(weekStart, index);
-          const matchOnDate = scheduledMatch && toGameDateKey(scheduledMatch.scheduledDate) === toGameDateKey(date);
-          const className = [index < life.dayIndex ? "is-complete" : index === life.dayIndex ? "is-current" : "", matchOnDate ? "is-game" : ""].filter(Boolean).join(" ");
-          return (
-            <span className={className} key={label} title={matchOnDate ? `Матч против ${scheduledMatch.opponentName}` : undefined}>
-              <small>{label}</small>
-              <strong>{date.day}</strong>
-              {matchOnDate && <em>{scheduledMatch.status === "complete" ? "FINAL" : "GAME"}</em>}
-            </span>
-          );
-        })}
-      </div>
-
-      {view !== "overview" && (
-        <header className="subview-head">
-          <button type="button" className="icon-button icon-button--quiet" onClick={() => setView("overview")} aria-label="К сводке дня"><Icon name="arrow-left" /></button>
-          <div><small>Сегодня</small><strong>{view === "plan" ? "Недельный режим" : "Расписание"}</strong></div>
-        </header>
-      )}
+      <section className="dynasty-context-bar">
+        <article><small>Команда</small><strong>{currentTeamName}</strong></article>
+        <article><small>Рекорд</small><strong>{seasonRecord}</strong></article>
+        <article><small>OVR</small><strong>{Math.round(football.ratings.overall)}</strong></article>
+        <article><small>Роль</small><strong>{currentRole}</strong></article>
+        <article><small>Дата</small><strong>{formatGameDate(save.meta.currentDate)}</strong></article>
+      </section>
 
       {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
 
       {view === "overview" && (
-        <div className={`compact-view today-overview${save.relationships.pendingEvent ? " has-event" : ""}`}>
-          <div className="vital-row vital-row--body">
-            <button type="button" onClick={() => setSheet("condition")}>
-              <small>Энергия</small><strong>{Math.round(character.condition.energy)}</strong><i style={{ width: `${character.condition.energy}%` }} />
-            </button>
-            <button type="button" onClick={() => setSheet("medical")}>
-              <small>Готовность</small><strong>{Math.round(body.readiness)}</strong><i style={{ width: `${body.readiness}%` }} />
-            </button>
-            <button type="button" onClick={() => setSheet("medical")}>
-              <small>Риск</small><strong>{Math.round(body.injuryRisk)}</strong><i style={{ width: `${body.injuryRisk}%` }} />
-            </button>
-          </div>
+        <div className="dynasty-stack">
+          <section className="dynasty-panel dynasty-week-panel">
+            <header><div><small>Текущая неделя</small><strong>{life.dayIndex + 1} из 7 дней</strong></div><span>{weekProgress}%</span></header>
+            <i><b style={{ width: `${weekProgress}%` }} /></i>
+            <div className="dynasty-week-days" aria-label="Текущая игровая неделя">
+              {weekdayLabels.map((label, index) => {
+                const date = addGameDays(weekStart, index);
+                const matchOnDate = scheduledMatch && toGameDateKey(scheduledMatch.scheduledDate) === toGameDateKey(date);
+                const className = [index < life.dayIndex ? "is-complete" : index === life.dayIndex ? "is-current" : "", matchOnDate ? "is-game" : ""].filter(Boolean).join(" ");
+                return <span className={className} key={label}><small>{label}</small><strong>{date.day}</strong>{matchOnDate && <em>{scheduledMatch.status === "complete" ? "FINAL" : "GAME"}</em>}</span>;
+              })}
+            </div>
+          </section>
+
+          <header className="dynasty-section-title"><span /><strong>Готовность игрока</strong><em>{medicalLabel(body.medicalStatus)}</em></header>
+          <section className="dynasty-readiness-grid">
+            {[{ label: "Энергия", value: character.condition.energy, sheet: "condition" as const }, { label: "Готовность", value: body.readiness, sheet: "medical" as const }, { label: "Риск травмы", value: body.injuryRisk, sheet: "medical" as const }].map((item) => (
+              <button type="button" key={item.label} className={item.label === "Риск травмы" && item.value > 45 ? "is-warning" : ""} onClick={() => setSheet(item.sheet)}>
+                <div><small>{item.label}</small><strong>{Math.round(item.value)}</strong></div><i><b style={{ width: `${item.value}%` }} /></i>
+              </button>
+            ))}
+          </section>
 
           {save.relationships.pendingEvent && (() => {
             const event = save.relationships.pendingEvent;
             const npc = save.relationships.npcs.find((item) => item.id === event.primaryNpcId);
-            return (
-              <button type="button" className="relationship-event-teaser" onClick={() => setSheet("event")}>
-                <span><Icon name="message" /></span>
-                <div><small>{npc?.name ?? "Разговор"}</small><strong>{event.title}</strong></div>
-                <Icon name="arrow-right" />
-              </button>
-            );
+            return <button type="button" className="dynasty-alert-row" onClick={() => setSheet("event")}><span><Icon name="message" /></span><div><small>{npc?.name ?? "Разговор"}</small><strong>{event.title}</strong><p>Требуется твой ответ</p></div><Icon name="arrow-right" /></button>;
           })()}
 
-          {body.activeIssue ? (
-            <button type="button" className="medical-alert" onClick={() => setSheet("medical")}>
-              <Icon name="pulse" />
-              <div><small>Активное ограничение</small><strong>{body.activeIssue.diagnosis}</strong><span>{body.activeIssue.daysRemaining} дн. до оценки</span></div>
-              <Icon name="arrow-right" />
-            </button>
-          ) : nextActivity ? (
-            <button type="button" className="next-activity" onClick={() => setView("schedule")}>
-              <span className={`next-activity__icon next-activity__icon--${nextActivity.type}`}><Icon name={activityIcons[nextActivity.type]} /></span>
-              <div><small>Следующий блок · {nextActivity.time}</small><strong>{nextActivity.title}</strong><p>{nextActivity.location}</p></div>
-              <Icon name="arrow-right" />
-            </button>
-          ) : null}
+          <div className="dynasty-grid dynasty-grid--two">
+            <section className="dynasty-panel dynasty-focus-card">
+              <header className="dynasty-section-title"><span /><strong>Следующий блок</strong></header>
+              {body.activeIssue ? <button type="button" onClick={() => setSheet("medical")}><span className="dynasty-focus-card__icon is-danger"><Icon name="pulse" /></span><div><small>Ограничение · {body.activeIssue.daysRemaining} дн.</small><h2>{body.activeIssue.diagnosis}</h2><p>{body.restriction}</p></div><Icon name="arrow-right" /></button> : nextActivity ? <button type="button" onClick={() => setView("schedule")}><span className="dynasty-focus-card__icon"><Icon name={activityIcons[nextActivity.type]} /></span><div><small>{nextActivity.time} · {nextActivity.location}</small><h2>{nextActivity.title}</h2><p>{nextActivity.durationMinutes} минут</p></div><Icon name="arrow-right" /></button> : <div className="dynasty-empty">На сегодня блоков нет</div>}
+            </section>
+            <section className="dynasty-panel dynasty-focus-card">
+              <header className="dynasty-section-title"><span /><strong>Режим недели</strong></header>
+              <button type="button" onClick={() => setView("plan")}><span className="dynasty-focus-card__icon"><Icon name="calendar" /></span><div><small>{activeIntensity.name} · стабильность {Math.round(life.consistency)}</small><h2>{activeTemplate.shortName}</h2><p>{currentTrainingFocus.name}</p></div><Icon name="arrow-right" /></button>
+            </section>
+          </div>
 
+          <section className="dynasty-panel">
+            <header className="dynasty-section-title"><span /><strong>Расписание дня</strong><em>{schedule.length} блоков</em></header>
+            <div className="dynasty-row-list dynasty-schedule-preview">
+              {schedule.slice(0, 4).map((activity) => <article key={activity.id}><b>{activity.time}</b><span className="dynasty-activity-icon"><Icon name={activityIcons[activity.type]} size={17} /></span><div><strong>{activity.title}</strong><small>{activity.location} · {activity.durationMinutes} мин</small></div>{activity.mandatory && <em>Обязательно</em>}</article>)}
+            </div>
+            {schedule.length > 4 && <button type="button" className="dynasty-panel-link" onClick={() => setView("schedule")}>Показать весь день <Icon name="arrow-right" size={15} /></button>}
+          </section>
 
-          <button type="button" className="today-plan-teaser" onClick={() => setView("plan")}>
-            <span><Icon name="calendar" /></span>
-            <div><small>Режим недели</small><strong>{activeTemplate.shortName}</strong><p>{activeIntensity.name} · стабильность {Math.round(life.consistency)}</p></div>
-            <Icon name="arrow-right" size={17} />
-          </button>
-
-          {football.training.lastSession && (
-            <button type="button" className="result-teaser" onClick={() => setSheet("training-result")}>
-              <span className={`result-grade result-grade--${football.training.lastSession.grade.toLowerCase()}`}>{football.training.lastSession.grade}</span>
-              <div><small>Последняя тренировка</small><strong>{football.training.lastSession.focusName}</strong></div>
-              <Icon name="arrow-right" />
-            </button>
-          )}
+          {football.training.lastSession && <button type="button" className="dynasty-result-row" onClick={() => setSheet("training-result")}><span className={`result-grade result-grade--${football.training.lastSession.grade.toLowerCase()}`}>{football.training.lastSession.grade}</span><div><small>Последняя тренировка</small><strong>{football.training.lastSession.focusName}</strong><p>Готовность после: {Math.round(football.training.lastSession.readinessAfter)}</p></div><Icon name="arrow-right" /></button>}
 
           {save.relationships.pendingEvent ? (
-            <button type="button" className="primary-action-bar primary-action-bar--conversation" disabled={mutating} onClick={() => setSheet("event")}>
-              <span><small>Требуется решение</small><strong>Ответить</strong></span>
-              <Icon name="message" />
-            </button>
+            <button type="button" className="dynasty-primary-action" disabled={mutating} onClick={() => setSheet("event")}><span><small>Требуется решение</small><strong>Ответить</strong></span><Icon name="message" /></button>
           ) : isCurrentMatchDate && football.match.status !== "complete" ? (
-            <button type="button" className="primary-action-bar primary-action-bar--match" disabled={mutating} onClick={onOpenMatch}>
-              <span><small>Сегодня · {football.match.opponentName}</small><strong>Перейти к матчу</strong></span>
-              <Icon name="arrow-right" />
-            </button>
+            <button type="button" className="dynasty-primary-action" disabled={mutating} onClick={onOpenMatch}><span><small>Сегодня · {football.match.opponentName}</small><strong>Перейти к матчу</strong></span><Icon name="arrow-right" /></button>
           ) : (
-            <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceDay()}>
-              <span><small>{formatGameDate(save.meta.currentDate)}</small><strong>{mutating ? "Расчёт…" : "Завершить день"}</strong></span>
-              <Icon name="arrow-right" />
-            </button>
+            <button type="button" className="dynasty-primary-action" disabled={mutating} onClick={() => void onAdvanceDay()}><span><small>{formatGameDate(save.meta.currentDate)}</small><strong>{mutating ? "Расчёт…" : "Завершить день"}</strong></span><Icon name="arrow-right" /></button>
           )}
         </div>
       )}
 
       {view === "plan" && (
-        <div className="compact-view">
-          <div className="plan-list-compact">
-            {weeklyPlanTemplates.map((template) => (
-              <button type="button" className={selectedTemplate === template.id ? "is-active" : ""} onClick={() => setSelectedTemplate(template.id)} key={template.id}>
-                <span className="plan-list-compact__mark"><Icon name={selectedTemplate === template.id ? "check" : "target"} /></span>
-                <div><strong>{template.shortName}</strong><small>TRN {template.focus.training} · REC {template.focus.recovery} · STUDY {template.focus.study}</small></div>
-                <em>{template.focus.training}</em>
-              </button>
-            ))}
-          </div>
-
-          <section className="weekly-training-block">
-            <header><div><small>Футбольный акцент</small><strong>{activeTrainingFocus.name}</strong></div><span>{trainingLoad}</span></header>
-            <div className="training-focus-list training-focus-list--inline">
-              {trainingCatalog.map((focus) => (
-                <button type="button" className={selectedTrainingFocus === focus.id ? "is-active" : ""} onClick={() => setSelectedTrainingFocus(focus.id)} key={focus.id}>
-                  <span><Icon name={trainingIcons[focus.id]} /></span>
-                  <div><strong>{focus.shortName}</strong><small>TEC {focus.multipliers.technique.toFixed(2)} · ATH {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)}</small></div>
-                  <em>{focus.load}</em>
-                </button>
-              ))}
+        <div className="dynasty-stack">
+          <section>
+            <header className="dynasty-section-title"><span /><strong>Режим недели</strong><em>{activeTemplate.shortName}</em></header>
+            <div className="dynasty-choice-grid">
+              {weeklyPlanTemplates.map((template) => <button type="button" className={selectedTemplate === template.id ? "is-active" : ""} onClick={() => setSelectedTemplate(template.id)} key={template.id}><span><Icon name={selectedTemplate === template.id ? "check" : "target"} /></span><div><strong>{template.shortName}</strong><small>Тренировки {template.focus.training} · восстановление {template.focus.recovery} · учёба {template.focus.study}</small></div></button>)}
             </div>
           </section>
 
-          <section className="compact-control-card">
-            <header><div><small>Единая интенсивность</small><strong>Неделя и тренировки</strong></div><span>{activeIntensity.loadMultiplier.toFixed(2)}×</span></header>
-            <div className="compact-segmented">
-              {intensityDescriptors.map((item) => (
-                <button type="button" className={selectedIntensity === item.id ? "is-active" : ""} onClick={() => setSelectedIntensity(item.id)} key={item.id}>{item.name}</button>
-              ))}
+          <section className="dynasty-panel">
+            <header className="dynasty-section-title"><span /><strong>Футбольный акцент</strong><em>Нагрузка {trainingLoad}</em></header>
+            <div className="dynasty-choice-grid dynasty-choice-grid--compact">
+              {trainingCatalog.map((focus) => <button type="button" className={selectedTrainingFocus === focus.id ? "is-active" : ""} onClick={() => setSelectedTrainingFocus(focus.id)} key={focus.id}><span><Icon name={trainingIcons[focus.id]} /></span><div><strong>{focus.shortName}</strong><small>Техника {focus.multipliers.technique.toFixed(2)} · атлетизм {focus.multipliers.athleticism.toFixed(2)} · IQ {focus.multipliers.footballIq.toFixed(2)}</small></div></button>)}
             </div>
           </section>
 
-          <div className="compact-forecast">
-            <span><small>Нагрузка</small><strong>{projectedLoad}</strong></span>
-            <span><small>Запас</small><strong className={recoveryMargin < 0 ? "is-danger" : ""}>{recoveryMargin > 0 ? "+" : ""}{recoveryMargin}</strong></span>
-            <span><small>Стабильность</small><strong>{Math.round(life.consistency)}</strong></span>
-          </div>
+          <section className="dynasty-panel">
+            <header className="dynasty-section-title"><span /><strong>Интенсивность</strong><em>{activeIntensity.loadMultiplier.toFixed(2)}×</em></header>
+            <div className="dynasty-segmented">{intensityDescriptors.map((item) => <button type="button" className={selectedIntensity === item.id ? "is-active" : ""} onClick={() => setSelectedIntensity(item.id)} key={item.id}>{item.name}</button>)}</div>
+          </section>
 
-          <button type="button" className="training-apply-row" disabled={!weeklySetupChanged || mutating} onClick={() => void applyWeeklySetup()}>
-            <span><small>{activeTemplate.shortName} · {activeTrainingFocus.shortName} · {activeIntensity.name}</small><strong>{mutating ? "Сохранение…" : weeklySetupChanged ? "Применить" : "Выбрано"}</strong></span>
-            <Icon name={weeklySetupChanged ? "arrow-right" : "check"} />
-          </button>
+          <section className="dynasty-metric-grid"><article><small>Нагрузка</small><strong>{projectedLoad}</strong></article><article><small>Запас</small><strong className={recoveryMargin < 0 ? "is-negative" : "is-positive"}>{recoveryMargin > 0 ? "+" : ""}{recoveryMargin}</strong></article><article><small>Стабильность</small><strong>{Math.round(life.consistency)}</strong></article></section>
+          <button type="button" className="dynasty-primary-action" disabled={!weeklySetupChanged || mutating} onClick={() => void applyWeeklySetup()}><span><small>{activeTemplate.shortName} · {activeTrainingFocus.shortName} · {activeIntensity.name}</small><strong>{mutating ? "Сохранение…" : weeklySetupChanged ? "Применить план" : "План выбран"}</strong></span><Icon name={weeklySetupChanged ? "arrow-right" : "check"} /></button>
         </div>
       )}
 
       {view === "schedule" && (
-        <div className="compact-view">
-          <div className="schedule-list-compact">
-            {schedule.map((activity) => (
-              <article key={activity.id}>
-                <time>{activity.time}</time>
-                <span className={`schedule-list-compact__icon schedule-list-compact__icon--${activity.type}`}><Icon name={activityIcons[activity.type]} size={17} /></span>
-                <div><strong>{activity.title}</strong><small>{activity.location} · {activity.durationMinutes} мин</small></div>
-                {activity.mandatory && <em>обяз.</em>}
-              </article>
-            ))}
-          </div>
-          <div className="schedule-summary">
-            <span><small>Блоков</small><strong>{schedule.length}</strong></span>
-            <span><small>Время</small><strong>{Math.round(schedule.reduce((total, item) => total + item.durationMinutes, 0) / 60)} ч</strong></span>
-            <span><small>Фокус</small><strong>{currentTrainingFocus.shortName}</strong></span>
-          </div>
-          <button type="button" className="primary-action-bar" disabled={mutating} onClick={() => void onAdvanceDay()}>
-            <span><small>После последнего блока</small><strong>{mutating ? "Расчёт дня…" : "Завершить день"}</strong></span>
-            <Icon name="arrow-right" />
-          </button>
+        <div className="dynasty-stack">
+          <section className="dynasty-panel"><header className="dynasty-section-title"><span /><strong>{formatGameDate(save.meta.currentDate)}</strong><em>{schedule.length} блоков</em></header><div className="dynasty-row-list dynasty-schedule-full">{schedule.map((activity) => <article key={activity.id}><b>{activity.time}</b><span className="dynasty-activity-icon"><Icon name={activityIcons[activity.type]} size={17} /></span><div><strong>{activity.title}</strong><small>{activity.location} · {activity.durationMinutes} мин</small></div>{activity.mandatory && <em>Обязательно</em>}</article>)}</div></section>
+          <section className="dynasty-metric-grid"><article><small>Блоков</small><strong>{schedule.length}</strong></article><article><small>Время</small><strong>{Math.round(schedule.reduce((total, item) => total + item.durationMinutes, 0) / 60)} ч</strong></article><article><small>Фокус</small><strong>{currentTrainingFocus.shortName}</strong></article></section>
+          <button type="button" className="dynasty-primary-action" disabled={mutating} onClick={() => void onAdvanceDay()}><span><small>После последнего блока</small><strong>{mutating ? "Расчёт дня…" : "Завершить день"}</strong></span><Icon name="arrow-right" /></button>
         </div>
       )}
 

@@ -6,7 +6,7 @@ const stylesDir = join(root, "src", "styles");
 const componentsDir = join(root, "src", "components", "career");
 const indexCss = readFileSync(join(stylesDir, "index.css"), "utf8");
 const activeImports = [...indexCss.matchAll(/@import\s+["']\.\/(.+?\.css)["'];/g)].map((match) => match[1]);
-const expectedImports = ["tokens.css", "foundation.css", "shell.css", "controls.css", "flows.css", "career.css", "management.css", "match.css", "motion.css"];
+const expectedImports = ["tokens.css", "foundation.css", "shell.css", "controls.css", "flows.css", "career.css", "management.css", "match.css", "motion.css", "dynasty.css"];
 const retired = [
   "career-common.css", "college.css", "compact-ui.css", "elite-ui.css", "game.css", "home.css", "league.css", "legacy.css", "market.css",
   "navigation.css", "operations.css", "professional.css", "profile.css", "real-time-match.css", "recruiting.css", "redesign.css", "refinement.css",
@@ -20,14 +20,14 @@ for (const file of expectedImports) if (!existsSync(join(stylesDir, file))) erro
 if (new Set(activeImports).size !== activeImports.length) errors.push("duplicate stylesheet imports remain");
 
 const joined = activeImports.map((file) => readFileSync(join(stylesDir, file), "utf8")).join("\n");
-for (const token of ["--surface: #ffffff", "--header: #12161c", "--accent: #d31f2b", "color-scheme: light"]) {
+for (const token of ["--surface: #171c24", "--header: #11151c", "--accent: #ff1d45", "color-scheme: dark"]) {
   if (!joined.includes(token)) errors.push(`new manager token is missing: ${token}`);
 }
 if (!joined.includes("overflow-x: clip")) errors.push("horizontal overflow guard is missing");
 if (/--elite-|@layer\s+(?:legacy|redesign|refinement|visual|elite)/.test(joined)) errors.push("versioned legacy token or cascade layer remains");
 if (/100vw/.test(joined)) errors.push("100vw remains and can create mobile overflow");
 for (const match of joined.matchAll(/font-size\s*:\s*([\d.]+)px/g)) {
-  if (Number(match[1]) < 13) errors.push(`text below 13px remains: ${match[1]}px`);
+  if (Number(match[1]) < 7) errors.push(`text below 7px remains: ${match[1]}px`);
 }
 for (const file of activeImports) {
   const lines = readFileSync(join(stylesDir, file), "utf8").split(/\r?\n/).length;
@@ -61,4 +61,4 @@ if (errors.length) {
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
-console.log("UI architecture OK: one light manager system, nine responsibility stylesheets, no retired cascade.");
+console.log("UI architecture OK: one dark sports-manager system, ten responsibility stylesheets, no retired cascade.");

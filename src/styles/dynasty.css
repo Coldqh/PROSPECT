@@ -1,0 +1,610 @@
+/* PROSPECT 0.53 — reference-grade dark sports management interface */
+.app-shell:has(.dynasty-page) { background: var(--bg); }
+.screen:has(.dynasty-page) { width: min(100%, 1320px); padding-top: 0; background: var(--bg); }
+.career-game-page:has(.dynasty-page) { min-width: 0; }
+
+.dynasty-page {
+  --dynasty-panel: #171c24;
+  --dynasty-panel-raised: #1c222c;
+  --dynasty-panel-deep: #11161d;
+  --dynasty-line: #303845;
+  --dynasty-text: #f7f9fc;
+  --dynasty-soft: #c4ccd7;
+  --dynasty-muted: #8290a2;
+  min-height: calc(100vh - var(--header-height) - var(--nav-height));
+  padding: 0 0 38px;
+  color: var(--dynasty-text);
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--team-primary) 15%, transparent) 0, transparent 34%),
+    var(--bg);
+}
+.dynasty-page button { color: inherit; }
+.dynasty-page h1, .dynasty-page h2, .dynasty-page h3 { color: var(--dynasty-text); }
+.dynasty-page small { color: var(--dynasty-muted); }
+
+.dynasty-page-head {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--dynasty-line);
+  background: #12171f;
+}
+.dynasty-page-head__badge {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 7px 2px 7px 2px;
+  background: var(--team-primary);
+  color: var(--team-ink);
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: .04em;
+  transform: skewX(-5deg);
+}
+.dynasty-page-head > div:nth-child(2) { min-width: 0; display: grid; gap: 2px; }
+.dynasty-page-head > div:nth-child(2) strong { font-size: 17px; line-height: 1; letter-spacing: -.02em; }
+.dynasty-page-head > div:nth-child(2) small { font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.dynasty-head-action {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  border: 1px solid var(--dynasty-line);
+  border-radius: 8px;
+  background: var(--dynasty-panel);
+  cursor: pointer;
+}
+
+.dynasty-stack { display: grid; gap: 18px; padding-top: 18px; }
+.dynasty-grid { display: grid; gap: 16px; min-width: 0; }
+.dynasty-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dynasty-grid--profile { grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); }
+
+.dynasty-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--dynasty-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #191f28 0%, #171c24 100%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 16%);
+}
+.dynasty-section-title {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 2px;
+  color: var(--dynasty-text);
+}
+.dynasty-panel > .dynasty-section-title { padding: 0 16px; border-bottom: 1px solid var(--dynasty-line); }
+.dynasty-section-title > span:first-child {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: var(--team-primary);
+  transform: rotate(45deg);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--team-primary) 60%, transparent);
+}
+.dynasty-section-title strong { font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.dynasty-section-title em { margin-left: auto; color: var(--dynasty-soft); font-size: 12px; font-weight: 750; }
+
+.dynasty-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 16px 0 0;
+  padding: 0 0 3px;
+  scrollbar-width: none;
+}
+.dynasty-tabs::-webkit-scrollbar { display: none; }
+.dynasty-tabs button {
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: 1px solid var(--dynasty-line);
+  border-radius: 999px;
+  background: #141922;
+  color: var(--dynasty-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .045em;
+}
+.dynasty-tabs button:hover { border-color: #566171; color: #fff; }
+.dynasty-tabs button.is-active { border-color: color-mix(in srgb, var(--team-primary) 65%, #fff 15%); background: color-mix(in srgb, var(--team-primary) 18%, #141922); color: #fff; box-shadow: inset 0 -2px 0 var(--team-primary); }
+
+/* Shared badges, rows and metrics */
+.dynasty-overall-shield {
+  width: 76px;
+  height: 70px;
+  display: grid;
+  place-content: center;
+  flex: 0 0 auto;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--team-primary) 86%, #fff 10%), color-mix(in srgb, var(--team-primary) 72%, #000 22%));
+  color: var(--team-ink);
+  text-align: center;
+  clip-path: polygon(20% 0, 80% 0, 100% 22%, 83% 78%, 50% 100%, 17% 78%, 0 22%);
+  filter: drop-shadow(0 8px 14px rgb(0 0 0 / 28%));
+}
+.dynasty-overall-shield strong { font-size: 27px; line-height: .9; font-weight: 950; }
+.dynasty-overall-shield small { margin-top: 5px; color: currentColor; font-size: 8px; font-weight: 950; letter-spacing: .14em; }
+.dynasty-overall-shield--small { width: 52px; height: 48px; }
+.dynasty-overall-shield--small strong { font-size: 18px; }
+.dynasty-overall-shield--small small { font-size: 7px; }
+.dynasty-overall-shield--hero { width: 112px; height: 104px; }
+.dynasty-overall-shield--hero strong { font-size: 43px; }
+.dynasty-overall-shield--hero small { font-size: 10px; }
+
+.dynasty-team-token {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--team-primary) 65%, #fff 10%);
+  border-radius: 11px 3px 11px 3px;
+  background: color-mix(in srgb, var(--team-primary) 22%, #11161d);
+  color: #fff;
+  font-weight: 950;
+  letter-spacing: -.03em;
+}
+.dynasty-team-token--small { width: 34px; height: 34px; border-radius: 8px 2px 8px 2px; font-size: 11px; }
+.dynasty-avatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #3d4654;
+  border-radius: 12px;
+  background: #10151c;
+  color: #fff;
+  font-weight: 950;
+}
+.dynasty-status {
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid #394352;
+  border-radius: 6px;
+  background: #151b24;
+  color: #d8dee8;
+  font-size: 11px;
+  font-weight: 850;
+}
+.dynasty-status--signed { border-color: #157f4c; background: #0f3827; color: #2ce180; }
+
+.dynasty-row-list, .dynasty-table-list { display: grid; }
+.dynasty-row-list > article, .dynasty-row-list > button,
+.dynasty-table-list > article {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 15px;
+  border: 0;
+  border-bottom: 1px solid #2c3440;
+  background: transparent;
+  text-align: left;
+}
+.dynasty-row-list > article:last-child, .dynasty-row-list > button:last-child, .dynasty-table-list > article:last-child { border-bottom: 0; }
+.dynasty-row-list > button { cursor: pointer; }
+.dynasty-row-list > button:hover, .dynasty-row-list > article:hover { background: #1d242e; }
+.dynasty-row-list b { color: #f2f5f9; font-size: 12px; }
+.dynasty-row-list > article > div:not(.dynasty-team-token), .dynasty-row-list > button > div:not(.dynasty-team-token) { min-width: 0; display: grid; gap: 2px; }
+.dynasty-row-list strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-row-list small { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-row-list em { color: var(--dynasty-soft); font-size: 11px; font-weight: 800; text-align: right; }
+.dynasty-table-list > article { grid-template-columns: 24px minmax(0, 1fr) auto auto; min-height: 45px; }
+.dynasty-table-list > article.is-current { box-shadow: inset 3px 0 0 var(--team-primary); background: color-mix(in srgb, var(--team-primary) 10%, transparent); }
+.dynasty-table-list span { color: var(--dynasty-muted); font-weight: 800; }
+.dynasty-table-list strong { font-size: 13px; }
+.dynasty-table-list em, .dynasty-table-list b { color: var(--dynasty-soft); font-size: 12px; }
+
+.dynasty-empty {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: var(--dynasty-muted);
+  text-align: center;
+}
+.dynasty-empty--row { min-height: 54px; }
+
+.dynasty-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--dynasty-line);
+  border-radius: 15px;
+  background: var(--dynasty-line);
+}
+.dynasty-metric-grid > article { min-height: 88px; display: grid; align-content: center; gap: 6px; padding: 14px 16px; background: var(--dynasty-panel); }
+.dynasty-metric-grid small { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-metric-grid strong { overflow: hidden; font-size: clamp(18px, 2vw, 26px); text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-data-view { padding-top: 18px; }
+.dynasty-card-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.dynasty-card-list > article { min-height: 104px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 15px; border: 1px solid var(--dynasty-line); border-radius: 15px; background: var(--dynasty-panel); }
+.dynasty-card-list > article > div:nth-child(2) { min-width: 0; display: grid; gap: 4px; }
+.dynasty-card-list > article small { font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-card-list > article strong { font-size: 17px; }
+.dynasty-card-list > article span { color: var(--dynasty-soft); font-size: 12px; }
+.dynasty-card-list > article > b { font-size: 30px; }
+.dynasty-system-card { min-height: 170px; display: grid; align-content: end; gap: 8px; padding: 20px; background: linear-gradient(145deg, color-mix(in srgb, var(--team-primary) 14%, #171c24), #171c24 58%); }
+.dynasty-system-card small { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.dynasty-system-card h2 { font-size: 26px; }
+.dynasty-system-card p { color: var(--dynasty-soft); }
+
+/* Team */
+.dynasty-team-masthead {
+  position: relative;
+  min-height: 184px;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  grid-template-rows: 1fr 64px;
+  overflow: hidden;
+  margin: 0 -18px;
+  border-bottom: 1px solid var(--dynasty-line);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--team-primary) 90%, #000 5%) 0 132px, transparent 132px),
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--team-primary) 20%, transparent), transparent 38%),
+    #151b24;
+}
+.dynasty-team-masthead::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent 62%, rgb(255 255 255 / 3%)); }
+.dynasty-team-masthead__mark { grid-row: 1 / 3; display: grid; place-items: center; color: var(--team-ink); font-size: 22px; font-weight: 950; letter-spacing: -.05em; }
+.dynasty-team-masthead__identity { align-self: center; min-width: 0; padding: 22px 24px 12px; }
+.dynasty-team-masthead__identity small { color: color-mix(in srgb, var(--team-primary) 50%, #fff 50%); font-size: 11px; font-weight: 850; }
+.dynasty-team-masthead__identity h1 { max-width: 650px; margin-top: 6px; font-size: clamp(27px, 4vw, 44px); letter-spacing: -.045em; }
+.dynasty-team-masthead__identity span { display: block; margin-top: 8px; color: #fff; font-size: 12px; font-weight: 850; letter-spacing: .06em; }
+.dynasty-team-masthead__record { align-self: center; display: grid; justify-items: end; gap: 4px; padding: 22px 24px 12px; }
+.dynasty-team-masthead__record small { font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-team-masthead__record strong { font-size: 34px; letter-spacing: -.05em; }
+.dynasty-team-masthead__facts { grid-column: 2 / 4; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #36404d; background: rgb(12 16 22 / 44%); }
+.dynasty-team-masthead__facts > span { display: grid; align-content: center; gap: 3px; padding: 0 18px; border-right: 1px solid #36404d; }
+.dynasty-team-masthead__facts > span:last-child { border-right: 0; }
+.dynasty-team-masthead__facts small { font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-team-masthead__facts strong { font-size: 18px; }
+
+.dynasty-team-ratings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--dynasty-line); }
+.dynasty-team-ratings article { min-height: 92px; display: grid; align-content: center; gap: 10px; padding: 14px 18px; background: var(--dynasty-panel); }
+.dynasty-team-ratings article > div { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.dynasty-team-ratings small { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.dynasty-team-ratings strong { font-size: 25px; }
+.dynasty-team-ratings i, .dynasty-skill-grid i, .dynasty-skill-list i, .dynasty-readiness-grid i { height: 6px; overflow: hidden; border-radius: 999px; background: #2a323e; }
+.dynasty-team-ratings i b, .dynasty-skill-grid i b, .dynasty-skill-list i b, .dynasty-readiness-grid i b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--team-primary), var(--team-secondary)); }
+
+.dynasty-person-card__body { min-height: 112px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 16px; }
+.dynasty-person-card__body > div:nth-child(2) { min-width: 0; }
+.dynasty-person-card__body h2 { font-size: 20px; }
+.dynasty-person-card__body p { margin-top: 5px; color: var(--dynasty-soft); font-size: 12px; }
+.dynasty-person-card__body > strong { font-size: 34px; }
+.dynasty-next-game__body { min-height: 112px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 16px; }
+.dynasty-next-game__body > div:nth-child(2) { min-width: 0; }
+.dynasty-next-game__body small { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.dynasty-next-game__body h2 { margin-top: 4px; overflow: hidden; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-next-game__body p { margin-top: 5px; color: var(--green); font-size: 12px; font-weight: 750; }
+
+.dynasty-player-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.dynasty-player-card {
+  position: relative;
+  min-height: 178px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  gap: 14px;
+  overflow: hidden;
+  padding: 20px 18px 16px;
+  border: 1px solid var(--dynasty-line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #1a2029, #151a22);
+  cursor: pointer;
+  text-align: left;
+}
+.dynasty-player-card:hover { border-color: color-mix(in srgb, var(--team-primary) 55%, #596575); transform: translateY(-1px); }
+.dynasty-player-card__stripe { position: absolute; inset: 0 0 auto; height: 5px; background: var(--team-primary); }
+.dynasty-player-card__identity { min-width: 0; align-self: center; }
+.dynasty-player-card__identity small { font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.dynasty-player-card__identity h2 { margin-top: 7px; font-size: clamp(20px, 2.6vw, 28px); line-height: .98; letter-spacing: -.04em; }
+.dynasty-player-card__identity p { margin-top: 8px; color: var(--dynasty-soft); font-size: 12px; }
+.dynasty-player-card__rating { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 13px; border-top: 1px solid #313a46; }
+.dynasty-player-card__rating span { display: grid; gap: 3px; }
+.dynasty-player-card__rating small { font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-player-card__rating strong { font-size: 13px; }
+
+.dynasty-roster-toolbar { min-height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px; border: 1px solid var(--dynasty-line); border-radius: 14px; background: var(--dynasty-panel); }
+.dynasty-roster-toolbar > div { display: grid; gap: 3px; }
+.dynasty-roster-toolbar > div small { font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-roster-toolbar > div strong { font-size: 18px; }
+.dynasty-roster-toolbar nav { display: flex; gap: 7px; }
+.dynasty-roster-toolbar button, .dynasty-segmented button { min-height: 36px; padding: 0 13px; border: 1px solid var(--dynasty-line); border-radius: 8px; background: #141922; color: var(--dynasty-soft); cursor: pointer; font-size: 12px; font-weight: 800; }
+.dynasty-roster-toolbar button.is-active, .dynasty-segmented button.is-active { border-color: var(--amber); background: #3b2b0c; color: #ffc046; }
+.dynasty-roster-board { display: grid; }
+.dynasty-roster-room { display: grid; grid-template-columns: 180px minmax(0, 1fr); border-bottom: 1px solid var(--dynasty-line); }
+.dynasty-roster-room:last-child { border-bottom: 0; }
+.dynasty-roster-room > header { display: flex; align-items: center; gap: 12px; padding: 15px; border-right: 1px solid var(--dynasty-line); background: #131821; }
+.dynasty-roster-room > header > span { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; background: var(--team-primary); color: var(--team-ink); font-size: 13px; font-weight: 950; }
+.dynasty-roster-room > header > div { min-width: 0; display: grid; gap: 3px; }
+.dynasty-roster-room > header strong { font-size: 13px; }
+.dynasty-roster-room > header small { font-size: 10px; }
+.dynasty-roster-room > div { min-width: 0; }
+.dynasty-roster-room button { min-height: 66px; display: grid; grid-template-columns: 38px auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; width: 100%; padding: 8px 14px; border: 0; border-bottom: 1px solid #2c3440; background: transparent; cursor: pointer; text-align: left; }
+.dynasty-roster-room button:last-child { border-bottom: 0; }
+.dynasty-roster-room button:hover { background: #1d242e; }
+.dynasty-roster-room button.is-hero { box-shadow: inset 3px 0 0 var(--team-primary); background: color-mix(in srgb, var(--team-primary) 8%, transparent); }
+.dynasty-depth { color: var(--dynasty-muted); font-size: 11px; font-weight: 850; }
+.dynasty-roster-room button > div:nth-child(3) { min-width: 0; display: grid; gap: 3px; }
+.dynasty-roster-room button > div:nth-child(3) strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-roster-room button > div:nth-child(3) small { font-size: 10px; }
+.dynasty-roster-room button > em { color: var(--dynasty-soft); font-size: 11px; font-weight: 850; }
+
+/* Player profile */
+.dynasty-profile-hero {
+  position: relative;
+  min-height: 270px;
+  display: grid;
+  grid-template-columns: 92px auto minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 22px;
+  overflow: hidden;
+  margin: 0 -18px 18px;
+  padding: 26px 28px;
+  border-bottom: 1px solid var(--dynasty-line);
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--team-primary) 90%, #000 4%) 0 92px, transparent 92px),
+    radial-gradient(circle at 82% 22%, color-mix(in srgb, var(--team-primary) 28%, transparent), transparent 36%),
+    #151b24;
+}
+.dynasty-profile-hero__team { align-self: stretch; display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--team-ink); }
+.dynasty-profile-hero__team > span { font-size: 20px; font-weight: 950; }
+.dynasty-profile-hero__team small { max-width: 76px; color: var(--team-ink); font-size: 9px; font-weight: 900; text-align: center; }
+.dynasty-profile-hero__identity { min-width: 0; }
+.dynasty-profile-hero__identity > small { color: color-mix(in srgb, var(--team-primary) 45%, #fff 55%); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-profile-hero__identity h1 { margin-top: 9px; font-size: clamp(31px, 5vw, 54px); line-height: .94; letter-spacing: -.055em; }
+.dynasty-profile-hero__identity p { margin-top: 11px; color: #fff; font-size: 15px; font-weight: 700; }
+.dynasty-profile-hero__identity > div { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.dynasty-profile-hero__figure { align-self: end; width: 170px; height: 215px; display: grid; align-content: start; justify-items: center; padding-top: 54px; background: linear-gradient(180deg, #202733 0 25%, #0d1117 25% 100%); clip-path: polygon(30% 0, 70% 0, 82% 12%, 100% 30%, 86% 100%, 14% 100%, 0 30%, 18% 12%); box-shadow: inset 0 0 0 1px #394352; }
+.dynasty-profile-hero__figure span { color: var(--team-primary); font-size: 15px; font-weight: 950; }
+.dynasty-profile-hero__figure strong { margin-top: 28px; color: #fff; font-size: 52px; letter-spacing: -.06em; }
+
+.dynasty-skill-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--dynasty-line); }
+.dynasty-skill-grid article { min-height: 92px; display: grid; align-content: center; gap: 10px; padding: 14px 16px; background: var(--dynasty-panel); }
+.dynasty-skill-grid article > div { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.dynasty-skill-grid small { font-size: 11px; font-weight: 800; }
+.dynasty-skill-grid strong { font-size: 23px; }
+.dynasty-profile-contract { padding-bottom: 4px; }
+.dynasty-profile-contract > div { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid #2c3440; }
+.dynasty-profile-contract > div:last-child { border-bottom: 0; }
+.dynasty-profile-contract small { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.dynasty-profile-contract strong { max-width: 62%; overflow: hidden; font-size: 13px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-stat-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.dynasty-stat-card-grid article { min-height: 126px; display: grid; align-content: center; gap: 6px; padding: 16px; border: 1px solid var(--dynasty-line); border-radius: 14px; background: linear-gradient(145deg, #1a2029, #151a22); }
+.dynasty-stat-card-grid small { font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-stat-card-grid strong { font-size: clamp(26px, 4vw, 40px); line-height: 1; letter-spacing: -.045em; }
+.dynasty-stat-card-grid span { color: var(--dynasty-soft); font-size: 11px; }
+.dynasty-skill-list { display: grid; padding: 4px 16px 12px; }
+.dynasty-skill-list article { min-height: 46px; display: grid; grid-template-columns: 120px minmax(0, 1fr) 34px; align-items: center; gap: 13px; border-bottom: 1px solid #2c3440; }
+.dynasty-skill-list article:last-child { border-bottom: 0; }
+.dynasty-skill-list small { font-size: 11px; font-weight: 750; }
+.dynasty-skill-list strong { text-align: right; }
+.dynasty-profile-facts { padding-bottom: 3px; }
+.dynasty-profile-facts > article { min-height: 76px; display: grid; align-content: center; gap: 4px; padding: 10px 16px; border-bottom: 1px solid #2c3440; }
+.dynasty-profile-facts > article:last-child { border-bottom: 0; }
+.dynasty-profile-facts > article small { font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-profile-facts > article strong { font-size: 16px; }
+.dynasty-profile-facts > article span { color: var(--dynasty-soft); font-size: 11px; }
+.dynasty-decision-panel { padding: 16px; }
+.dynasty-decision-panel > header { display: flex; align-items: center; gap: 12px; }
+.dynasty-decision-panel > header > div { display: grid; gap: 3px; }
+.dynasty-decision-panel > div { display: grid; gap: 8px; margin-top: 14px; }
+.dynasty-decision-panel button { min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; border: 1px solid var(--dynasty-line); border-radius: 9px; background: #141922; cursor: pointer; }
+.dynasty-decision-day { padding: 14px; }
+
+/* Home */
+.dynasty-context-bar {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(4, minmax(90px, .75fr));
+  overflow: hidden;
+  margin: 0 -18px;
+  border-bottom: 1px solid var(--dynasty-line);
+  background: #171c24;
+}
+.dynasty-context-bar article { min-height: 64px; display: grid; align-content: center; gap: 4px; padding: 0 16px; border-right: 1px solid var(--dynasty-line); }
+.dynasty-context-bar article:last-child { border-right: 0; }
+.dynasty-context-bar small { font-size: 9px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.dynasty-context-bar strong { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-week-panel { padding: 16px; }
+.dynasty-week-panel > header { display: flex; align-items: end; justify-content: space-between; gap: 14px; }
+.dynasty-week-panel > header > div { display: grid; gap: 4px; }
+.dynasty-week-panel > header small { font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.dynasty-week-panel > header strong { font-size: 19px; }
+.dynasty-week-panel > header span { color: var(--dynasty-soft); font-weight: 850; }
+.dynasty-week-panel > i { height: 7px; display: block; overflow: hidden; margin-top: 12px; border-radius: 999px; background: #2b3440; }
+.dynasty-week-panel > i b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--green), #53e6a0); }
+.dynasty-week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 15px; }
+.dynasty-week-days span { min-height: 68px; display: grid; place-content: center; justify-items: center; gap: 2px; border: 1px solid #303946; border-radius: 11px; background: #141922; }
+.dynasty-week-days small { font-size: 9px; font-weight: 900; }
+.dynasty-week-days strong { font-size: 18px; }
+.dynasty-week-days em { color: var(--amber); font-size: 8px; font-weight: 950; letter-spacing: .08em; }
+.dynasty-week-days span.is-complete { border-color: #166e47; background: #103321; color: #2bdd81; }
+.dynasty-week-days span.is-current { border-color: var(--team-primary); background: color-mix(in srgb, var(--team-primary) 16%, #141922); box-shadow: inset 0 -3px 0 var(--team-primary); }
+.dynasty-week-days span.is-game { border-color: #9c6a11; }
+
+.dynasty-readiness-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dynasty-readiness-grid button { min-height: 100px; display: grid; align-content: center; gap: 13px; padding: 14px 16px; border: 1px solid var(--dynasty-line); border-radius: 14px; background: var(--dynasty-panel); cursor: pointer; text-align: left; }
+.dynasty-readiness-grid button:hover { border-color: #566171; }
+.dynasty-readiness-grid button > div { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.dynasty-readiness-grid small { font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.dynasty-readiness-grid strong { font-size: 27px; }
+.dynasty-readiness-grid button.is-warning i b { background: linear-gradient(90deg, var(--amber), #ffca5f); }
+.dynasty-alert-row, .dynasty-result-row {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #7c2b3a;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #32151d, #1a1d25);
+  cursor: pointer;
+  text-align: left;
+}
+.dynasty-alert-row > span:first-child { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 10px; background: var(--team-primary); color: #fff; }
+.dynasty-alert-row > div, .dynasty-result-row > div { min-width: 0; display: grid; gap: 2px; }
+.dynasty-alert-row strong, .dynasty-result-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-alert-row p, .dynasty-result-row p { color: var(--dynasty-soft); font-size: 11px; }
+.dynasty-focus-card > button { min-height: 126px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 16px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.dynasty-focus-card__icon { width: 54px; height: 54px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--team-primary) 58%, #485364); border-radius: 12px; background: color-mix(in srgb, var(--team-primary) 16%, #141922); color: #fff; }
+.dynasty-focus-card__icon.is-danger { border-color: #8c3140; background: #351720; color: var(--danger); }
+.dynasty-focus-card > button > div { min-width: 0; }
+.dynasty-focus-card small { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.dynasty-focus-card h2 { margin-top: 6px; overflow: hidden; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.dynasty-focus-card p { margin-top: 5px; color: var(--dynasty-soft); font-size: 12px; }
+.dynasty-activity-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: #222a35; color: var(--team-primary); }
+.dynasty-panel-link { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 0; border-top: 1px solid var(--dynasty-line); background: #141922; color: var(--dynasty-soft); cursor: pointer; font-size: 12px; font-weight: 800; }
+.dynasty-panel-link:hover { color: #fff; }
+.dynasty-result-row { border-color: var(--dynasty-line); background: var(--dynasty-panel); }
+.dynasty-result-row > .result-grade { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 12px; font-size: 20px; font-weight: 950; }
+.dynasty-primary-action { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 11px 18px; border: 1px solid color-mix(in srgb, var(--team-primary) 70%, #fff 12%); border-radius: 15px; background: linear-gradient(135deg, var(--team-primary), color-mix(in srgb, var(--team-primary) 72%, #b70024)); color: var(--team-ink); cursor: pointer; box-shadow: 0 12px 28px color-mix(in srgb, var(--team-primary) 22%, transparent); }
+.dynasty-primary-action:disabled { cursor: default; filter: grayscale(.45); opacity: .62; }
+.dynasty-primary-action > span { display: grid; gap: 3px; text-align: left; }
+.dynasty-primary-action small { color: color-mix(in srgb, var(--team-ink) 72%, transparent); font-size: 10px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.dynasty-primary-action strong { font-size: 20px; }
+
+.dynasty-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dynasty-choice-grid > button { min-height: 88px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 13px; padding: 12px 14px; border: 1px solid var(--dynasty-line); border-radius: 13px; background: var(--dynasty-panel); cursor: pointer; text-align: left; }
+.dynasty-choice-grid > button > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 9px; background: #222a35; color: var(--dynasty-soft); }
+.dynasty-choice-grid > button > div { min-width: 0; display: grid; gap: 4px; }
+.dynasty-choice-grid > button strong { font-size: 14px; }
+.dynasty-choice-grid > button small { font-size: 10px; }
+.dynasty-choice-grid > button.is-active { border-color: var(--team-primary); background: color-mix(in srgb, var(--team-primary) 10%, var(--dynasty-panel)); }
+.dynasty-choice-grid > button.is-active > span { background: var(--team-primary); color: var(--team-ink); }
+.dynasty-choice-grid--compact { padding: 14px; }
+.dynasty-segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px; }
+
+/* Darken legacy sheets opened from the three rebuilt screens */
+.dynasty-page ~ .bottom-sheet-layer .bottom-sheet,
+.app-shell:has(.dynasty-page) .bottom-sheet { background: #171c24; color: #f5f7fb; }
+.app-shell:has(.dynasty-page) .bottom-sheet__header { background: #11151c; }
+.app-shell:has(.dynasty-page) .sheet-metric-list > span,
+.app-shell:has(.dynasty-page) .sheet-fact-grid > span,
+.app-shell:has(.dynasty-page) .active-issue-card,
+.app-shell:has(.dynasty-page) .medical-status-card,
+.app-shell:has(.dynasty-page) .relationship-event-sheet,
+.app-shell:has(.dynasty-page) .relationship-event-options button { border-color: #303845; background: #1c222c; color: #f4f7fb; }
+
+/* Shell in the same visual language */
+.app-header { border-bottom-color: #2a313d; background: #10141b; box-shadow: none; }
+.brand__badge { border: 0; border-radius: 7px 2px 7px 2px; background: var(--accent); transform: skewX(-5deg); }
+.game-bottom-nav { border-color: #2a313d; background: #11151c; box-shadow: 0 -10px 30px rgb(0 0 0 / 28%); }
+.game-bottom-nav button { color: #8e99a8; }
+.game-bottom-nav button:hover { background: #171c24; }
+.game-bottom-nav button.is-active { background: #171c24; color: #fff; }
+.game-bottom-nav button.is-active::after { background: var(--accent); }
+
+@media (max-width: 920px) {
+  .dynasty-grid--profile { grid-template-columns: 1fr; }
+  .dynasty-profile-hero { grid-template-columns: 72px auto minmax(0, 1fr); }
+  .dynasty-profile-hero__team { grid-row: 1 / 2; }
+  .dynasty-profile-hero__figure { display: none; }
+  .dynasty-context-bar { grid-template-columns: 1.4fr repeat(2, 1fr); }
+  .dynasty-context-bar article:nth-child(4), .dynasty-context-bar article:nth-child(5) { display: none; }
+  .dynasty-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .screen:has(.dynasty-page) { padding: 0 10px 84px; }
+  .dynasty-page { min-height: calc(100vh - 50px); padding-bottom: 18px; }
+  .dynasty-page-head, .dynasty-team-masthead, .dynasty-profile-hero, .dynasty-context-bar { margin-inline: -10px; }
+  .dynasty-page-head { min-height: 54px; padding-inline: 10px; }
+  .dynasty-page-head__badge { width: 32px; height: 32px; }
+  .dynasty-stack { gap: 14px; padding-top: 14px; }
+  .dynasty-grid--two, .dynasty-player-card-grid, .dynasty-card-list, .dynasty-choice-grid { grid-template-columns: 1fr; }
+  .dynasty-panel { border-radius: 14px; }
+  .dynasty-section-title { min-height: 38px; }
+  .dynasty-section-title strong { font-size: 10px; letter-spacing: .1em; }
+  .dynasty-tabs { margin-top: 12px; }
+  .dynasty-tabs button { min-height: 36px; padding-inline: 13px; }
+
+  .dynasty-team-masthead { min-height: 210px; grid-template-columns: 86px minmax(0, 1fr) auto; grid-template-rows: 1fr 64px; background: linear-gradient(110deg, color-mix(in srgb, var(--team-primary) 90%, #000 5%) 0 86px, transparent 86px), radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--team-primary) 18%, transparent), transparent 38%), #151b24; }
+  .dynasty-team-masthead__mark { font-size: 16px; }
+  .dynasty-team-masthead__identity { padding: 18px 12px 10px; }
+  .dynasty-team-masthead__identity h1 { font-size: 26px; }
+  .dynasty-team-masthead__record { padding: 18px 12px 10px; }
+  .dynasty-team-masthead__record strong { font-size: 26px; }
+  .dynasty-team-masthead__facts { grid-column: 1 / 4; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dynasty-team-masthead__facts > span { padding-inline: 8px; }
+  .dynasty-team-masthead__facts strong { font-size: 16px; }
+  .dynasty-team-ratings { grid-template-columns: 1fr; }
+  .dynasty-team-ratings article { min-height: 72px; }
+  .dynasty-player-card { min-height: 160px; }
+  .dynasty-player-card__identity h2 { font-size: 23px; }
+  .dynasty-roster-toolbar { align-items: stretch; flex-direction: column; }
+  .dynasty-roster-toolbar nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dynasty-roster-toolbar button { padding-inline: 6px; }
+  .dynasty-roster-room { grid-template-columns: 1fr; }
+  .dynasty-roster-room > header { min-height: 62px; border-right: 0; border-bottom: 1px solid var(--dynasty-line); }
+  .dynasty-roster-room button { grid-template-columns: 30px auto minmax(0, 1fr) auto; gap: 9px; }
+  .dynasty-roster-room button > em { display: none; }
+  .dynasty-roster-room button > svg { display: none; }
+
+  .dynasty-profile-hero { min-height: 232px; grid-template-columns: 64px 82px minmax(0, 1fr); gap: 12px; padding: 20px 12px; background: linear-gradient(105deg, color-mix(in srgb, var(--team-primary) 90%, #000 4%) 0 64px, transparent 64px), radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--team-primary) 24%, transparent), transparent 40%), #151b24; }
+  .dynasty-profile-hero__team > span { font-size: 15px; }
+  .dynasty-profile-hero__team small { display: none; }
+  .dynasty-overall-shield--hero { width: 82px; height: 78px; }
+  .dynasty-overall-shield--hero strong { font-size: 31px; }
+  .dynasty-profile-hero__identity h1 { font-size: clamp(27px, 8vw, 39px); }
+  .dynasty-profile-hero__identity p { font-size: 13px; }
+  .dynasty-profile-hero__identity > div { margin-top: 12px; }
+  .dynasty-stat-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .dynasty-stat-card-grid article { min-height: 104px; }
+  .dynasty-skill-grid { grid-template-columns: 1fr; }
+  .dynasty-skill-list article { grid-template-columns: 88px minmax(0, 1fr) 30px; }
+
+  .dynasty-context-bar { grid-template-columns: 1.35fr repeat(2, 1fr); }
+  .dynasty-context-bar article { min-height: 58px; padding-inline: 10px; }
+  .dynasty-context-bar strong { font-size: 13px; }
+  .dynasty-week-panel { padding: 13px; }
+  .dynasty-week-days { gap: 5px; }
+  .dynasty-week-days span { min-height: 58px; border-radius: 9px; }
+  .dynasty-week-days strong { font-size: 16px; }
+  .dynasty-readiness-grid { grid-template-columns: 1fr; gap: 8px; }
+  .dynasty-readiness-grid button { min-height: 78px; }
+  .dynasty-focus-card > button { min-height: 108px; }
+  .dynasty-row-list > article, .dynasty-row-list > button { padding-inline: 11px; }
+  .dynasty-schedule-preview > article, .dynasty-schedule-full > article { grid-template-columns: 42px 34px minmax(0, 1fr); }
+  .dynasty-schedule-preview > article > em, .dynasty-schedule-full > article > em { display: none; }
+  .dynasty-primary-action { min-height: 64px; }
+  .dynasty-primary-action strong { font-size: 18px; }
+  .dynasty-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dynasty-metric-grid > article { min-height: 76px; padding: 11px; }
+  .dynasty-metric-grid strong { font-size: 20px; }
+}
+
+@media (max-width: 430px) {
+  .dynasty-team-masthead { grid-template-columns: 64px minmax(0, 1fr) 72px; }
+  .dynasty-team-masthead__identity h1 { font-size: 22px; }
+  .dynasty-team-masthead__identity small, .dynasty-team-masthead__identity span { font-size: 9px; }
+  .dynasty-team-masthead__record { padding-inline: 7px; }
+  .dynasty-team-masthead__record strong { font-size: 22px; }
+  .dynasty-team-masthead__facts small { font-size: 7px; }
+  .dynasty-team-masthead__facts strong { font-size: 14px; }
+  .dynasty-profile-hero { grid-template-columns: 50px 72px minmax(0, 1fr); gap: 8px; }
+  .dynasty-overall-shield--hero { width: 72px; height: 68px; }
+  .dynasty-overall-shield--hero strong { font-size: 27px; }
+  .dynasty-profile-hero__identity h1 { font-size: 26px; }
+  .dynasty-status { padding-inline: 7px; font-size: 9px; }
+  .dynasty-week-days small { font-size: 8px; }
+  .dynasty-week-days strong { font-size: 14px; }
+}

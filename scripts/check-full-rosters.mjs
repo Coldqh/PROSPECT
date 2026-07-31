@@ -32,7 +32,7 @@ const requiredTokens = [
   ["match", "specialistForSide"],
   ["match", "fieldGoalChance"],
   ["match", "puntNetYards"],
-  ["teamProfile", "team-depth-chart"],
+  ["teamProfile", "dynasty-roster-board"],
   ["teamProfile", 'label: "Атака"'],
   ["teamProfile", 'label: "Защита"'],
   ["teamProfile", 'label: "Спецкоманды"'],
