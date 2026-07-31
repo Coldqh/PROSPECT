@@ -4,6 +4,7 @@ import type { EcosystemMarketNegotiation, EcosystemPlayer, EcosystemTransaction 
 import { candidateKindLabel, getCoachTransactions, getMarketTransactions, promiseRoleLabel, vacancyStatusLabel } from "../../sports/football/ecosystem/visibility";
 import { Icon } from "../ui/Icon";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
+import { teamBrandStyle, teamMark } from "./teamBrand";
 
 type MarketView = "overview" | "players" | "coaches";
 type PlayerFilter = "all" | "portal" | "offers" | "signed";
@@ -86,6 +87,12 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
     return world.teams.find((team) => team.id === teamId)?.shortName ?? teamId;
   }
 
+
+  function teamStyle(teamId?: string) {
+    const team = teamId ? world.teams.find((candidate) => candidate.id === teamId) : undefined;
+    return teamBrandStyle(team ? `${team.id}:${team.shortName}` : teamId ?? "free-market");
+  }
+
   function openTransaction(item: EcosystemTransaction) {
     const player = item.playerId ? world.players.find((candidate) => candidate.id === item.playerId) : undefined;
     if (player) return setSelectedPlayer(player);
@@ -96,13 +103,21 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
   return (
     <div className="market-hub">
       <header className="market-hub__head">
-        <div><small>{world.phase === "offseason" ? "ТРАНСФЕРНОЕ ОКНО" : `НЕДЕЛЯ ${world.seasonWeek}`}</small><h1>Движение мира</h1></div>
-        <span>{world.seasonYear}</span>
+        <div className="market-hub__title">
+          <small>{world.phase === "offseason" ? "ТРАНСФЕРНОЕ ОКНО" : `НЕДЕЛЯ ${world.seasonWeek}`}</small>
+          <h1>Трансферный центр</h1>
+          <p>Кто уходит, кого ищут команды и какие решения уже изменили лигу.</p>
+        </div>
+        <div className="market-hub__scoreboard">
+          <span><small>Сезон</small><strong>{world.seasonYear}</strong></span>
+          <span><small>Портал</small><strong>{world.market.portalPlayers}</strong></span>
+          <span><small>Офферы</small><strong>{activeOffers.length}</strong></span>
+        </div>
       </header>
 
       <section className="market-hub__brief">
-        <div><strong>{activeOffers.length} активных предложений</strong><p>{world.market.portalPlayers} игроков находятся в портале, {openings.reduce((sum, item) => sum + item.remaining, 0)} мест остаются открытыми.</p></div>
-        <div className="market-hub__brief-counts"><span><strong>{latestMoves.length}</strong><small>последних движений</small></span><span><strong>{activeVacancies.length}</strong><small>вакансий штабов</small></span></div>
+        <div><small>СОСТОЯНИЕ РЫНКА</small><strong>{activeOffers.length} активных предложений</strong><p>{world.market.portalPlayers} игроков находятся в портале, {openings.reduce((sum, item) => sum + item.remaining, 0)} мест остаются открытыми.</p></div>
+        <div className="market-hub__brief-counts"><span><strong>{latestMoves.length}</strong><small>движений</small></span><span><strong>{activeVacancies.length}</strong><small>вакансий</small></span></div>
       </section>
 
       {heroCareer && (
@@ -140,7 +155,7 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
 
           <section className="market-needs">
             <header><div><small>КОМАНДЫ</small><h2>Кого ищут прямо сейчас</h2></div><span>{openings.length} активных потребностей</span></header>
-            {openings.slice(0, 8).map(({ item, remaining }) => <button type="button" key={item.id} onClick={() => onOpenTeam?.(item.teamId)}><span>{item.position}</span><div><strong>{teamName(item.teamId)}</strong><small>{item.reason}</small></div><em>{remaining} {remaining === 1 ? "место" : "места"}</em></button>)}
+            {openings.slice(0, 8).map(({ item, remaining }) => <button type="button" key={item.id} style={teamStyle(item.teamId)} onClick={() => onOpenTeam?.(item.teamId)}><span className="market-needs__mark">{teamMark(teamName(item.teamId))}</span><span className="market-needs__position">{item.position}</span><div><strong>{teamName(item.teamId)}</strong><small>{item.reason}</small></div><em>{remaining} {remaining === 1 ? "место" : "места"}</em></button>)}
             {openings.length === 0 && <div className="data-empty">Все основные потребности закрыты</div>}
           </section>
         </div>
@@ -173,7 +188,7 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
         <div className="market-hub__coaches">
           <section className="market-vacancies">
             <header><div><small>ВАКАНСИИ</small><h2>Открытые места в штабах</h2></div><span>{activeVacancies.length}</span></header>
-            {world.movementMarket.coachVacancies.slice().reverse().map((vacancy) => <button type="button" key={vacancy.id} onClick={() => onOpenTeam?.(vacancy.teamId)}><span>{vacancy.role === "head-coach" ? "Главный" : vacancy.role === "offensive-coordinator" ? "Атака" : vacancy.role === "defensive-coordinator" ? "Защита" : "Позиция"}</span><div><strong>{teamName(vacancy.teamId)}</strong><small>{vacancy.reason}</small></div><em>{vacancyStatusLabel(vacancy.status)}</em></button>)}
+            {world.movementMarket.coachVacancies.slice().reverse().map((vacancy) => <button type="button" key={vacancy.id} style={teamStyle(vacancy.teamId)} onClick={() => onOpenTeam?.(vacancy.teamId)}><span className="market-vacancies__mark">{teamMark(teamName(vacancy.teamId))}</span><span>{vacancy.role === "head-coach" ? "Главный" : vacancy.role === "offensive-coordinator" ? "Атака" : vacancy.role === "defensive-coordinator" ? "Защита" : "Позиция"}</span><div><strong>{teamName(vacancy.teamId)}</strong><small>{vacancy.reason}</small></div><em>{vacancyStatusLabel(vacancy.status)}</em></button>)}
             {world.movementMarket.coachVacancies.length === 0 && <div className="data-empty">Открытых вакансий нет</div>}
           </section>
 

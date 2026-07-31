@@ -10,7 +10,7 @@ const required = [
   [recruiting, "МОЙ РЕКРУТИНГ", "recruiting summary is missing"],
   [recruiting, "ЧТО ПРОИСХОДИТ", "selected-program context is missing"],
   [recruiting, "СЛЕДУЮЩИЙ КОНТАКТ", "next recruiting action is missing"],
-  [market, "Движение мира", "market weekly context is missing"],
+  [market, "Трансферный центр", "market weekly context is missing"],
   [market, "Что изменилось", "market digest is missing"],
   [market, "Кого ищут прямо сейчас", "team needs are missing"],
   [league, "ЦЕНТР СЕЗОНА", "league season center is missing"],

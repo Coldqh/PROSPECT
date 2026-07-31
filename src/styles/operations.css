@@ -1,0 +1,152 @@
+.career-game-shell { --ops-bg: #07090d; --ops-panel: #0d1118; --ops-panel-2: #121824; --ops-line: rgba(255, 255, 255, .11); --ops-line-strong: rgba(255, 255, 255, .2); --ops-paper: #ece9e1; --ops-paper-muted: #cac5ba; --ops-ink: #101216; background: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px), radial-gradient(circle at 82% 4%, rgba(239,62,82,.11), transparent 28%), var(--ops-bg); background-size: 48px 48px, 48px 48px, auto, auto; }
+.career-game-shell .app-header { min-height: calc(58px + env(safe-area-inset-top)); border-bottom-color: var(--ops-line-strong); background: rgba(5, 7, 11, .96); }
+.career-game-shell .brand__mark, .career-game-shell .app-header .brand__mark { font-size: 24px; font-style: normal; letter-spacing: -.05em; }
+.career-game-shell .career-game-page { width: 100%; max-width: 1320px; padding-top: 20px; }
+.career-game-shell .secondary-page-bar { min-height: 46px; margin-bottom: 16px; padding: 0 0 10px; border-bottom: 2px solid var(--ops-line-strong); }
+.career-game-shell .secondary-page-bar strong { font-size: 18px; letter-spacing: -.02em; }
+.career-game-shell .player-identity-bar { position: relative; min-height: 92px; padding: 12px 14px; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 14px; overflow: hidden; border: 1px solid var(--ops-line-strong); border-left: 6px solid var(--team-primary, var(--accent)); background: linear-gradient(105deg, color-mix(in srgb, var(--team-primary, var(--accent)) 18%, transparent), transparent 38%), var(--ops-panel); }
+.career-game-shell .player-identity-bar::after { content: ""; position: absolute; inset: 0 0 0 auto; width: 34%; pointer-events: none; background: linear-gradient(120deg, transparent, color-mix(in srgb, var(--team-primary, var(--accent)) 10%, transparent)); }
+.career-game-shell .player-identity-bar__portrait { width: 62px; height: 62px; z-index: 1; border-radius: 2px; color: var(--team-ink, #fff); background: var(--team-primary, var(--accent)); }
+.career-game-shell .player-identity-bar__copy, .career-game-shell .player-identity-bar__team { z-index: 1; }
+.career-game-shell .player-identity-bar__copy h1 { margin: 2px 0; font-size: 20px; line-height: 24px; }
+.career-game-shell .player-identity-bar__copy > span { color: var(--team-secondary, var(--accent)); font-weight: 750; }
+.career-game-shell .player-identity-bar__team { min-width: 128px; min-height: 62px; padding: 7px 10px; justify-content: space-between; border: 1px solid var(--ops-line-strong); border-radius: 2px; background: rgba(0, 0, 0, .28); }
+.career-game-shell .player-identity-bar__team-mark { width: 42px; height: 42px; display: grid; place-items: center; color: var(--team-ink, #fff); background: var(--team-primary, var(--accent)); font-weight: 900; }
+.career-game-shell :where(.recruiting-hub, .market-hub, .league-hub) { width: min(100%, 1320px); gap: 16px; }
+.career-game-shell :where(.recruiting-hub__head, .market-hub__head, .league-hub__head) { min-height: 128px; padding: 22px 24px; align-items: stretch; overflow: hidden; border: 1px solid var(--ops-line-strong); border-left: 7px solid var(--accent); background: linear-gradient(108deg, rgba(239,62,82,.17), transparent 42%), linear-gradient(180deg, #151b27, #0c1017); }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) { min-width: 0; align-self: center; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) small { color: var(--accent); font-weight: 850; letter-spacing: .06em; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) h1 { margin-top: 4px; font-size: 32px; line-height: 36px; letter-spacing: -.045em; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) p { max-width: 650px; margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) { min-width: 310px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(92px, 1fr); align-self: stretch; border-left: 1px solid var(--ops-line-strong); background: rgba(0, 0, 0, .16); }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) > span { min-width: 0; padding: 12px 16px; display: grid; align-content: center; gap: 6px; border-right: 1px solid var(--ops-line-strong); }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) small { color: var(--muted); font-weight: 700; }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) strong { overflow: hidden; font-size: 25px; line-height: 28px; text-overflow: ellipsis; white-space: nowrap; }
+.career-game-shell .recruiting-hub__scoreboard strong em { color: var(--muted); font-size: 15px; font-style: normal; }
+.career-game-shell :where(.recruiting-hub__brief, .market-hub__brief) { min-height: 94px; padding: 0; border: 1px solid var(--ops-line-strong); border-left: 0; background: var(--ops-paper); color: var(--ops-ink); }
+.career-game-shell .recruiting-hub__brief-copy, .career-game-shell .market-hub__brief > div:first-child { min-width: 0; padding: 15px 18px; }
+.career-game-shell :where(.recruiting-hub__brief-copy, .market-hub__brief > div:first-child) > small { display: block; margin-bottom: 4px; color: #9d2333; font-weight: 900; letter-spacing: .05em; }
+.career-game-shell :where(.recruiting-hub__brief, .market-hub__brief) strong { color: var(--ops-ink); font-size: 18px; }
+.career-game-shell :where(.recruiting-hub__brief, .market-hub__brief) p { color: #555860; }
+.career-game-shell .recruiting-hub__tape, .career-game-shell .market-hub__brief-counts { min-width: 310px; align-self: stretch; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; border-left: 1px solid rgba(16,18,22,.22); }
+.career-game-shell .recruiting-hub__tape > span, .career-game-shell .market-hub__brief-counts > span { min-width: 92px; padding: 12px 15px; display: grid; align-content: center; justify-items: start; border-right: 1px solid rgba(16,18,22,.18); }
+.career-game-shell .recruiting-hub__tape strong, .career-game-shell .market-hub__brief-counts strong { font-size: 25px; line-height: 28px; }
+.career-game-shell .recruiting-hub__tape small, .career-game-shell .market-hub__brief-counts small { color: #696b71; }
+.career-game-shell :where(.recruiting-hub__filters, .market-hub__tabs, .league-hub__sections) { min-height: 48px; gap: 0; border: 1px solid var(--ops-line-strong); background: #090c11; }
+.career-game-shell :where(.recruiting-hub__filters, .market-hub__tabs, .league-hub__sections) button { min-height: 46px; padding: 0 18px; border-right: 1px solid var(--ops-line); border-bottom: 0; color: var(--muted); }
+.career-game-shell :where(.recruiting-hub__filters, .market-hub__tabs, .league-hub__sections) button.is-active { color: #fff; background: var(--accent); box-shadow: none; }
+.career-game-shell .recruiting-hub__workspace { grid-template-columns: minmax(0, 1.28fr) minmax(380px, .72fr); gap: 14px; }
+.career-game-shell .recruiting-board { border: 1px solid var(--ops-line-strong); background: #090c12; }
+.career-game-shell .recruiting-board > header { min-height: 42px; padding: 0 12px; grid-template-columns: 34px 56px minmax(0, 1fr) 170px; border-bottom: 1px solid var(--ops-line-strong); background: #131925; color: #9299a6; }
+.career-game-shell .recruiting-board > button { min-height: 82px; padding: 10px 12px; grid-template-columns: 34px 56px minmax(0, 1fr) 170px; border-top: 0; border-bottom: 1px solid var(--ops-line); background: #0a0e15; }
+.career-game-shell .recruiting-board > button:nth-of-type(even) { background: #0c1119; }
+.career-game-shell .recruiting-board > button:hover { background: #151c28; }
+.career-game-shell .recruiting-board > button.is-selected { box-shadow: inset 6px 0 0 var(--team-primary, var(--accent)); background: linear-gradient(90deg, color-mix(in srgb, var(--team-primary) 18%, #111722), #111722 58%); }
+.career-game-shell .recruiting-board__mark, .career-game-shell .recruiting-detail__mark, .career-game-shell .market-needs__mark, .career-game-shell .market-vacancies__mark, .career-game-shell .league-ranking-panel > button > b, .career-game-shell .league-movers > button > b, .career-game-shell .league-races > article > button > b, .career-game-shell .league-power-table > button > b, .career-game-shell .league-playoff-picture button > b { display: grid; place-items: center; color: var(--team-ink, #fff); background: var(--team-primary, var(--accent)); font-weight: 900; font-style: normal; }
+.career-game-shell .recruiting-board__mark { width: 48px; height: 48px; border: 2px solid color-mix(in srgb, var(--team-secondary) 48%, transparent); }
+.career-game-shell .recruiting-board__rank { font-size: 18px; }
+.career-game-shell .recruiting-board__program strong { font-size: 16px; }
+.career-game-shell .recruiting-board__status strong { color: #f1f3f6; }
+.career-game-shell .recruiting-board > button.is-offer .recruiting-board__status strong { color: #ff8b99; }
+.career-game-shell .recruiting-detail { top: 16px; padding: 0; gap: 0; overflow: hidden; border: 1px solid var(--ops-line-strong); background: #0b0f16; }
+.career-game-shell .recruiting-detail > header { min-height: 116px; padding: 18px; display: grid; grid-template-columns: 68px minmax(0, 1fr) auto; align-items: center; gap: 14px; background: linear-gradient(105deg, color-mix(in srgb, var(--team-primary) 33%, transparent), transparent 66%), #151b25; border-bottom: 1px solid var(--ops-line-strong); }
+.career-game-shell .recruiting-detail__mark { width: 68px; height: 68px; font-size: 20px; }
+.career-game-shell .recruiting-detail > header h2 { font-size: 25px; line-height: 29px; }
+.career-game-shell .recruiting-detail > header p { margin: 4px 0 0; color: var(--muted); }
+.career-game-shell .recruiting-detail__interest { min-width: 70px; padding-left: 14px; border-left: 1px solid var(--ops-line-strong); }
+.career-game-shell :where(.recruiting-detail__next, .recruiting-detail__facts, .recruiting-detail__context, .recruiting-detail__promises, .recruiting-detail__actions) { margin: 0 16px; }
+.career-game-shell .recruiting-detail__next { padding: 16px 0; }
+.career-game-shell .recruiting-detail__facts article { padding: 13px 0; }
+.career-game-shell .recruiting-detail__context { margin-top: 14px; margin-bottom: 14px; background: var(--ops-line); }
+.career-game-shell .recruiting-detail__context span { background: #101620; }
+.career-game-shell .recruiting-detail__actions { margin-top: 16px; padding-bottom: 16px; }
+.career-game-shell .recruiting-detail__actions > button { min-height: 64px; padding: 10px 12px; border: 1px solid var(--ops-line); border-bottom: 0; background: #111722; }
+.career-game-shell .recruiting-detail__actions > button:last-child { border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .recruiting-detail > .button--primary { width: auto; margin: 16px; min-height: 48px; border-radius: 2px; font-size: 15px; }
+.career-game-shell :where(.market-hub__overview, .market-hub__players, .market-hub__coaches) { gap: 14px; }
+.career-game-shell :where(.market-headlines, .market-table, .market-needs, .market-negotiations, .market-movement-list, .market-vacancies, .league-featured-game, .league-ranking-panel, .league-movers, .league-races, .league-news, .league-playoff-picture, .league-power-table) { overflow: hidden; border: 1px solid var(--ops-line-strong); border-radius: 0; background: #0b0f16; }
+.career-game-shell :where(.market-headlines, .market-table, .market-needs, .market-negotiations, .market-movement-list, .market-vacancies, .league-ranking-panel, .league-movers, .league-races, .league-news, .league-playoff-picture, .league-power-table) > header { min-height: 64px; padding: 12px 14px; border-bottom: 1px solid var(--ops-line-strong); background: #141a25; }
+.career-game-shell .market-headlines { background: var(--ops-paper); color: var(--ops-ink); }
+.career-game-shell .market-headlines > header { background: #dcd7cc; border-bottom-color: rgba(16,18,22,.22); }
+.career-game-shell .market-headlines > header small, .career-game-shell .market-headlines > header span { color: #737069; }
+.career-game-shell .market-headlines > :where(article, button) { min-height: 66px; border-top: 0; border-bottom: 1px solid rgba(16,18,22,.16); color: var(--ops-ink); }
+.career-game-shell .market-headlines > :where(article, button) > span:first-child { color: #9d2333; font-size: 21px; }
+.career-game-shell .market-table__head { background: #0f141d; }
+.career-game-shell :where(.market-table, .market-negotiations, .market-movement-list, .market-vacancies) > button { border-top: 0; border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .market-needs > button { min-height: 70px; grid-template-columns: 48px 48px minmax(0, 1fr) auto; border-top: 0; border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .market-needs__mark, .career-game-shell .market-vacancies__mark { width: 40px; height: 40px; }
+.career-game-shell .market-needs__position { color: var(--team-secondary, var(--accent)); font-size: 15px; font-weight: 900; }
+.career-game-shell .market-vacancies > button { grid-template-columns: 42px 92px minmax(0, 1fr) auto; }
+.career-game-shell .market-hub__hero { border-radius: 0; border-left: 6px solid var(--accent); background: linear-gradient(90deg, rgba(239,62,82,.12), transparent 44%), #0d121a; }
+.career-game-shell .market-hub__filters button { border-radius: 2px; }
+.career-game-shell .league-hub__levels { min-height: 54px; grid-template-columns: repeat(2, minmax(0, 220px)); justify-content: start; border: 1px solid var(--ops-line-strong); background: #090c11; }
+.career-game-shell .league-hub__levels button { min-height: 52px; font-size: 15px; }
+.career-game-shell .league-hub__levels button.is-active { background: var(--accent); box-shadow: none; }
+.career-game-shell .league-overview { grid-template-columns: minmax(0, 1.3fr) minmax(340px, .7fr); gap: 14px; }
+.career-game-shell .league-featured-game { grid-column: 1 / -1; background: var(--ops-paper); color: var(--ops-ink); }
+.career-game-shell .league-featured-game > header { min-height: 46px; padding: 0 16px; border-bottom: 1px solid rgba(16,18,22,.2); background: #dcd7cc; }
+.career-game-shell .league-featured-game > header small, .career-game-shell .league-featured-game > header span { color: #706d66; }
+.career-game-shell .league-featured-game > div { min-height: 174px; padding: 22px 24px; }
+.career-game-shell .league-featured-game > div > button { color: var(--ops-ink); }
+.career-game-shell .league-featured-game > div > button span { width: 66px; height: 66px; border-radius: 0; color: var(--team-ink, #fff); background: var(--team-primary, #333); font-size: 18px; }
+.career-game-shell .league-featured-game > div > button strong { max-width: 220px; font-size: 18px; }
+.career-game-shell .league-featured-game > div > button em { font-size: 26px; }
+.career-game-shell .league-featured-game > div > p { min-width: 140px; color: #706d66; font-weight: 750; }
+.career-game-shell .league-ranking-panel > button { min-height: 58px; grid-template-columns: 38px 42px minmax(0, 1fr) auto; border-top: 0; border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .league-ranking-panel > button > b, .career-game-shell .league-movers > button > b, .career-game-shell .league-power-table > button > b, .career-game-shell .league-playoff-picture button > b { width: 34px; height: 34px; }
+.career-game-shell .league-movers > button { grid-template-columns: 38px minmax(0, 1fr) auto; }
+.career-game-shell .league-races > article > button { grid-template-columns: 28px 34px minmax(0, 1fr) auto; }
+.career-game-shell .league-races > article > button > b { width: 30px; height: 30px; }
+.career-game-shell .league-power-table > button { grid-template-columns: 34px 40px minmax(0, 1fr) auto; }
+.career-game-shell .league-playoff-picture > div > section > button { grid-template-columns: 28px 34px minmax(0, 1fr) auto; }
+.career-game-shell .league-playoff-picture button > b { width: 30px; height: 30px; }
+.career-game-shell .league-news > article { border-top: 0; border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .league-hub__search { min-height: 50px; border-radius: 0; border-color: var(--ops-line-strong); background: #0b0f16; }
+.career-game-shell .league-team-directory { border: 1px solid var(--ops-line-strong); background: #090d13; }
+.career-game-shell .league-team-directory > header { min-height: 44px; border-bottom: 1px solid var(--ops-line-strong); background: #151b26; }
+.career-game-shell .league-team-directory > button { min-height: 66px; border-top: 0; border-bottom: 1px solid var(--ops-line); }
+.career-game-shell .league-team-directory > button:nth-of-type(even) { background: #0c1119; }
+.career-game-shell .league-team-directory > button > div span { width: 44px; height: 44px; color: var(--team-ink, #fff); background: var(--team-primary, var(--surface-3)); }
+
+@media (min-width: 980px) { .career-game-shell .screen { max-width: none; padding-left: 88px; }
+.career-game-shell .game-bottom-nav { inset: calc(58px + env(safe-area-inset-top)) auto 0 0; width: 88px; max-width: none; height: auto; margin: 0; padding: 14px 8px; grid-template-columns: 1fr; grid-template-rows: repeat(4, 76px); align-content: start; border-top: 0; border-right: 1px solid var(--ops-line-strong); background: rgba(5, 7, 11, .97); box-shadow: 12px 0 34px rgba(0,0,0,.3); }
+.career-game-shell .game-bottom-nav button { min-height: 70px; padding: 8px 4px; border-radius: 2px; }
+.career-game-shell .game-bottom-nav button.is-active { background: var(--accent); color: #fff; }
+.career-game-shell .game-bottom-nav button.is-active .game-bottom-nav__icon { color: #fff; } }
+
+@media (max-width: 979px) { .career-game-shell :where(.recruiting-hub__head, .market-hub__head, .league-hub__head) { min-height: 112px; padding: 18px; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) h1 { font-size: 27px; line-height: 31px; }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) { min-width: 250px; }
+.career-game-shell .recruiting-hub__workspace { grid-template-columns: 1fr; }
+.career-game-shell .recruiting-detail { position: static; } }
+
+@media (max-width: 720px) { .career-game-shell .career-game-page { padding-top: 10px; }
+.career-game-shell .player-identity-bar { min-height: 78px; padding: 9px; grid-template-columns: 50px minmax(0, 1fr) auto; }
+.career-game-shell .player-identity-bar__portrait { width: 50px; height: 50px; }
+.career-game-shell .player-identity-bar__team { min-width: 62px; min-height: 50px; padding: 4px 7px; }
+.career-game-shell .player-identity-bar__team-mark { display: none; }
+.career-game-shell :where(.recruiting-hub__head, .market-hub__head, .league-hub__head) { display: grid; gap: 16px; }
+.career-game-shell :where(.recruiting-hub__scoreboard, .market-hub__scoreboard, .league-hub__scoreboard) { min-width: 0; width: 100%; border-top: 1px solid var(--ops-line-strong); border-left: 0; }
+.career-game-shell :where(.recruiting-hub__brief, .market-hub__brief) { display: grid; }
+.career-game-shell .recruiting-hub__tape, .career-game-shell .market-hub__brief-counts { min-width: 0; width: 100%; border-top: 1px solid rgba(16,18,22,.2); border-left: 0; }
+.career-game-shell .recruiting-board > header { display: none; }
+.career-game-shell .recruiting-board > button { grid-template-columns: 30px 48px minmax(0, 1fr); }
+.career-game-shell .recruiting-board__status { grid-column: 3; justify-items: start; text-align: left; }
+.career-game-shell .recruiting-board__mark { width: 42px; height: 42px; }
+.career-game-shell .league-overview { grid-template-columns: 1fr; }
+.career-game-shell .league-featured-game { grid-column: auto; }
+.career-game-shell .league-featured-game > div { min-height: 148px; padding: 16px 10px; }
+.career-game-shell .market-needs > button { grid-template-columns: 42px 42px minmax(0, 1fr); }
+.career-game-shell .market-needs > button em { grid-column: 3; text-align: left; }
+.career-game-shell .market-vacancies > button { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.career-game-shell .market-vacancies > button > span:nth-child(2) { display: none; } }
+
+@media (max-width: 460px) { .career-game-shell :where(.recruiting-hub__head, .market-hub__head, .league-hub__head) { padding: 15px; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) h1 { font-size: 24px; line-height: 28px; }
+.career-game-shell :where(.recruiting-hub__title, .market-hub__title, .league-hub__title) p { display: none; }
+.career-game-shell .recruiting-detail > header { grid-template-columns: 54px minmax(0, 1fr) auto; padding: 13px; }
+.career-game-shell .recruiting-detail__mark { width: 54px; height: 54px; }
+.career-game-shell .recruiting-detail > header h2 { font-size: 20px; line-height: 24px; }
+.career-game-shell .league-featured-game > div > button span { width: 52px; height: 52px; }
+.career-game-shell .league-featured-game > div > button strong { max-width: 112px; font-size: 14px; }
+.career-game-shell .league-featured-game > div > p { min-width: 74px; font-size: 13px; } }

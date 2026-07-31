@@ -60,3 +60,9 @@
 `RecruitingDashboard` держит доску программ и выбранную школу в одном рабочем пространстве. `MarketDashboard` отделяет недельную сводку, переговоры, реальные движения и вакансии. `LeagueDirectoryDashboard` сначала показывает состояние сезона College или PRO, а каталог команд оставляет вторичным режимом.
 
 `scripts/check-interface-comprehension.mjs` запрещает возврат к синтетическим кодам и модальному сокрытию базового контекста.
+
+## Sports operations presentation
+
+`operations.css` is the final responsibility-based visual layer. It does not own domain data. It converts existing recruiting, market and league projections into a manager workspace: a desktop operations rail, scoreboard mastheads, team-branded rows, editorial weekly summaries and dense flat tables. `teamBrand.ts` deterministically derives presentation-only team colors from stable ids when the domain has no explicit branding fields.
+
+Mobile keeps the bottom navigation and collapses master-detail layouts to one column. Save state, simulation decisions and market logic remain outside the presentation layer.

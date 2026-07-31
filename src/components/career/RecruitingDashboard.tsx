@@ -3,6 +3,7 @@ import type { CareerSave } from "../../storage/saves/schema";
 import type { RecruitingActionId, RecruitingProgram, RecruitingStage } from "../../sports/football/recruiting/types";
 import { recruitingActionsRemaining, recruitingRoleLabel, recruitingStageLabel } from "../../sports/football/recruiting/updateRecruiting";
 import { Icon } from "../ui/Icon";
+import { teamBrandStyle, teamMark } from "./teamBrand";
 
 type RecruitingView = "board" | "offers" | "visits";
 
@@ -104,13 +105,24 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
   return (
     <div className="recruiting-hub">
       <header className="recruiting-hub__head">
-        <div><small>МОЙ РЕКРУТИНГ</small><h1>{recruitment.regionalRankLabel}</h1></div>
-        <div className="recruiting-hub__budget"><small>Контакты недели</small><strong>{actionsRemaining} из 2</strong></div>
+        <div className="recruiting-hub__title">
+          <small>МОЙ РЕКРУТИНГ</small>
+          <h1>Доска программ</h1>
+          <p>Кто действительно зовёт тебя, что обещает и где есть путь к игровому времени.</p>
+        </div>
+        <div className="recruiting-hub__scoreboard">
+          <span><small>Рейтинг</small><strong>{recruitment.regionalRankLabel}</strong></span>
+          <span><small>Контакты</small><strong>{actionsRemaining}<em>/2</em></strong></span>
+        </div>
       </header>
 
       <section className="recruiting-hub__brief">
-        <div><strong>{programs.length} программ остаются в борьбе</strong><p>{offers.length > 0 ? `${offers.length} оффера уже на столе.` : "Офферов пока нет — штабы продолжают оценку."} {visits.length > 0 ? `${visits.length} программ обсуждают визит.` : "Приглашений на визит пока нет."}</p></div>
-        <span>{Math.round(recruitment.filmGrade)}<small>оценка видео</small></span>
+        <div className="recruiting-hub__brief-copy"><small>СОСТОЯНИЕ БОРЬБЫ</small><strong>{programs.length} программ остаются в борьбе</strong><p>{offers.length > 0 ? `${offers.length} оффера уже на столе.` : "Офферов пока нет — штабы продолжают оценку."} {visits.length > 0 ? `${visits.length} программ обсуждают визит.` : "Приглашений на визит пока нет."}</p></div>
+        <div className="recruiting-hub__tape">
+          <span><strong>{offers.length}</strong><small>офферы</small></span>
+          <span><strong>{visits.length}</strong><small>визиты</small></span>
+          <span><strong>{Math.round(recruitment.filmGrade)}</strong><small>видео</small></span>
+        </div>
       </section>
 
       {committed && (
@@ -131,11 +143,12 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
 
       <div className="recruiting-hub__workspace">
         <section className="recruiting-board" aria-label="Список программ">
-          <header><span>#</span><span>Программа и ситуация</span><span>Статус</span></header>
+          <header><span>#</span><span>Команда</span><span>Программа и ситуация</span><span>Статус</span></header>
           {visible.map((program, index) => (
-            <button type="button" key={program.id} className={`${selected?.id === program.id ? "is-selected" : ""} ${stageTone(program.stage)}`} onClick={() => setSelectedId(program.id)}>
+            <button type="button" key={program.id} style={teamBrandStyle(program.seed)} className={`${selected?.id === program.id ? "is-selected" : ""} ${stageTone(program.stage)}`} onClick={() => setSelectedId(program.id)}>
               <span className="recruiting-board__rank">{index + 1}</span>
-              <div>
+              <span className="recruiting-board__mark">{teamMark(program.shortName)}</span>
+              <div className="recruiting-board__program">
                 <strong>{program.shortName}</strong>
                 <small>{recruitingRoleLabel(program.projectedRole)} · {programReason(program)}</small>
               </div>
@@ -148,12 +161,13 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
           {visible.length === 0 && <div className="data-empty">Здесь пока нет программ</div>}
         </section>
 
-        <aside className="recruiting-detail" aria-label="Подробности программы">
+        <aside className="recruiting-detail" style={selected ? teamBrandStyle(selected.seed) : undefined} aria-label="Подробности программы">
           {selected ? (
             <>
               <header>
-                <div><small>{tierLabel(selected)} · {selected.stateCode}</small><h2>{selected.name}</h2></div>
-                <span>{Math.round(selected.interest)}<small>интерес</small></span>
+                <span className="recruiting-detail__mark">{teamMark(selected.shortName)}</span>
+                <div><small>{tierLabel(selected)} · {selected.stateCode}</small><h2>{selected.name}</h2><p>{selected.city} · {selected.scheme}</p></div>
+                <span className="recruiting-detail__interest">{Math.round(selected.interest)}<small>интерес</small></span>
               </header>
 
               <section className="recruiting-detail__next">

@@ -354,3 +354,13 @@
 - PRO season center with featured game, conference playoff picture, transactions and power table;
 - raw interface codes replaced by football language;
 - no domain-state or save-schema changes.
+
+## v0.51 — Sports operations visual rebuild
+
+- fixed desktop operations rail and expanded manager workspace;
+- team-branded recruiting rows, market needs and league tables;
+- high-contrast editorial weekly digest and featured-game presentation;
+- scoreboard mastheads for recruiting, market, College and PRO context;
+- flat dense tables instead of repeated rounded card stacks;
+- responsive mobile fallback using the same information architecture;
+- no save migration or domain-system changes.

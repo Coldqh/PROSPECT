@@ -7,6 +7,7 @@ import type { ProfessionalCoach, ProfessionalGame, ProfessionalRosterPlayer, Pro
 import { FOOTBALL_ROSTER_POSITIONS } from "../../sports/football/team/positions";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
+import { teamBrandStyle, teamMark } from "./teamBrand";
 
 type LeagueDirectoryView = "college" | "professional";
 type LeagueSection = "overview" | "teams";
@@ -120,8 +121,8 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
   return (
     <div className="league-hub">
       <header className="league-hub__head">
-        <div><small>ЦЕНТР СЕЗОНА</small><h1>{view === "college" ? "Колледжный футбол" : "Профессиональная лига"}</h1></div>
-        <span>{view === "college" ? `${save.world.seasonYear} · W${collegeWeek}` : `${proLeague.seasonYear} · W${proLeague.week}`}</span>
+        <div className="league-hub__title"><small>ЦЕНТР СЕЗОНА</small><h1>{view === "college" ? "Колледжный футбол" : "Профессиональная лига"}</h1><p>{view === "college" ? "Рейтинг, конференции, ключевые матчи и движение программ." : "Плей-офф, сила команд, кадровые движения и главные матчи."}</p></div>
+        <div className="league-hub__scoreboard"><span><small>Сезон</small><strong>{view === "college" ? save.world.seasonYear : proLeague.seasonYear}</strong></span><span><small>Неделя</small><strong>{view === "college" ? collegeWeek : proLeague.week}</strong></span></div>
       </header>
 
       <nav className="league-hub__levels" aria-label="Уровень лиги">
@@ -139,9 +140,9 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
           <section className="league-featured-game">
             <header><small>ГЛАВНЫЙ МАТЧ НЕДЕЛИ</small><span>{collegeFeatured ? `W${collegeFeatured.week}` : "—"}</span></header>
             {collegeFeatured ? <div>
-              <button type="button" onClick={() => onOpenCollegeTeam?.(collegeFeatured.homeTeamId)}><span>{collegeTeam(collegeFeatured.homeTeamId)?.shortName ?? collegeFeatured.homeTeamId}</span><strong>{collegeTeam(collegeFeatured.homeTeamId)?.name ?? collegeFeatured.homeTeamId}</strong><em>{collegeFeatured.status === "complete" ? collegeFeatured.homeScore : Math.round(collegeTeam(collegeFeatured.homeTeamId)?.rating ?? 0)}</em></button>
+              <button type="button" style={teamBrandStyle(collegeFeatured.homeTeamId)} onClick={() => onOpenCollegeTeam?.(collegeFeatured.homeTeamId)}><span>{teamMark(collegeTeam(collegeFeatured.homeTeamId)?.shortName ?? collegeFeatured.homeTeamId)}</span><strong>{collegeTeam(collegeFeatured.homeTeamId)?.name ?? collegeFeatured.homeTeamId}</strong><em>{collegeFeatured.status === "complete" ? collegeFeatured.homeScore : Math.round(collegeTeam(collegeFeatured.homeTeamId)?.rating ?? 0)}</em></button>
               <p>{gameState(collegeFeatured)}</p>
-              <button type="button" onClick={() => onOpenCollegeTeam?.(collegeFeatured.awayTeamId)}><span>{collegeTeam(collegeFeatured.awayTeamId)?.shortName ?? collegeFeatured.awayTeamId}</span><strong>{collegeTeam(collegeFeatured.awayTeamId)?.name ?? collegeFeatured.awayTeamId}</strong><em>{collegeFeatured.status === "complete" ? collegeFeatured.awayScore : Math.round(collegeTeam(collegeFeatured.awayTeamId)?.rating ?? 0)}</em></button>
+              <button type="button" style={teamBrandStyle(collegeFeatured.awayTeamId)} onClick={() => onOpenCollegeTeam?.(collegeFeatured.awayTeamId)}><span>{teamMark(collegeTeam(collegeFeatured.awayTeamId)?.shortName ?? collegeFeatured.awayTeamId)}</span><strong>{collegeTeam(collegeFeatured.awayTeamId)?.name ?? collegeFeatured.awayTeamId}</strong><em>{collegeFeatured.status === "complete" ? collegeFeatured.awayScore : Math.round(collegeTeam(collegeFeatured.awayTeamId)?.rating ?? 0)}</em></button>
             </div> : <div className="data-empty">Матчи не назначены</div>}
           </section>
 
@@ -150,7 +151,7 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
             {collegeRankings.slice(0, 8).map((ranking) => {
               const team = collegeTeam(ranking.teamId);
               const movement = ranking.previousRank ? ranking.previousRank - ranking.rank : 0;
-              return <button type="button" key={ranking.teamId} onClick={() => onOpenCollegeTeam?.(ranking.teamId)}><span>{ranking.rank}</span><div><strong>{team?.name ?? ranking.teamId}</strong><small>{team?.wins ?? 0}–{team?.losses ?? 0} · разница {ranking.pointDifferential >= 0 ? "+" : ""}{ranking.pointDifferential}</small></div><em className={movement > 0 ? "is-up" : movement < 0 ? "is-down" : ""}>{movement > 0 ? `▲ ${movement}` : movement < 0 ? `▼ ${Math.abs(movement)}` : "—"}</em></button>;
+              return <button type="button" key={ranking.teamId} style={teamBrandStyle(ranking.teamId)} onClick={() => onOpenCollegeTeam?.(ranking.teamId)}><span>{ranking.rank}</span><b>{teamMark(team?.shortName ?? ranking.teamId)}</b><div><strong>{team?.name ?? ranking.teamId}</strong><small>{team?.wins ?? 0}–{team?.losses ?? 0} · разница {ranking.pointDifferential >= 0 ? "+" : ""}{ranking.pointDifferential}</small></div><em className={movement > 0 ? "is-up" : movement < 0 ? "is-down" : ""}>{movement > 0 ? `▲ ${movement}` : movement < 0 ? `▼ ${Math.abs(movement)}` : "—"}</em></button>;
             })}
           </section>
 
@@ -159,14 +160,14 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
             {rankingMovers.map((ranking) => {
               const team = collegeTeam(ranking.teamId);
               const movement = (ranking.previousRank ?? ranking.rank) - ranking.rank;
-              return <button type="button" key={ranking.teamId} onClick={() => onOpenCollegeTeam?.(ranking.teamId)}><div><strong>{team?.shortName ?? ranking.teamId}</strong><small>Теперь #{ranking.rank}</small></div><span className={movement > 0 ? "is-up" : "is-down"}>{movement > 0 ? `Подъём на ${movement}` : `Падение на ${Math.abs(movement)}`}</span></button>;
+              return <button type="button" key={ranking.teamId} style={teamBrandStyle(ranking.teamId)} onClick={() => onOpenCollegeTeam?.(ranking.teamId)}><b>{teamMark(team?.shortName ?? ranking.teamId)}</b><div><strong>{team?.shortName ?? ranking.teamId}</strong><small>Теперь #{ranking.rank}</small></div><span className={movement > 0 ? "is-up" : "is-down"}>{movement > 0 ? `Подъём на ${movement}` : `Падение на ${Math.abs(movement)}`}</span></button>;
             })}
             {rankingMovers.length === 0 && <div className="data-empty">Рейтинг не изменился</div>}
           </section>
 
           <section className="league-races">
             <header><div><small>КОНФЕРЕНЦИИ</small><h2>Борьба за первое место</h2></div><span>{conferenceRaces.length} гонок</span></header>
-            {conferenceRaces.map(({ conference, teams }) => <article key={conference.id}><header><strong>{conference.shortName}</strong><span>{teams[0]?.conferenceWins ?? 0}–{teams[0]?.conferenceLosses ?? 0}</span></header>{teams.map((team, index) => <button type="button" key={team.id} onClick={() => onOpenCollegeTeam?.(team.id)}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.conferenceWins}–{team.conferenceLosses}</em></button>)}</article>)}
+            {conferenceRaces.map(({ conference, teams }) => <article key={conference.id}><header><strong>{conference.shortName}</strong><span>{teams[0]?.conferenceWins ?? 0}–{teams[0]?.conferenceLosses ?? 0}</span></header>{teams.map((team, index) => <button type="button" key={team.id} style={teamBrandStyle(team.id)} onClick={() => onOpenCollegeTeam?.(team.id)}><span>{index + 1}</span><b>{teamMark(team.shortName)}</b><strong>{team.shortName}</strong><em>{team.conferenceWins}–{team.conferenceLosses}</em></button>)}</article>)}
           </section>
 
           <section className="league-news">
@@ -182,9 +183,9 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
           <section className="league-featured-game">
             <header><small>ГЛАВНЫЙ МАТЧ НЕДЕЛИ</small><span>{proFeatured ? `W${proFeatured.week}` : "—"}</span></header>
             {proFeatured ? <div>
-              <button type="button" onClick={() => setSelectedProTeamId(proFeatured.homeTeamId)}><span>{proTeam(proFeatured.homeTeamId)?.shortName ?? proFeatured.homeTeamId}</span><strong>{proTeam(proFeatured.homeTeamId)?.city} {proTeam(proFeatured.homeTeamId)?.name}</strong><em>{proFeatured.status === "complete" ? proFeatured.homeScore : `${proTeam(proFeatured.homeTeamId)?.wins ?? 0}–${proTeam(proFeatured.homeTeamId)?.losses ?? 0}`}</em></button>
+              <button type="button" style={teamBrandStyle(proFeatured.homeTeamId)} onClick={() => setSelectedProTeamId(proFeatured.homeTeamId)}><span>{teamMark(proTeam(proFeatured.homeTeamId)?.shortName ?? proFeatured.homeTeamId)}</span><strong>{proTeam(proFeatured.homeTeamId)?.city} {proTeam(proFeatured.homeTeamId)?.name}</strong><em>{proFeatured.status === "complete" ? proFeatured.homeScore : `${proTeam(proFeatured.homeTeamId)?.wins ?? 0}–${proTeam(proFeatured.homeTeamId)?.losses ?? 0}`}</em></button>
               <p>{proFeatured.playoffRound ? "Плей-офф" : proFeatured.status === "complete" ? "Финальный счёт" : "Предстоящий матч"}</p>
-              <button type="button" onClick={() => setSelectedProTeamId(proFeatured.awayTeamId)}><span>{proTeam(proFeatured.awayTeamId)?.shortName ?? proFeatured.awayTeamId}</span><strong>{proTeam(proFeatured.awayTeamId)?.city} {proTeam(proFeatured.awayTeamId)?.name}</strong><em>{proFeatured.status === "complete" ? proFeatured.awayScore : `${proTeam(proFeatured.awayTeamId)?.wins ?? 0}–${proTeam(proFeatured.awayTeamId)?.losses ?? 0}`}</em></button>
+              <button type="button" style={teamBrandStyle(proFeatured.awayTeamId)} onClick={() => setSelectedProTeamId(proFeatured.awayTeamId)}><span>{teamMark(proTeam(proFeatured.awayTeamId)?.shortName ?? proFeatured.awayTeamId)}</span><strong>{proTeam(proFeatured.awayTeamId)?.city} {proTeam(proFeatured.awayTeamId)?.name}</strong><em>{proFeatured.status === "complete" ? proFeatured.awayScore : `${proTeam(proFeatured.awayTeamId)?.wins ?? 0}–${proTeam(proFeatured.awayTeamId)?.losses ?? 0}`}</em></button>
             </div> : <div className="data-empty">Матчи не назначены</div>}
           </section>
 
@@ -201,7 +202,7 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
 
           <section className="league-power-table">
             <header><div><small>ВСЯ ЛИГА</small><h2>Лучшие команды сейчас</h2></div><button type="button" onClick={() => setSection("teams")}>Открыть все</button></header>
-            {proStandings.slice(0, 8).map((team, index) => <button type="button" key={team.id} onClick={() => setSelectedProTeamId(team.id)}><span>{index + 1}</span><div><strong>{team.city} {team.name}</strong><small>{team.conference} · сила состава {Math.round(team.rosterStrength)}</small></div><em>{team.wins}–{team.losses}</em></button>)}
+            {proStandings.slice(0, 8).map((team, index) => <button type="button" key={team.id} style={teamBrandStyle(team.id)} onClick={() => setSelectedProTeamId(team.id)}><span>{index + 1}</span><b>{teamMark(team.shortName)}</b><div><strong>{team.city} {team.name}</strong><small>{team.conference} · сила состава {Math.round(team.rosterStrength)}</small></div><em>{team.wins}–{team.losses}</em></button>)}
           </section>
         </div>
       )}
@@ -211,7 +212,7 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
           <label className="league-hub__search"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти команду" /></label>
           <section className="league-team-directory">
             <header><span>Команда</span><span>Контекст</span><span>Рекорд</span><span>Сила</span></header>
-            {view === "college" ? colleges.map((team) => <button type="button" key={team.id} onClick={() => onOpenCollegeTeam?.(team.id)} disabled={!onOpenCollegeTeam}><div><span>{team.shortName.slice(0, 3)}</span><strong>{team.name}</strong></div><small>{conferenceName(save, team.conferenceId)} · {team.stateCode}</small><em>{team.wins}–{team.losses}</em><b>{Math.round(team.rating)}</b></button>) : professionalTeams.map((team) => <button type="button" key={team.id} onClick={() => setSelectedProTeamId(team.id)}><div><span>{team.shortName.slice(0, 3)}</span><strong>{team.city} {team.name}</strong></div><small>{team.conference} · свободно {money(team.capSpace)}</small><em>{team.wins}–{team.losses}</em><b>{Math.round(team.rosterStrength)}</b></button>)}
+            {view === "college" ? colleges.map((team) => <button type="button" key={team.id} style={teamBrandStyle(team.id)} onClick={() => onOpenCollegeTeam?.(team.id)} disabled={!onOpenCollegeTeam}><div><span>{teamMark(team.shortName)}</span><strong>{team.name}</strong></div><small>{conferenceName(save, team.conferenceId)} · {team.stateCode}</small><em>{team.wins}–{team.losses}</em><b>{Math.round(team.rating)}</b></button>) : professionalTeams.map((team) => <button type="button" key={team.id} style={teamBrandStyle(team.id)} onClick={() => setSelectedProTeamId(team.id)}><div><span>{teamMark(team.shortName)}</span><strong>{team.city} {team.name}</strong></div><small>{team.conference} · свободно {money(team.capSpace)}</small><em>{team.wins}–{team.losses}</em><b>{Math.round(team.rosterStrength)}</b></button>)}
           </section>
         </>
       )}
@@ -224,7 +225,7 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
 }
 
 function ConferenceTable({ title, teams, onOpen }: { title: string; teams: ProfessionalTeam[]; onOpen(teamId: string): void }) {
-  return <section><header><strong>{title}</strong><span>Топ-4</span></header>{teams.map((team, index) => <button type="button" key={team.id} onClick={() => onOpen(team.id)}><span>{index + 1}</span><strong>{team.shortName}</strong><em>{team.wins}–{team.losses}</em></button>)}</section>;
+  return <section><header><strong>{title}</strong><span>Топ-4</span></header>{teams.map((team, index) => <button type="button" key={team.id} style={teamBrandStyle(team.id)} onClick={() => onOpen(team.id)}><span>{index + 1}</span><b>{teamMark(team.shortName)}</b><strong>{team.shortName}</strong><em>{team.wins}–{team.losses}</em></button>)}</section>;
 }
 
 function ProTeamSheet({ team, roster, needs }: { team: ProfessionalTeam; roster: ProfessionalRosterPlayer[]; needs: Array<{ position: ProfessionalRosterPlayer["position"]; value: number }> }) {

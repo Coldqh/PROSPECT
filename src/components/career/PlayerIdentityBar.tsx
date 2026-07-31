@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
 import type { CareerSave } from "../../storage/saves/schema";
 import { Icon } from "../ui/Icon";
+import { teamBrandStyle, teamMark } from "./teamBrand";
 
 interface PlayerIdentityBarProps {
   save: CareerSave;
@@ -51,15 +51,21 @@ export function PlayerIdentityBar({ save, onOpenTeam, onOpenProfile, compact = f
     : undefined;
   const heroPlayer = collegeProgram ? save.world.players.find((player) => player.isHero) : undefined;
   const teamName = professionalTeam ? `${professionalTeam.city} ${professionalTeam.name}` : collegeProgram?.shortName ?? `${football.school.shortName} ${football.school.mascot}`;
-  const teamMark = (professionalTeam?.shortName ?? collegeProgram?.shortName ?? football.school.shortName).slice(0, 2);
+  const teamCode = professionalTeam?.shortName ?? collegeProgram?.shortName ?? football.school.shortName;
+  const teamBadge = teamMark(teamCode);
   const overall = Math.round(heroPlayer?.overall ?? football.ratings.overall);
-  const style = collegeProgram || professionalTeam ? undefined : ({
-    "--team-primary": football.school.primaryColor,
-    "--team-secondary": football.school.secondaryColor,
-  } as CSSProperties);
+  const style = professionalTeam
+    ? teamBrandStyle(`${professionalTeam.city}:${professionalTeam.name}`)
+    : collegeProgram
+      ? teamBrandStyle(`${collegeProgram.id}:${collegeProgram.shortName}`)
+      : {
+          ...teamBrandStyle(football.school.id),
+          "--team-primary": football.school.primaryColor,
+          "--team-secondary": football.school.secondaryColor,
+        };
 
   return (
-    <section className={`player-identity-bar ${compact ? "player-identity-bar--compact" : ""}`} {...(style ? { style } : {})}>
+    <section className={`player-identity-bar ${compact ? "player-identity-bar--compact" : ""}`} style={style}>
       {onOpenProfile ? (
         <button type="button" className="player-identity-bar__portrait" onClick={onOpenProfile} aria-label="Открыть профиль игрока">
           <span>{initials}</span>
@@ -80,13 +86,13 @@ export function PlayerIdentityBar({ save, onOpenTeam, onOpenProfile, compact = f
 
       {onOpenTeam ? (
         <button type="button" className="player-identity-bar__team" onClick={onOpenTeam} aria-label="Открыть команду">
-          <span className="player-identity-bar__team-mark">{teamMark}</span>
+          <span className="player-identity-bar__team-mark">{teamBadge}</span>
           <span><small>OVR</small><strong>{overall}</strong></span>
           <Icon name="arrow-right" size={16} />
         </button>
       ) : (
         <div className="player-identity-bar__team player-identity-bar__team--static">
-          <span className="player-identity-bar__team-mark">{teamMark}</span>
+          <span className="player-identity-bar__team-mark">{teamBadge}</span>
           <span><small>OVR</small><strong>{overall}</strong></span>
         </div>
       )}

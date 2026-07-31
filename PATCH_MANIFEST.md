@@ -1,17 +1,18 @@
-# PROSPECT 0.50.0 patch manifest
+# PROSPECT 0.51.0 patch manifest
 
-Base version: `0.49.0`  
-Target version: `0.50.0`  
+Base version: `0.50.0`  
+Target version: `0.51.0`  
 Save schema: `35` (unchanged)  
 Ecosystem module: `14` (unchanged)  
 IndexedDB schema: `2` (unchanged)
 
-## Interface rebuild
+## Visual rebuild
 
-- recruiting master-detail workspace;
-- weekly market comprehension hub;
-- College and PRO season centers;
-- semantic football copy instead of synthetic codes;
-- dedicated interface-comprehension invariant.
+- manager-first desktop operations rail;
+- team identities and color-coded competition rows;
+- broadcast-style featured match and league scoreboards;
+- editorial weekly digest surfaces;
+- dense flat tables with reduced card chrome;
+- responsive mobile fallback without domain changes.
 
-Replacement and new files are listed in `PATCH_FILES_0.50.0.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.51.0.txt`.

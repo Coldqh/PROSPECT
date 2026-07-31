@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.51.0 — SPORTS OPERATIONS VISUAL REBUILD
+
+### Visual system
+
+- desktop careers use a fixed operations rail and a wider manager workspace;
+- recruiting, market and league screens have distinct compositions instead of one repeated card template;
+- team marks and deterministic team colors identify programs and clubs across tables;
+- weekly headlines and featured games use high-contrast editorial surfaces;
+- dense square tables, stronger type hierarchy and scoreboard mastheads replace soft nested cards;
+- player identity inherits the active school or professional-team brand.
+
+### Verification
+
+- dedicated visual-workbench invariant;
+- interface-comprehension and UI-architecture checks remain active;
+- no save migration or simulation changes.
+
 ## 0.50.0 — INTERFACE COMPREHENSION REBUILD
 
 ### Recruiting
