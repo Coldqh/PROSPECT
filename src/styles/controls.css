@@ -30,11 +30,11 @@ input, select, textarea {
   padding: 8px 10px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
 }
-input::placeholder, textarea::placeholder { color: #919ba7; }
-input:hover, select:hover, textarea:hover { border-color: #8c98a5; }
+input::placeholder, textarea::placeholder { color: var(--ink-muted); }
+input:hover, select:hover, textarea:hover { border-color: var(--line-strong); background: var(--surface-soft); }
 label > span { display: block; margin-bottom: 5px; color: var(--ink-soft); font-size: 13px; font-weight: 700; }
 
 .compact-segmented, .section-tabs, .team-profile__tabs, .world-v27-tabs, .market-hub__tabs, .recruiting-hub__filters, .market-hub__filters, .league-hub__levels {
@@ -59,15 +59,15 @@ label > span { display: block; margin-bottom: 5px; color: var(--ink-soft); font-
   font-size: 13px;
   font-weight: 700;
 }
-.compact-segmented button:hover, .section-tabs button:hover, .team-profile__tabs button:hover, .world-v27-tabs button:hover, .market-hub__tabs button:hover, .recruiting-hub__filters button:hover, .market-hub__filters button:hover, .league-hub__levels button:hover { background: #fff; color: var(--ink); }
+.compact-segmented button:hover, .section-tabs button:hover, .team-profile__tabs button:hover, .world-v27-tabs button:hover, .market-hub__tabs button:hover, .recruiting-hub__filters button:hover, .market-hub__filters button:hover, .league-hub__levels button:hover { background: var(--surface); color: var(--ink); }
 .compact-segmented button.is-active, .section-tabs button.is-active, .team-profile__tabs button.is-active, .world-v27-tabs button.is-active, .market-hub__tabs button.is-active, .recruiting-hub__filters button.is-active, .market-hub__filters button.is-active, .league-hub__levels button.is-active { background: var(--header-raised); color: #fff; }
 
-.inline-message { padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--blue-soft); color: #183f69; }
-.inline-message--error { border-left-color: var(--danger); background: var(--danger-soft); color: #7c1821; }
-.inline-message--success { border-left-color: var(--green); background: var(--green-soft); color: #185d39; }
+.inline-message { padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--blue-soft); color: #c7dcff; }
+.inline-message--error { border-left-color: var(--danger); background: var(--danger-soft); color: #ffb7c0; }
+.inline-message--success { border-left-color: var(--green); background: var(--green-soft); color: #a9f2cb; }
 
 .metric-bar__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; color: var(--ink-soft); font-size: 13px; }
-.metric-bar__track { height: 7px; overflow: hidden; border: 1px solid #c8d0d8; background: #e9edf1; }
+.metric-bar__track { height: 7px; overflow: hidden; border: 1px solid #c8d0d8; background: var(--surface-muted); }
 .metric-bar__track > i, .metric-bar__track > span { display: block; height: 100%; background: var(--blue); }
 
 .info-list, .info-list--compact, .sheet-metric-list, .sheet-fact-grid, .sheet-metric-pair, .profile-stat-grid, .season-stat-grid, .college-home-metrics, .professional-combine-card, .professional-market-strip, .pro-team-sheet__metrics {
@@ -89,7 +89,7 @@ label > span { display: block; margin-bottom: 5px; color: var(--ink-soft); font-
 .info-list small, .info-list--compact small, .sheet-metric-list small, .sheet-fact-grid small, .sheet-metric-pair small, .profile-stat-grid small, .season-stat-grid small, .college-home-metrics small, .professional-combine-card small, .professional-market-strip small, .pro-team-sheet__metrics small { color: var(--ink-muted); }
 .info-list strong, .info-list--compact strong, .sheet-metric-list strong, .sheet-fact-grid strong, .sheet-metric-pair strong, .profile-stat-grid strong, .season-stat-grid strong, .college-home-metrics strong, .professional-combine-card strong, .professional-market-strip strong, .pro-team-sheet__metrics strong { font-size: 17px; }
 
-.primary-action-bar { position: sticky; bottom: 10px; z-index: 30; display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; padding: 10px; border: 1px solid var(--line-strong); background: rgb(255 255 255 / 94%); box-shadow: var(--shadow-lg); backdrop-filter: blur(8px); }
+.primary-action-bar { position: sticky; bottom: 10px; z-index: 30; display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; padding: 10px; border: 1px solid var(--line-strong); background: rgb(17 21 28 / 94%); box-shadow: var(--shadow-lg); backdrop-filter: blur(8px); }
 .primary-action-bar--match, .primary-action-bar--conversation { justify-content: stretch; }
 .primary-action-bar > * { min-width: 160px; }
 

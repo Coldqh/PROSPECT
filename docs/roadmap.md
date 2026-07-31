@@ -384,3 +384,10 @@
 - keep mobile and desktop on the same component hierarchy;
 - prohibit the retired screen class names through automated UI checks;
 - no save migration or domain-system changes.
+
+## v0.53.1 — Dark surface consistency
+
+- dark table, list, search, dialog and empty-state surfaces across the entire active UI;
+- readable alternating rows, hover states and status messages;
+- automated rejection of legacy light backgrounds;
+- no domain or save migration changes.

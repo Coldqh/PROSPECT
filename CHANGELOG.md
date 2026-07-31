@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.1 — DARK SURFACE CONSISTENCY
+
+- removed white and pale-gray surfaces from tables, feeds, searches, dialogs and empty states;
+- unified rows, hover states, alternating rows and selected states around dark surface tokens;
+- fixed low-contrast error, success and muted text;
+- UI checks now reject legacy light backgrounds.
+
 ## 0.53.0 — REFERENCE SCREEN REPLACEMENT
 
 ### Visual replacement

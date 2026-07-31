@@ -102,7 +102,7 @@
   gap: 0;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--identity-accent) 70%, #000);
-  background: color-mix(in srgb, var(--identity-accent) 12%, white);
+  background: color-mix(in srgb, var(--identity-accent) 16%, var(--surface));
   color: var(--ink);
   text-align: center;
 }

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 const root = new URL("..", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
@@ -27,6 +27,25 @@ const required = [
 ];
 for (const [source, token, message] of required) if (!source.includes(token)) errors.push(message);
 
+const styleFiles = readdirSync(new URL("src/styles", root)).filter((name) => name.endsWith(".css"));
+const allStyles = styleFiles.map((name) => read(`src/styles/${name}`)).join("\n");
+const forbiddenLightSurfaces = [
+  "background: #fff",
+  "background: #ffffff",
+  "background: #f8fafb",
+  "background: #f7f9fb",
+  "background: #f6f8fa",
+  "background: #f0f3f5",
+  "background: #edf3f8",
+  "background: #e9edf1",
+  "background: #d7dde4",
+  "background: rgb(255 255 255 / 94%)",
+  "%, white)",
+];
+for (const token of forbiddenLightSurfaces) {
+  if (allStyles.toLowerCase().includes(token.toLowerCase())) errors.push(`legacy light surface remains in active CSS: ${token}`);
+}
+
 const imports = [...index.matchAll(/@import\s+["']\.\/(.+?\.css)["'];/g)].map((match) => match[1]);
 if (imports.at(-1) !== "dynasty.css") errors.push("reference UI stylesheet must be the final cascade module");
 if (imports.length !== 10) errors.push(`expected 10 active style modules, found ${imports.length}`);
@@ -44,4 +63,4 @@ if (errors.length) {
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
-console.log("Reference UI OK: dark sports-manager shell, rebuilt home/team/player compositions and no legacy screen markup.");
+console.log("Reference UI OK: dark sports-manager shell, rebuilt reference screens, unified dark tables and no legacy light surfaces.");

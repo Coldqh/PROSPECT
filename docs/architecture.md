@@ -68,3 +68,7 @@
 `TodayDashboard`, `TeamProfileDashboard` и `PlayerProfileDashboard` используют новый DOM: тёмные уровни поверхности, masthead команды, OVR-щиты, крупные карточки игроков, статусные бейджи и плотные строки данных. Старые классы `compact-page-head`, `elite-team-hero`, `elite-player-card` и `team-depth-chart` запрещены для этих экранов проверкой `check-f1-dynasty-ui.mjs`.
 
 Mobile использует тот же DOM и меняет только сетку. Компоненты остаются read-only представлениями существующего состояния; CSS и presentation helpers не влияют на симуляцию, рынок или сохранения.
+
+## Surface consistency
+
+Active UI modules must use `--surface`, `--surface-soft` and `--surface-muted` for data surfaces. Hard-coded white and pale-gray backgrounds are prohibited by `check-f1-dynasty-ui.mjs`.

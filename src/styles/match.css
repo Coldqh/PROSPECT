@@ -18,7 +18,7 @@
 .match-page-head { align-items: center; }
 .match-upcoming, .match-mode-panel, .match-lock-card, .match-section, .match-section--v36, .match-analysis-panel, .match-coach-report, .match-possession-dialog, .match-called-play, .match-called-play--kernel, .match-call-duel, .match-personnel-matchup, .match-role-metrics, .match-usage-grid, .match-evaluation-grid, .match-drive-strip, .match-log, .match-sheet-stats, .match-sheet-drives, .elite-match-live, .elite-match-facts, .elite-match-situation, .elite-match-player-strip {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 .match-section > header, .match-section--v36 > header, .match-analysis-panel > header, .match-coach-report > header, .match-called-play > header, .match-call-duel > header, .match-personnel-matchup > header, .match-log > header, .match-sheet-stats > header, .match-sheet-drives > header, .elite-match-live > header, .elite-match-facts > header {
@@ -34,7 +34,7 @@
 }
 .match-section > div, .match-section--v36 > div, .match-analysis-panel > div, .match-coach-report > div, .match-called-play > div, .match-call-duel > div, .match-personnel-matchup > div, .match-log > div, .match-sheet-stats > div, .match-sheet-drives > div, .elite-match-live > div, .elite-match-facts > div { padding: 12px; }
 .match-mode-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.match-mode-panel button { min-height: 96px; display: grid; align-content: center; gap: 5px; padding: 14px; border: 0; border-right: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.match-mode-panel button { min-height: 96px; display: grid; align-content: center; gap: 5px; padding: 14px; border: 0; border-right: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; }
 .match-mode-panel button:hover { background: var(--surface-soft); }
 .match-mode-panel button.is-active { border-top: 4px solid var(--accent); background: var(--accent-soft); }
 .match-situation, .elite-match-situation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -43,9 +43,9 @@
 .match-situation strong, .elite-match-situation strong { font-size: 19px; }
 .match-data-list, .match-stat-grid, .match-evaluation-grid, .match-role-metrics, .match-usage-grid { display: grid; }
 .match-stat-grid, .match-evaluation-grid, .match-role-metrics, .match-usage-grid { grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
-.match-stat-grid > article, .match-evaluation-grid > article, .match-role-metrics > article, .match-usage-grid > article { min-height: 68px; display: grid; align-content: center; gap: 3px; padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; }
+.match-stat-grid > article, .match-evaluation-grid > article, .match-role-metrics > article, .match-usage-grid > article { min-height: 68px; display: grid; align-content: center; gap: 3px; padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); }
 .match-stat-grid strong, .match-evaluation-grid strong, .match-role-metrics strong, .match-usage-grid strong { font-size: 18px; }
-.match-stat-button { min-height: 68px; display: grid; align-content: center; gap: 3px; padding: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.match-stat-button { min-height: 68px; display: grid; align-content: center; gap: 3px; padding: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; }
 .match-stat-button:hover { background: var(--surface-soft); }
 .match-called-play__meta, .match-drive-strip, .snap-personnel { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px; }
 .match-called-play__meta span, .snap-personnel span, .match-drive-strip span { padding: 6px 8px; border: 1px solid var(--line); background: var(--surface-soft); font-size: 13px; font-weight: 700; }
@@ -56,7 +56,7 @@
 .match-personnel-matchup > section { padding: 12px; border-right: 1px solid var(--line); }
 .match-personnel-matchup > section:last-child { border-right: 0; }
 .match-decision-options, .decision-options-list, .relationship-event-options { display: grid; gap: 7px; }
-.match-decision-options button, .decision-options-list button, .relationship-event-options button { min-height: 62px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); background: #fff; cursor: pointer; text-align: left; }
+.match-decision-options button, .decision-options-list button, .relationship-event-options button { min-height: 62px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; }
 .match-decision-options button:hover, .decision-options-list button:hover, .relationship-event-options button:hover { border-color: var(--blue); background: var(--blue-soft); }
 .decision-option-main { display: grid; gap: 3px; }
 .decision-option-meta { display: flex; align-items: center; gap: 7px; color: var(--ink-muted); }
@@ -74,13 +74,13 @@
 .live-football__snap { display: flex; flex-wrap: wrap; gap: 7px; }
 .live-football__snap span { padding: 6px 8px; border: 1px solid var(--line); background: var(--surface-muted); font-weight: 700; }
 .live-role-actions, .live-receiver-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
-.live-role-actions button, .live-receiver-buttons button { min-height: 40px; padding: 0 10px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; }
+.live-role-actions button, .live-receiver-buttons button { min-height: 40px; padding: 0 10px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; }
 .live-role-actions button:hover, .live-receiver-buttons button:hover { background: var(--blue-soft); }
 .live-role-actions__main { border-color: var(--accent-dark) !important; background: var(--accent) !important; color: #fff; }
 .live-keyboard-guide { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 10px; border: 1px solid var(--line); background: var(--surface-muted); color: var(--ink-soft); }
-.live-keyboard-guide kbd { min-width: 28px; padding: 3px 6px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink); font-family: var(--ui-font); text-align: center; }
+.live-keyboard-guide kbd { min-width: 28px; padding: 3px 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-family: var(--ui-font); text-align: center; }
 .live-snap-result-layer, .match-possession-layer { align-items: center; justify-content: center; padding: 16px; }
-.live-snap-result-grade, .match-possession-dialog { width: min(600px, 100%); padding: 18px; border: 1px solid #697582; background: #fff; box-shadow: var(--shadow-lg); }
+.live-snap-result-grade, .match-possession-dialog { width: min(600px, 100%); padding: 18px; border: 1px solid #697582; background: var(--surface); box-shadow: var(--shadow-lg); }
 .live-snap-result-grade > strong { font-size: 42px; }
 .live-snap-result-grade > header, .match-possession-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 

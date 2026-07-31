@@ -429,11 +429,11 @@
   "tsconfig.node.json",
   "vite.config.ts",
   "vitest.config.ts",
-  "APPLY_PATCH_0.53.0.ps1",
-  "APPLY_PATCH_0.53.0.sh",
-  "DELETE_FILES_0.53.0.txt",
-  "PACKAGE_0.53.0.md",
-  "PATCH_0.53.0.md",
-  "PATCH_FILES_0.53.0.txt",
-  "src/styles/dynasty.css"
+  "src/styles/dynasty.css",
+  "APPLY_PATCH_0.53.1.ps1",
+  "APPLY_PATCH_0.53.1.sh",
+  "DELETE_FILES_0.53.1.txt",
+  "PACKAGE_0.53.1.md",
+  "PATCH_0.53.1.md",
+  "PATCH_FILES_0.53.1.txt"
 ]
