@@ -8,6 +8,7 @@ import { FOOTBALL_ROSTER_POSITIONS } from "../../sports/football/team/positions"
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { teamBrandStyle, teamMark } from "./teamBrand";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 type LeagueDirectoryView = "college" | "professional";
 type LeagueSection = "overview" | "teams";
@@ -120,10 +121,18 @@ export function LeagueDirectoryDashboard({ save, onOpenCollegeTeam, initialView 
 
   return (
     <div className="league-hub">
-      <header className="league-hub__head">
-        <div className="league-hub__title"><small>ЦЕНТР СЕЗОНА</small><h1>{view === "college" ? "Колледжный футбол" : "Профессиональная лига"}</h1><p>{view === "college" ? "Рейтинг, конференции, ключевые матчи и движение программ." : "Плей-офф, сила команд, кадровые движения и главные матчи."}</p></div>
-        <div className="league-hub__scoreboard"><span><small>Сезон</small><strong>{view === "college" ? save.world.seasonYear : proLeague.seasonYear}</strong></span><span><small>Неделя</small><strong>{view === "college" ? collegeWeek : proLeague.week}</strong></span></div>
-      </header>
+      <ManagerPageHeader
+        eyebrow="ЦЕНТР СЕЗОНА"
+        title={view === "college" ? "Колледжный футбол" : "Профессиональная лига"}
+        subtitle={view === "college" ? "Рейтинг, конференции, ключевые матчи и движение программ." : "Плей-офф, сила команд, кадровые движения и главные матчи."}
+        badge={view === "college" ? "CFB" : "PRO"}
+        metrics={[
+          { label: "Сезон", value: view === "college" ? save.world.seasonYear : proLeague.seasonYear },
+          { label: "Неделя", value: view === "college" ? collegeWeek : proLeague.week },
+          { label: "Команды", value: view === "college" ? collegeTeams.length : allProfessionalTeams.length },
+          { label: "Фаза", value: view === "college" ? save.world.phase : proLeague.phase },
+        ]}
+      />
 
       <nav className="league-hub__levels" aria-label="Уровень лиги">
         <button type="button" className={view === "college" ? "is-active" : ""} onClick={() => { setView("college"); setSection("overview"); }}>Колледжи</button>

@@ -1,16 +1,17 @@
-# PROSPECT 0.53.1 patch manifest
+# PROSPECT 0.54.0 patch manifest
 
-Base version: `0.53.0`  
-Target version: `0.53.1`  
+Base version: `0.53.1`  
+Target version: `0.54.0`  
 Save schema: `35` (unchanged)  
 Ecosystem module: `14` (unchanged)  
 IndexedDB schema: `2` (unchanged)
 
-## Dark surface consistency
+## Complete manager UI migration
 
-- all active tables and list surfaces use the dark token system;
-- searches, dialogs, empty states and sticky action bars no longer flash white;
-- alternating rows and hover states remain visible without breaking contrast;
-- automated UI checks reject legacy light backgrounds.
+- one command header across recruiting, market, College, PRO, world, season, draft and match;
+- consistent season context, metrics and actions;
+- readable news desk, schedules, rankings and movement tables;
+- shared professional player banner and management surfaces;
+- automated rejection of retired top-level compositions.
 
-Replacement and new files are listed in `PATCH_FILES_0.53.1.txt`.
+Replacement and new files are listed in `PATCH_FILES_0.54.0.txt`.

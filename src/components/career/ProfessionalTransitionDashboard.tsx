@@ -4,6 +4,7 @@ import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, Professiona
 import type { MatchParticipationMode } from "../../sports/football/matches/types";
 import { MatchDashboard } from "./MatchDashboard";
 import { Icon } from "../ui/Icon";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 interface ProfessionalTransitionDashboardProps {
   save: CareerSave;
@@ -126,25 +127,43 @@ export function ProfessionalTransitionDashboard({
 
   return (
     <div className="professional-shell">
-      <header className="elite-draft-header">
-        <div className="elite-draft-header__title">
-          <span className="elite-draft-shield">PRO</span>
-          {activeProfessionalCareer ? (
-            <div><small>{statusLabel(professional.status).toUpperCase()}</small><h1>{professionalTeamLabel}</h1><p>{league.seasonYear} · W{league.week}</p></div>
-          ) : (
-            <div><small>ПРОФЕССИОНАЛЬНЫЙ ДРАФТ</small><h1>{professional.draftYear}</h1><p>{statusLabel(professional.status)}</p></div>
-          )}
+      <ManagerPageHeader
+        eyebrow={activeProfessionalCareer ? `${statusLabel(professional.status).toUpperCase()} · НЕДЕЛЯ ${league.week}` : `ПРОФЕССИОНАЛЬНЫЙ ДРАФТ · ${professional.draftYear}`}
+        title={activeProfessionalCareer ? professionalTeamLabel : statusLabel(professional.status)}
+        subtitle={activeProfessionalCareer ? `${league.seasonYear} · ${heroCareer?.role ?? "free agent"} · ${save.football.position}` : `${save.football.college.program?.shortName ?? save.football.school.shortName} · ${save.football.position} · ${professional.projectedRange}`}
+        badge="PRO"
+        metrics={activeProfessionalCareer ? [
+          { label: "Рекорд", value: heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "—" },
+          { label: "Игры", value: heroCareer?.gamesPlayed ?? 0 },
+          { label: "Снэпы", value: heroCareer?.snaps ?? 0 },
+          { label: "Здоровье", value: Math.round(save.character.condition.health), tone: save.character.condition.health >= 75 ? "positive" : "warning" },
+        ] : [
+          { label: "Big board", value: heroRank ? `#${heroRank}` : "—" },
+          { label: "Draft stock", value: Math.round(professional.draftStock), tone: professional.draftStock >= 75 ? "positive" : "warning" },
+          { label: "Раунд", value: professional.projectedRound ? `R${professional.projectedRound}` : "UDFA" },
+          { label: "OVR", value: Math.round(save.football.ratings.overall) },
+        ]}
+      />
+
+      <section className="pro-player-banner">
+        <div className="pro-player-banner__portrait" aria-hidden="true">
+          <span>{initials(save.character.identity.fullName)}</span>
+          <strong>#{save.football.jerseyNumber}</strong>
         </div>
-      </header>
-
-      <section className="elite-draft-candidate">
-        <div className="elite-draft-candidate__art" aria-hidden="true"><span>{initials(save.character.identity.fullName)}</span><strong>#{save.football.jerseyNumber}</strong></div>
-        <div className="elite-draft-candidate__copy"><small>{activeProfessionalCareer ? professionalTeamLabel : save.football.college.program?.shortName ?? save.football.school.shortName}</small><h2>{save.character.identity.fullName}</h2><p>{save.football.position}</p><div>{activeProfessionalCareer ? <><span><small>Role</small><strong>{heroCareer?.role ?? "FA"}</strong></span><span><small>Depth</small><strong>{heroCareer?.depthRank ? `#${heroCareer.depthRank}` : "—"}</strong></span></> : <><span><small>Проекция</small><strong>{professional.projectedRange}</strong></span><span><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong></span></>}</div></div>
-        {activeProfessionalCareer ? <div className={`professional-stock ${gradeClass(heroCareer?.coachTrust ?? 0)}`}><small>OVR</small><strong>{Math.round(save.football.ratings.overall)}</strong><span>TRUST {Math.round(heroCareer?.coachTrust ?? 0)}</span></div> : <div className={`professional-stock ${gradeClass(professional.draftStock)}`}><small>Draft stock</small><strong>{Math.round(professional.draftStock)}</strong><span>{professional.projectedRound ? `R${professional.projectedRound}` : "UDFA"}</span></div>}
-      </section>
-
-      <section className="professional-market-strip">
-        {activeProfessionalCareer ? <><span><small>Record</small><strong>{heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "—"}</strong></span><span><small>Games</small><strong>{heroCareer?.gamesPlayed ?? 0}</strong></span><span><small>Snaps</small><strong>{heroCareer?.snaps ?? 0}</strong></span><span><small>Health</small><strong>{Math.round(save.character.condition.health)}</strong></span></> : <><span><small>Класс</small><strong>#{heroRank || "—"}</strong></span><span><small>Клубы</small><strong>{professional.teams.length}</strong></span><span><small>Пики</small><strong>{professional.draftOrder.length}</strong></span><span><small>Позиция</small><strong>{save.football.position}</strong></span></>}
+        <div className="pro-player-banner__identity">
+          <small>{activeProfessionalCareer ? professionalTeamLabel : save.football.college.program?.shortName ?? save.football.school.shortName}</small>
+          <h2>{save.character.identity.fullName}</h2>
+          <p>{save.football.position} · {activeProfessionalCareer ? statusLabel(professional.status) : professional.projectedRange}</p>
+          <div>
+            <span><small>{activeProfessionalCareer ? "Роль" : "Проекция"}</small><strong>{activeProfessionalCareer ? heroCareer?.role ?? "FA" : professional.projectedRange}</strong></span>
+            <span><small>{activeProfessionalCareer ? "Depth" : "Агент"}</small><strong>{activeProfessionalCareer ? heroCareer?.depthRank ? `#${heroCareer.depthRank}` : "—" : selectedAgent?.name ?? "Не выбран"}</strong></span>
+          </div>
+        </div>
+        <div className={`pro-player-banner__grade ${gradeClass(activeProfessionalCareer ? heroCareer?.coachTrust ?? 0 : professional.draftStock)}`}>
+          <small>{activeProfessionalCareer ? "OVR" : "STOCK"}</small>
+          <strong>{Math.round(activeProfessionalCareer ? save.football.ratings.overall : professional.draftStock)}</strong>
+          <span>{activeProfessionalCareer ? `TRUST ${Math.round(heroCareer?.coachTrust ?? 0)}` : professional.projectedRound ? `ROUND ${professional.projectedRound}` : "UDFA"}</span>
+        </div>
       </section>
 
       {professional.status === "decision" && (
@@ -204,7 +223,7 @@ export function ProfessionalTransitionDashboard({
       )}
 
       {professional.status === "draft-ready" && (
-        <section className="professional-draft-stage">
+        <section className="professional-draft-stage professional-draft-stage--manager">
           <div className="professional-board">
             <header><small>BIG BOARD</small><h2>Верхушка класса</h2></header>
             {topProspects.map((prospect, index) => (
@@ -256,7 +275,7 @@ export function ProfessionalTransitionDashboard({
       )}
 
       {save.meta.phase === "professional-career" && (
-        <section className="professional-season">
+        <section className="professional-season professional-season--manager">
           <header className="professional-season__head">
             <div><small>{league.phase === "playoffs" ? "ПЛЕЙ-ОФФ" : league.phase === "complete" ? "СЕЗОН ЗАВЕРШЁН" : "РЕГУЛЯРНЫЙ СЕЗОН"}</small><h2>{league.seasonYear} · Неделя {league.week}</h2></div>
             <strong>{heroTeam ? `${heroTeam.wins}–${heroTeam.losses}` : "FA"}</strong>

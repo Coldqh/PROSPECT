@@ -72,3 +72,9 @@ Mobile использует тот же DOM и меняет только сет�
 ## Surface consistency
 
 Active UI modules must use `--surface`, `--surface-soft` and `--surface-muted` for data surfaces. Hard-coded white and pale-gray backgrounds are prohibited by `check-f1-dynasty-ui.mjs`.
+## Complete manager UI migration
+
+`ManagerPageHeader` is the shared command surface for recruiting, market, league, world, season, professional transition and match destinations. It receives already computed labels and metrics; it never derives domain state.
+
+The migrated screens use the same hierarchy: context and primary action → operational summary → dense tables or selected-object detail. `check-complete-ui-migration.mjs` rejects the retired top-level compositions on these destinations.
+

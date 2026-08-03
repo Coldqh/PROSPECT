@@ -435,5 +435,13 @@
   "DELETE_FILES_0.53.1.txt",
   "PACKAGE_0.53.1.md",
   "PATCH_0.53.1.md",
-  "PATCH_FILES_0.53.1.txt"
+  "PATCH_FILES_0.53.1.txt",
+  "src/components/career/ManagerPageHeader.tsx",
+  "scripts/check-complete-ui-migration.mjs",
+  "APPLY_PATCH_0.54.0.ps1",
+  "APPLY_PATCH_0.54.0.sh",
+  "DELETE_FILES_0.54.0.txt",
+  "PACKAGE_0.54.0.md",
+  "PATCH_0.54.0.md",
+  "PATCH_FILES_0.54.0.txt"
 ]

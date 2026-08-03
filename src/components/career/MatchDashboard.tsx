@@ -12,6 +12,7 @@ import type { CareerSave } from "../../storage/saves/schema";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { RealTimeMatchField } from "./RealTimeMatchField";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 interface MatchDashboardProps {
   save: CareerSave;
@@ -224,16 +225,24 @@ export function MatchDashboard({
 
   return (
     <div className="compact-section match-section match-section--v36">
-      <header className="compact-page-head match-page-head">
-        <div><span>WEEK {match.scheduledWeek} · {unitLabel(match.heroUnit)}</span><h2>Матч</h2></div>
-        <button type="button" className="match-stat-button" onClick={() => setSheetOpen(true)}>
-          <small>SNAPS</small><strong>{match.advancedStats.snaps}</strong>
-        </button>
-      </header>
+      <ManagerPageHeader
+        eyebrow={`НЕДЕЛЯ ${match.scheduledWeek} · ${unitLabel(match.heroUnit)}`}
+        title={match.status === "complete" ? "Финальный результат" : match.status === "in-progress" ? "Матч в прямом эфире" : `${heroTeamName} — ${match.opponentName}`}
+        subtitle={match.status === "upcoming" ? `${formatGameDate(match.scheduledDate)} · ${match.opponentRecord}` : `Q${match.quarter} · ${clockLabel(match.clockSeconds)} · ${match.usagePlan.label}`}
+        badge="GAME"
+        metrics={[
+          { label: heroTeamName, value: match.heroScore, tone: match.heroScore >= match.opponentScore ? "positive" : undefined },
+          { label: match.opponentName, value: match.opponentScore, tone: match.opponentScore > match.heroScore ? "danger" : undefined },
+          { label: "Снэпы", value: match.advancedStats.snaps },
+          { label: "Оценка", value: Math.round(match.coachGrade) },
+        ]}
+        actions={<button type="button" className="manager-head-action" onClick={() => setSheetOpen(true)}><Icon name="chart" /><span>Протокол</span></button>}
+        compact
+      />
 
       {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
 
-      <section className="match-scoreboard">
+      <section className="match-scoreboard match-scoreboard--manager">
         <div><small>{heroTeamName}</small><strong>{match.heroScore}</strong></div>
         <span>
           <em>{match.status === "upcoming" ? formatGameDate(match.scheduledDate) : `Q${match.quarter} · ${clockLabel(match.clockSeconds)}`}</em>
@@ -243,7 +252,7 @@ export function MatchDashboard({
       </section>
 
       {match.status === "upcoming" && (
-        <div className="compact-view match-upcoming">
+        <div className="compact-view match-upcoming match-upcoming--manager">
           <section className="opponent-card">
             <div className="opponent-card__mark"><Icon name={match.heroUnit === "defense" ? "shield" : "football"} size={28} /></div>
             <div><small>{match.opponentRecord}</small><h3>{match.opponentName}</h3></div>

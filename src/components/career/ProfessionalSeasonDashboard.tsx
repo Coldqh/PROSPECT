@@ -3,6 +3,7 @@ import type { CareerSave } from "../../storage/saves/schema";
 import { formatGameDate } from "../../core/calendar/types";
 import { professionalStandings } from "../../sports/football/pro/league";
 import { SectionTabs } from "../ui/SectionTabs";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 const views = [
   { id: "season", label: "Сезон" },
@@ -30,14 +31,22 @@ export function ProfessionalSeasonDashboard({ save }: { save: CareerSave }) {
 
   return (
     <div className="data-page professional-season-page">
-      <header className="data-page-head">
-        <div><small>{league.seasonYear} · W{league.week}</small><h1>{team?.shortName ?? "PRO"}</h1></div>
-        <strong>{team ? `${team.wins}–${team.losses}` : "—"}</strong>
-      </header>
+      <ManagerPageHeader
+        eyebrow={`PRO FOOTBALL · ${league.seasonYear}`}
+        title={view === "schedule" ? "Календарь команды" : view === "standings" ? "Таблица лиги" : view === "stats" ? "Статистика карьеры" : team ? `${team.city} ${team.name}` : "Профессиональный сезон"}
+        subtitle={team ? `${team.conference} · неделя ${league.week} · ${league.phase}` : "Статус свободного агента и картина лиги."}
+        badge={team?.shortName ?? "PRO"}
+        metrics={[
+          { label: "Рекорд", value: team ? `${team.wins}–${team.losses}` : "—", tone: team && team.wins >= team.losses ? "positive" : undefined },
+          { label: "Роль", value: career?.role ?? "—" },
+          { label: "Depth", value: career ? `#${career.depthRank}` : "—" },
+          { label: "Trust", value: Math.round(career?.coachTrust ?? 0) },
+        ]}
+      />
       <SectionTabs<ViewId> tabs={views} active={view} onChange={setView} ariaLabel="PRO сезон" />
 
       {view === "season" && (
-        <div className="compact-view">
+        <div className="compact-view professional-season-command">
           <section className="career-overview-grid">
             <article><small>Фаза</small><strong>{league.phase}</strong></article>
             <article><small>Роль</small><strong>{career?.role ?? "—"}</strong></article>
@@ -54,7 +63,8 @@ export function ProfessionalSeasonDashboard({ save }: { save: CareerSave }) {
       )}
 
       {view === "schedule" && (
-        <div className="match-data-list">
+        <div className="match-data-list professional-schedule-table">
+          <header><span>Неделя</span><span>Соперник</span><span>Дата</span><span>Счёт</span></header>
           {games.map((game) => {
             const gameOpponentId = team ? (game.homeTeamId === team.id ? game.awayTeamId : game.homeTeamId) : game.awayTeamId;
             const gameOpponent = professional.teams.find((item) => item.id === gameOpponentId);

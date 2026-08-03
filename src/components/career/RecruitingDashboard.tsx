@@ -4,6 +4,7 @@ import type { RecruitingActionId, RecruitingProgram, RecruitingStage } from "../
 import { recruitingActionsRemaining, recruitingRoleLabel, recruitingStageLabel } from "../../sports/football/recruiting/updateRecruiting";
 import { Icon } from "../ui/Icon";
 import { teamBrandStyle, teamMark } from "./teamBrand";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 type RecruitingView = "board" | "offers" | "visits";
 
@@ -104,17 +105,18 @@ export function RecruitingDashboard({ save, mutating, actionError, onAction, onC
 
   return (
     <div className="recruiting-hub">
-      <header className="recruiting-hub__head">
-        <div className="recruiting-hub__title">
-          <small>МОЙ РЕКРУТИНГ</small>
-          <h1>Доска программ</h1>
-          <p>Кто действительно зовёт тебя, что обещает и где есть путь к игровому времени.</p>
-        </div>
-        <div className="recruiting-hub__scoreboard">
-          <span><small>Рейтинг</small><strong>{recruitment.regionalRankLabel}</strong></span>
-          <span><small>Контакты</small><strong>{actionsRemaining}<em>/2</em></strong></span>
-        </div>
-      </header>
+      <ManagerPageHeader
+        eyebrow="МОЙ РЕКРУТИНГ"
+        title="Доска программ"
+        subtitle="Кто действительно зовёт тебя, что обещает и где есть путь к игровому времени."
+        badge="REC"
+        metrics={[
+          { label: "Рейтинг", value: recruitment.regionalRankLabel },
+          { label: "Контакты", value: `${actionsRemaining}/2`, tone: actionsRemaining > 0 ? "positive" : "warning" },
+          { label: "Офферы", value: offers.length, tone: offers.length > 0 ? "accent" : undefined },
+          { label: "Визиты", value: visits.length },
+        ]}
+      />
 
       <section className="recruiting-hub__brief">
         <div className="recruiting-hub__brief-copy"><small>СОСТОЯНИЕ БОРЬБЫ</small><strong>{programs.length} программ остаются в борьбе</strong><p>{offers.length > 0 ? `${offers.length} оффера уже на столе.` : "Офферов пока нет — штабы продолжают оценку."} {visits.length > 0 ? `${visits.length} программ обсуждают визит.` : "Приглашений на визит пока нет."}</p></div>

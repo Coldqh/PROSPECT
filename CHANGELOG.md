@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.54.0 — COMPLETE MANAGER UI MIGRATION
+
+- recruiting, market, College, PRO, world feed, draft and match screens now share one manager command header;
+- league and season screens expose context, metrics and primary actions in the same hierarchy;
+- world news is split into a readable news desk and a compact agency/history rail;
+- schedules, rankings and movement use explicit table headers instead of anonymous rows;
+- professional transition, draft and contract states use the same player banner and management surfaces;
+- no simulation, save-schema or ecosystem changes.
+
 ## 0.53.1 — DARK SURFACE CONSISTENCY
 
 - removed white and pale-gray surfaces from tables, feeds, searches, dialogs and empty states;

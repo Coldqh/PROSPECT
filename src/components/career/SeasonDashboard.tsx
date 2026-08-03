@@ -5,6 +5,7 @@ import { orderedStandings } from "../../sports/football/season/updateSeason";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Icon } from "../ui/Icon";
 import { SectionTabs } from "../ui/SectionTabs";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 const views = [
   { id: "season", label: "Сезон" },
@@ -112,36 +113,46 @@ export function SeasonDashboard({ save, onOpenMatch, lockedView }: SeasonDashboa
 
   return (
     <div className="compact-section season-dashboard">
-      <header className="compact-page-head">
-        <div><span>{season.year}</span><h2>{view === "schedule" ? "Матчи" : view === "standings" ? "Таблица" : view === "stats" ? "Статистика" : view === "history" ? "История" : "Сезон"}</h2></div>
-        <strong className="compact-head-score">{recordLabel(season.wins, season.losses)}</strong>
-      </header>
+      <ManagerPageHeader
+        eyebrow={`ШКОЛЬНЫЙ ФУТБОЛ · ${season.year}`}
+        title={view === "schedule" ? "Календарь" : view === "standings" ? "Региональная таблица" : view === "stats" ? "Статистика игрока" : view === "history" ? "История сезона" : "Центр сезона"}
+        subtitle={view === "season" ? `Неделя ${Math.min(season.week + 1, season.totalWeeks)} из ${season.totalWeeks}. Следующий соперник и положение команды.` : "Все данные сезона в одном рабочем экране."}
+        badge={save.football.school.shortName.slice(0, 3).toUpperCase()}
+        metrics={[
+          { label: "Рекорд", value: recordLabel(season.wins, season.losses), tone: season.wins >= season.losses ? "positive" : "danger" },
+          { label: "Место", value: heroRank > 0 ? `#${heroRank}` : "—" },
+          { label: "Сыграно", value: completed.length },
+          { label: "Прогресс", value: `${progress}%` },
+        ]}
+      />
       {!lockedView && <SectionTabs<ViewId> tabs={views} active={view} onChange={setInternalView} ariaLabel="Разделы школьного сезона" />}
 
       {view === "season" && (
         <div className="compact-view">
-          <section className="season-command-card">
-            <header>
-              <div><small>REGULAR SEASON</small><strong>Неделя {Math.min(season.week + 1, season.totalWeeks)} / {season.totalWeeks}</strong></div>
-              <span>#{heroRank}</span>
-            </header>
-            <div className="season-progress"><i style={{ width: `${progress}%` }} /></div>
-            <footer><span>{completed.length} сыграно</span><span>{season.totalWeeks - completed.length} осталось</span></footer>
-          </section>
-
-          {nextGame && nextProfile ? (
-            <section className="next-opponent-card">
-              <div className="next-opponent-card__mark">{nextGame.opponentShortName}</div>
-              <div className="next-opponent-card__copy">
-                <small>{nextGame.home ? "ДОМА" : "В ГОСТЯХ"} · {formatGameDate(nextGame.date)}</small>
-                <h3>{nextGame.opponentName}</h3>
-                <p>{nextProfile.defenseStyle} · {nextGame.opponentRating} OVR</p>
-              </div>
-              <button type="button" onClick={() => setScoutingOpen(true)} aria-label="Открыть скаутский отчёт"><Icon name="target" /></button>
+          <div className="season-control-grid">
+            <section className="season-command-card">
+              <header>
+                <div><small>ХОД СЕЗОНА</small><strong>Неделя {Math.min(season.week + 1, season.totalWeeks)} / {season.totalWeeks}</strong></div>
+                <span>#{heroRank}</span>
+              </header>
+              <div className="season-progress"><i style={{ width: `${progress}%` }} /></div>
+              <footer><span>{completed.length} сыграно</span><span>{season.totalWeeks - completed.length} осталось</span></footer>
             </section>
-          ) : (
-            <section className="season-finished-card"><Icon name="trophy" /><div><small>СЕЗОН ЗАВЕРШЁН</small><h3>{recordLabel(season.wins, season.losses)}</h3></div></section>
-          )}
+
+            {nextGame && nextProfile ? (
+              <section className="next-opponent-card">
+                <div className="next-opponent-card__mark">{nextGame.opponentShortName}</div>
+                <div className="next-opponent-card__copy">
+                  <small>{nextGame.home ? "ДОМА" : "В ГОСТЯХ"} · {formatGameDate(nextGame.date)}</small>
+                  <h3>{nextGame.opponentName}</h3>
+                  <p>{nextProfile.defenseStyle} · {nextGame.opponentRating} OVR</p>
+                </div>
+                <button type="button" onClick={() => setScoutingOpen(true)} aria-label="Открыть скаутский отчёт"><Icon name="target" /></button>
+              </section>
+            ) : (
+              <section className="season-finished-card"><Icon name="trophy" /><div><small>СЕЗОН ЗАВЕРШЁН</small><h3>{recordLabel(season.wins, season.losses)}</h3></div></section>
+            )}
+          </div>
 
           <div className="season-quick-grid">
             <article><small>Место</small><strong>#{heroRank}</strong><span>в регионе</span></article>
@@ -160,6 +171,7 @@ export function SeasonDashboard({ save, onOpenMatch, lockedView }: SeasonDashboa
 
       {view === "schedule" && (
         <div className="compact-view season-schedule-list">
+          <header><span>Неделя</span><span>Соперник</span><span>Дата</span><span>Результат</span></header>
           {season.schedule.map((game) => (
             <article key={game.id} className={game.status === "complete" ? (game.won ? "is-win" : "is-loss") : "is-upcoming"}>
               <div className="season-week-badge"><small>W{game.week}</small><strong>{game.home ? "H" : "A"}</strong></div>

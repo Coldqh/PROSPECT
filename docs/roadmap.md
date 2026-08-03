@@ -391,3 +391,12 @@
 - readable alternating rows, hover states and status messages;
 - automated rejection of legacy light backgrounds;
 - no domain or save migration changes.
+## v0.54 — Complete manager UI migration
+
+- shared manager command header across recruiting, market, College, PRO, world, season, draft and match screens;
+- explicit season context, key metrics and primary actions on every migrated destination;
+- world feed split into a news desk and compact agency/history context;
+- schedules, rankings and movement lists gain readable table headers;
+- professional transition and draft adopt the same player banner and management surfaces;
+- no domain-state or save-schema changes.
+

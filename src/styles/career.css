@@ -346,3 +346,45 @@
   .sheet-result { grid-template-columns: 58px minmax(0, 1fr); }
   .sheet-result__grade { width: 58px; height: 58px; font-size: 24px; }
 }
+
+/* 0.54 season, draft and contract migration */
+.season-control-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(310px, .72fr); gap: 12px; align-items: stretch; }
+.season-control-grid > * { min-height: 132px; }
+.season-schedule-list > header, .professional-schedule-table > header { min-height: 38px; display: grid; grid-template-columns: 86px minmax(0, 1fr) 150px 100px; align-items: center; padding: 0 12px; border: 1px solid var(--line); background: var(--header-raised); color: #9ba7b6; font-size: 12px; font-weight: 800; }
+.professional-season-command { grid-template-columns: minmax(0, 1fr); }
+
+.pro-player-banner { min-height: 176px; display: grid; grid-template-columns: 150px minmax(0, 1fr) 158px; border: 1px solid #080b0f; border-top: 4px solid var(--accent); background: linear-gradient(112deg, var(--surface) 0%, var(--surface-soft) 64%, #10141a 100%); box-shadow: var(--shadow-lg); overflow: hidden; }
+.pro-player-banner__portrait { display: grid; place-content: center; justify-items: center; gap: 7px; background: linear-gradient(145deg, var(--accent), var(--accent-dark)); color: #fff; }
+.pro-player-banner__portrait span { font-size: 34px; font-weight: 950; }
+.pro-player-banner__portrait strong { font-size: 18px; }
+.pro-player-banner__identity { display: grid; align-content: center; gap: 5px; padding: 18px 22px; }
+.pro-player-banner__identity h2 { font-size: clamp(26px, 3vw, 39px); }
+.pro-player-banner__identity p { color: var(--ink-soft); }
+.pro-player-banner__identity > div { display: flex; gap: 28px; margin-top: 12px; }
+.pro-player-banner__identity > div span { display: grid; gap: 2px; }
+.pro-player-banner__grade { display: grid; place-content: center; justify-items: center; gap: 3px; border-left: 1px solid var(--line); background: #0f141b; }
+.pro-player-banner__grade small { color: #929eac; }
+.pro-player-banner__grade strong { font-size: 56px; line-height: 1; }
+.pro-player-banner__grade span { color: var(--ink-soft); font-size: 12px; font-weight: 800; }
+.pro-player-banner__grade.is-elite strong { color: var(--green); }
+.pro-player-banner__grade.is-solid strong { color: var(--amber); }
+.pro-player-banner__grade.is-risk strong { color: var(--danger); }
+.professional-draft-stage--manager { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .38fr); align-items: stretch; gap: 12px; }
+.professional-draft-stage--manager > .primary-action-bar { min-height: 100%; }
+.professional-season--manager { border-top: 4px solid var(--accent); }
+.professional-season--manager .professional-season__head { margin-bottom: 0; }
+
+@media (max-width: 860px) {
+  .season-control-grid, .professional-draft-stage--manager { grid-template-columns: 1fr; }
+  .pro-player-banner { grid-template-columns: 112px minmax(0, 1fr) 120px; }
+}
+@media (max-width: 720px) {
+  .season-schedule-list > header, .professional-schedule-table > header { display: none; }
+  .pro-player-banner { grid-template-columns: 88px minmax(0, 1fr); min-height: 138px; }
+  .pro-player-banner__portrait span { font-size: 24px; }
+  .pro-player-banner__identity { padding: 13px; }
+  .pro-player-banner__identity h2 { font-size: 22px; }
+  .pro-player-banner__identity > div { gap: 15px; margin-top: 7px; }
+  .pro-player-banner__grade { grid-column: 1 / -1; min-height: 72px; grid-auto-flow: column; place-content: center; gap: 12px; border-top: 1px solid var(--line); border-left: 0; }
+  .pro-player-banner__grade strong { font-size: 34px; }
+}

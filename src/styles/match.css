@@ -95,3 +95,14 @@
   .live-football__canvas { aspect-ratio: 4 / 5; }
   .live-football__controls { grid-template-columns: 1fr; }
 }
+
+/* 0.54 match command center */
+.match-scoreboard--manager { min-height: 122px; box-shadow: var(--shadow); }
+.match-upcoming--manager { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); align-items: stretch; }
+.match-upcoming--manager > .primary-action-bar, .match-upcoming--manager > .match-lock-card { grid-column: 1 / -1; }
+.match-upcoming--manager .opponent-card { min-height: 100%; }
+.match-upcoming--manager .match-mode-panel { min-height: 100%; }
+@media (max-width: 720px) {
+  .match-upcoming--manager { grid-template-columns: 1fr; }
+  .match-upcoming--manager > .primary-action-bar, .match-upcoming--manager > .match-lock-card { grid-column: auto; }
+}

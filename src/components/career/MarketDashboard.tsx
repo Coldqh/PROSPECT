@@ -5,6 +5,7 @@ import { candidateKindLabel, getCoachTransactions, getMarketTransactions, promis
 import { Icon } from "../ui/Icon";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 import { teamBrandStyle, teamMark } from "./teamBrand";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 type MarketView = "overview" | "players" | "coaches";
 type PlayerFilter = "all" | "portal" | "offers" | "signed";
@@ -102,18 +103,18 @@ export function MarketDashboard({ save, mutating = false, actionError, onOpenTea
 
   return (
     <div className="market-hub">
-      <header className="market-hub__head">
-        <div className="market-hub__title">
-          <small>{world.phase === "offseason" ? "ТРАНСФЕРНОЕ ОКНО" : `НЕДЕЛЯ ${world.seasonWeek}`}</small>
-          <h1>Трансферный центр</h1>
-          <p>Кто уходит, кого ищут команды и какие решения уже изменили лигу.</p>
-        </div>
-        <div className="market-hub__scoreboard">
-          <span><small>Сезон</small><strong>{world.seasonYear}</strong></span>
-          <span><small>Портал</small><strong>{world.market.portalPlayers}</strong></span>
-          <span><small>Офферы</small><strong>{activeOffers.length}</strong></span>
-        </div>
-      </header>
+      <ManagerPageHeader
+        eyebrow={world.phase === "offseason" ? "ТРАНСФЕРНОЕ ОКНО" : `НЕДЕЛЯ ${world.seasonWeek}`}
+        title="Трансферный центр"
+        subtitle="Кто уходит, кого ищут команды и какие решения уже изменили лигу."
+        badge="MKT"
+        metrics={[
+          { label: "Сезон", value: world.seasonYear },
+          { label: "Портал", value: world.market.portalPlayers, tone: world.market.portalPlayers > 0 ? "warning" : undefined },
+          { label: "Офферы", value: activeOffers.length, tone: activeOffers.length > 0 ? "accent" : undefined },
+          { label: "Вакансии", value: activeVacancies.length },
+        ]}
+      />
 
       <section className="market-hub__brief">
         <div><small>СОСТОЯНИЕ РЫНКА</small><strong>{activeOffers.length} активных предложений</strong><p>{world.market.portalPlayers} игроков находятся в портале, {openings.reduce((sum, item) => sum + item.remaining, 0)} мест остаются открытыми.</p></div>

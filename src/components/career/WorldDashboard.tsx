@@ -4,6 +4,7 @@ import type { EcosystemPlayer, EcosystemPlayerCareerRecord, EcosystemStory, Ecos
 import { BottomSheet } from "../ui/BottomSheet";
 import { EcosystemPlayerProfile } from "./EcosystemPlayerProfile";
 import { Icon } from "../ui/Icon";
+import { ManagerPageHeader } from "./ManagerPageHeader";
 
 export type WorldPrimaryView = "feed" | "rankings" | "careers";
 
@@ -161,10 +162,19 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
 
   return (
     <div className="world-dashboard world-dashboard--v27">
-      <header className="world-v27-head">
-        <div><small>{phaseLabel(world.phase)} · W{world.seasonWeek}</small><h1>{selectedView === "feed" ? "Лента" : selectedView === "rankings" ? "Рейтинг" : "Карьеры"}</h1></div>
-        <strong>{world.seasonYear}</strong>
-      </header>
+      <ManagerPageHeader
+        eyebrow={`${phaseLabel(world.phase)} · НЕДЕЛЯ ${world.seasonWeek}`}
+        title={selectedView === "feed" ? "Центр новостей" : selectedView === "rankings" ? "Национальный рейтинг" : "Карьерный архив"}
+        subtitle={selectedView === "feed" ? "Главные события, конфликты и долгие линии автономного мира." : selectedView === "rankings" ? "Кто контролирует сезон и как изменились позиции за неделю." : "Путь игроков от школы до профессионального футбола."}
+        badge="WORLD"
+        metrics={[
+          { label: "Сезон", value: world.seasonYear },
+          { label: "События", value: stories.length },
+          { label: "Конфликты", value: activeConflicts.length, tone: activeConflicts.length > 0 ? "warning" : "positive" },
+          { label: "Цели", value: activeObjectives },
+        ]}
+        compact={hideNavigation}
+      />
 
       {!hideNavigation && (
         <nav className="world-v27-tabs" aria-label="Мир">
@@ -205,61 +215,72 @@ export function WorldDashboard({ save, view: forcedView, hideNavigation = false,
           {searchTeams.length + searchPlayers.length + searchCareers.length + searchStories.length === 0 && <div className="data-empty">Нет совпадений</div>}
         </section>
       ) : selectedView === "feed" ? (
-        <>
-          <section className="world-v48-agency" aria-label="Автономные решения">
-            <header>
-              <div><small>ДАВЛЕНИЕ И РЕШЕНИЯ</small><strong>{activeConflicts.length} открыто</strong></div>
-              <span>{recentDecisions.length} последних</span>
+        <div className="world-command-grid">
+          <section className="world-news-desk">
+            <header className="manager-section-head">
+              <div><small>ЛЕНТА НЕДЕЛИ</small><h2>Что изменилось</h2></div>
+              <span>{stories.length} событий</span>
             </header>
-            <div className="world-v48-agency__grid">
-              {activeConflicts.map((conflict) => {
-                const actor = conflict.actorKind === "team"
-                  ? world.teams.find((team) => team.id === conflict.actorId)?.shortName
-                  : conflict.actorKind === "player"
-                    ? world.players.find((player) => player.id === conflict.actorId)?.name
-                    : world.coaches.find((coach) => coach.id === conflict.actorId)?.name;
+            <div className="world-v27-feed">
+              {stories.map((story) => {
+                const team = teamForStory(story, world.teams);
                 return (
-                  <article key={conflict.id} className={conflict.relatedToHero ? "is-relevant" : ""}>
-                    <div><small>{conflict.stage.toUpperCase()} · {conflict.kind}</small><strong>{actor ?? conflict.actorId}</strong></div>
-                    <span>{Math.round(conflict.pressure)}</span>
-                  </article>
+                  <button type="button" key={story.id} className={story.relatedToHero ? "is-relevant" : ""} onClick={() => setSelectedStory(story)}>
+                    <span className="world-v27-feed__kind">{storyKindLabel(story.kind)}</span>
+                    <div><strong>{story.title}</strong><small>W{story.week}{team ? ` · ${team.shortName}` : ""}</small><p>{story.detail}</p></div>
+                    <em>{story.importance}</em>
+                  </button>
                 );
               })}
-              {activeConflicts.length === 0 && <p>Открытых конфликтов нет.</p>}
+              {stories.length === 0 && <div className="data-empty">Нет событий</div>}
             </div>
-            {recentDecisions.length > 0 && (
-              <div className="world-v48-agency__decisions">
-                {recentDecisions.map((decision) => <p key={decision.id}><strong>{decision.title}</strong><span>{decision.consequence}</span></p>)}
+          </section>
+
+          <aside className="world-command-rail">
+            <section className="world-v48-agency" aria-label="Автономные решения">
+              <header>
+                <div><small>ДАВЛЕНИЕ И РЕШЕНИЯ</small><strong>{activeConflicts.length} открыто</strong></div>
+                <span>{recentDecisions.length} последних</span>
+              </header>
+              <div className="world-v48-agency__grid">
+                {activeConflicts.map((conflict) => {
+                  const actor = conflict.actorKind === "team"
+                    ? world.teams.find((team) => team.id === conflict.actorId)?.shortName
+                    : conflict.actorKind === "player"
+                      ? world.players.find((player) => player.id === conflict.actorId)?.name
+                      : world.coaches.find((coach) => coach.id === conflict.actorId)?.name;
+                  return (
+                    <article key={conflict.id} className={conflict.relatedToHero ? "is-relevant" : ""}>
+                      <div><small>{conflict.stage.toUpperCase()} · {conflict.kind}</small><strong>{actor ?? conflict.actorId}</strong></div>
+                      <span>{Math.round(conflict.pressure)}</span>
+                    </article>
+                  );
+                })}
+                {activeConflicts.length === 0 && <p>Открытых конфликтов нет.</p>}
               </div>
-            )}
-          </section>
-          <section className="world-v47-history" aria-label="История мира">
-            <header><div><small>ЖИВОЙ МИР</small><strong>{activeArcs.length} линий</strong></div><span>{activeObjectives} целей</span></header>
-            {activeArcs.map((arc) => (
-              <article key={arc.id} className={arc.relatedToHero ? "is-relevant" : ""}>
-                <div><small>{arc.status === "active" ? "РАЗВИВАЕТСЯ" : "ЗАРОЖДАЕТСЯ"} · {arc.chapters} гл.</small><strong>{arc.title}</strong></div>
-                <p>{arc.summary || "История только начала складываться."}</p>
-                <span>{Math.round(arc.momentum)}</span>
-              </article>
-            ))}
-            {activeArcs.length === 0 && <p className="world-v47-history__empty">Долгие линии появятся после связанных событий симуляции.</p>}
-          </section>
-          <section className="world-v27-feed">
-          {stories.map((story) => {
-            const team = teamForStory(story, world.teams);
-            return (
-              <button type="button" key={story.id} className={story.relatedToHero ? "is-relevant" : ""} onClick={() => setSelectedStory(story)}>
-                <span className="world-v27-feed__kind">{storyKindLabel(story.kind)}</span>
-                <div><strong>{story.title}</strong><small>W{story.week}{team ? ` · ${team.shortName}` : ""}</small></div>
-                <Icon name="arrow-right" size={16} />
-              </button>
-            );
-          })}
-          {stories.length === 0 && <div className="data-empty">Нет событий</div>}
-          </section>
-        </>
+              {recentDecisions.length > 0 && (
+                <div className="world-v48-agency__decisions">
+                  {recentDecisions.map((decision) => <p key={decision.id}><strong>{decision.title}</strong><span>{decision.consequence}</span></p>)}
+                </div>
+              )}
+            </section>
+
+            <section className="world-v47-history" aria-label="История мира">
+              <header><div><small>ЖИВОЙ МИР</small><strong>{activeArcs.length} линий</strong></div><span>{activeObjectives} целей</span></header>
+              {activeArcs.map((arc) => (
+                <article key={arc.id} className={arc.relatedToHero ? "is-relevant" : ""}>
+                  <div><small>{arc.status === "active" ? "РАЗВИВАЕТСЯ" : "ЗАРОЖДАЕТСЯ"} · {arc.chapters} гл.</small><strong>{arc.title}</strong></div>
+                  <p>{arc.summary || "История только начала складываться."}</p>
+                  <span>{Math.round(arc.momentum)}</span>
+                </article>
+              ))}
+              {activeArcs.length === 0 && <p className="world-v47-history__empty">Долгие линии появятся после связанных событий симуляции.</p>}
+            </section>
+          </aside>
+        </div>
       ) : selectedView === "rankings" ? (
         <section className="world-v27-ranking">
+          <header><span>#</span><span>Команда</span><span>Рекорд и резюме</span><span>Изм.</span></header>
           {rankings.map((ranking) => {
             const team = world.teams.find((item) => item.id === ranking.teamId);
             if (!team) return null;
