@@ -4,6 +4,12 @@ const files = {
   types: readFileSync("src/sports/football/matches/types.ts", "utf8"),
   forecast: readFileSync("src/sports/football/matches/decisionForecast.ts", "utf8"),
   simulation: readFileSync("src/sports/football/matches/simulateMatch.ts", "utf8"),
+  lifecycle: readFileSync("src/sports/football/matches/simulation/matchLifecycle.ts", "utf8"),
+  decision: readFileSync("src/sports/football/matches/simulation/matchDecision.ts", "utf8"),
+  episodes: readFileSync("src/sports/football/matches/simulation/episodeBuilder.ts", "utf8"),
+  snaps: readFileSync("src/sports/football/matches/simulation/snapSimulation.ts", "utf8"),
+  drives: readFileSync("src/sports/football/matches/simulation/driveSimulation.ts", "utf8"),
+  stats: readFileSync("src/sports/football/matches/simulation/statTracking.ts", "utf8"),
   engine: readFileSync("src/sports/football/matches/realTimeEngine.ts", "utf8"),
   field: readFileSync("src/components/career/RealTimeMatchField.tsx", "utf8"),
   dashboard: readFileSync("src/components/career/MatchDashboard.tsx", "utf8"),
@@ -19,9 +25,12 @@ const required = [
   ["types", "lastResolvedEpisode"],
   ["types", "startFieldPosition"],
   ["forecast", "decisionScoreCenter"],
-  ["simulation", "advanceAutomatic"],
-  ["simulation", "decodeLivePlayOutcome"],
-  ["simulation", "grossPuntYards"],
+  ["lifecycle", "advanceAutomatic"],
+  ["decision", "decodeLivePlayOutcome"],
+  ["snaps", "grossPuntYards"],
+  ["episodes", "generateEpisode"],
+  ["drives", "backgroundDrive"],
+  ["stats", "makeStatDelta"],
   ["engine", "stepLivePlayEngine"],
   ["engine", "function quarterbackStep"],
   ["engine", "function defenderStep"],
@@ -58,7 +67,10 @@ const failures = required
 
 if (files.dashboard.includes("elite-match-options--v36")) failures.push("dashboard: legacy precomputed decision cards remain in live gameplay");
 if (files.field.includes("MatchPlaybackPhase")) failures.push("field: scripted playback phases remain in the real-time field");
-if (!files.simulation.includes("simulation.puntReturnYards ?? 0")) failures.push("simulation: punt return statistic is still reconstructed");
+if (!files.stats.includes("simulation.puntReturnYards ?? 0")) failures.push("stats: punt return statistic is still reconstructed");
+const facadeLines = files.simulation.trim().split(/\r?\n/);
+if (facadeLines.length > 6) failures.push("simulation: public facade absorbed match-domain logic again");
+if (files.simulation.includes("CareerSave") || files.simulation.includes("SeededRandom")) failures.push("simulation: public facade imports domain state");
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);

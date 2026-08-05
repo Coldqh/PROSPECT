@@ -10,7 +10,8 @@ const matchCommands = read("src/application/career/commands/MatchCommands.ts");
 const professionalCommands = read("src/application/career/commands/ProfessionalCareerCommands.ts");
 const slices = read("src/storage/saves/worldSlices.ts");
 const participation = read("src/sports/football/matches/participation.ts");
-const simulation = read("src/sports/football/matches/simulateMatch.ts");
+const matchLifecycle = read("src/sports/football/matches/simulation/matchLifecycle.ts");
+const driveSimulation = read("src/sports/football/matches/simulation/driveSimulation.ts");
 const matchUi = read("src/components/career/MatchDashboard.tsx");
 const drawer = read("src/components/career/CareerDrawer.tsx");
 const navigation = read("src/components/career/CareerNavigation.tsx");
@@ -23,7 +24,7 @@ const assertions = [
   [repository.includes("createWorldSliceRecords") && repository.includes("pruneWorldSlices"), "content-addressed world persistence"],
   [!repository.includes("sports/football") && !commands.includes("advanceFootballCareerDay") && !commands.includes("startMatch(current") && !commands.includes("advanceProfessionalWeek(current") && schoolCommands.includes("advanceFootballCareerDay") && collegeCommands.includes("advanceFootballCareerDay") && matchCommands.includes("startMatch") && professionalCommands.includes("advanceProfessionalWeek"), "phase command boundaries"],
   [participation.includes("expectedHeroSnapShare") && participation.includes("heroParticipationForSnap"), "dynamic package participation"],
-  [simulation.includes("advancePastBenchSnaps") && simulation.includes("advanceToSpecialOpportunity"), "bench skipping and real special-team opportunities"],
+  [matchLifecycle.includes("advancePastBenchSnaps") && driveSimulation.includes("advanceToSpecialOpportunity"), "bench skipping and real special-team opportunities"],
   [!matchUi.includes("entryQuarter") && !matchUi.includes("match.totalEpisodes}</strong>"), "no fake entry quarter or snap quota in match UI"],
   [!drawer.includes('"matches"') && !drawer.includes('"standings"') && !drawer.includes('"leagues"'), "consolidated drawer sections"],
   [navigation.includes('label: "Сегодня"') && navigation.includes('label: "Карьера"') && navigation.includes('label: "Лига"'), "shared four-part career navigation"],

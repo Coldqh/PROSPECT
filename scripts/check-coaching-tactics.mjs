@@ -6,7 +6,7 @@ const files = {
   ecosystemCoaching: read("src/sports/football/ecosystem/coaching.ts"),
   tactics: read("src/sports/football/ecosystem/tactics.ts"),
   playbook: read("src/sports/football/matches/playbook.ts"),
-  simulation: read("src/sports/football/matches/simulateMatch.ts"),
+  simulation: read("src/sports/football/matches/simulation/matchupContext.ts"),
   proTypes: read("src/sports/football/pro/types.ts"),
   proCoaching: read("src/sports/football/pro/coaching.ts"),
   proLeague: read("src/sports/football/pro/league.ts"),

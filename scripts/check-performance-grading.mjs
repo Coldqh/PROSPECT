@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const types = read("src/sports/football/matches/types.ts");
 const engine = read("src/sports/football/matches/realTimeEngine.ts");
-const simulation = read("src/sports/football/matches/simulateMatch.ts");
+const lifecycle = read("src/sports/football/matches/simulation/matchLifecycle.ts");
+const result = read("src/sports/football/matches/simulation/matchResult.ts");
 const evaluation = read("src/sports/football/matches/performanceEvaluation.ts");
 const league = read("src/sports/football/pro/league.ts");
 const participation = read("src/sports/football/matches/participation.ts");
@@ -13,9 +14,9 @@ const assertions = [
   [types.includes("MatchGameEvaluation"), "game evaluation contract"],
   [engine.includes("quarterbackTargetRead"), "QB target progression"],
   [engine.includes("routeAdherence"), "route adherence telemetry"],
-  [simulation.includes("aggregateMatchEvaluation"), "match grade aggregation"],
+  [result.includes("aggregateMatchEvaluation"), "match grade aggregation"],
   [evaluation.includes("routeCriteria") && evaluation.includes("coverageCriteria"), "position-specific criteria"],
-  [participation.includes("heroParticipationForSnap") && simulation.includes("advancePastBenchSnaps"), "dynamic package participation"],
+  [participation.includes("heroParticipationForSnap") && lifecycle.includes("advancePastBenchSnaps"), "dynamic package participation"],
   [league.includes("performanceScore: match.finalResult.score"), "persistent professional match grade"],
   [engine.includes("minimumReadTime") && engine.includes("qbDecisionQuality"), "deliberate QB decision timing"],
   [engine.includes("distanceToSegment"), "route adherence measured against route segments"],

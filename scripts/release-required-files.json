@@ -459,5 +459,15 @@
   "src/sports/football/ecosystem/simulation/story.ts",
   "src/sports/football/ecosystem/simulation/dailySystems.ts",
   "src/sports/football/ecosystem/simulation/offseasonSystems.ts",
-  "src/sports/football/ecosystem/simulation/marketSystems.ts"
+  "src/sports/football/ecosystem/simulation/marketSystems.ts",
+  "src/sports/football/matches/simulation/internalTypes.ts",
+  "src/sports/football/matches/simulation/matchMath.ts",
+  "src/sports/football/matches/simulation/matchupContext.ts",
+  "src/sports/football/matches/simulation/episodeBuilder.ts",
+  "src/sports/football/matches/simulation/snapSimulation.ts",
+  "src/sports/football/matches/simulation/statTracking.ts",
+  "src/sports/football/matches/simulation/driveSimulation.ts",
+  "src/sports/football/matches/simulation/matchResult.ts",
+  "src/sports/football/matches/simulation/matchLifecycle.ts",
+  "src/sports/football/matches/simulation/matchDecision.ts"
 ]
