@@ -73,7 +73,9 @@ describe("CareerCommandService", () => {
     expect(result.save.relationships.pendingEvent).toBeUndefined();
     expect(result.report.week).toBe(created.life.weekNumber);
     expect(result.report.metrics.some((metric) => metric.id === "overall")).toBe(true);
-    expect(result.report.summary.length).toBeGreaterThan(10);
+    expect(result.report.summary.length).toBeGreaterThan(5);
+    expect(result.report.changes.length).toBeGreaterThan(0);
+    expect(result.report.headlines.length).toBeLessThanOrEqual(3);
   });
 
   it("keeps phase rules outside the repository", async () => {

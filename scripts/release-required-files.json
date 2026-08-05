@@ -487,5 +487,7 @@
   "tsconfig.json",
   "tsconfig.node.json",
   "vite.config.ts",
-  "vitest.config.ts"
+  "vitest.config.ts",
+  "src/components/career/CareerWeekCenter.tsx",
+  "src/components/career/SeasonTimelinePanel.tsx"
 ]

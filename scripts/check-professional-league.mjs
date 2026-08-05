@@ -52,7 +52,7 @@ const required = [
   ["commands", "advanceProfessionalOffseason"],
   ["seasonDashboard", "professionalStandings"],
   ["dashboard", "onAdvanceProfessionalOffseason"],
-  ["dashboard", "WeeklyReportPanel"],
+  ["dashboard", "CareerWeekCenter"],
   ["dashboard", "onAdvanceWeek"],
   ["schema", "CURRENT_SCHEMA_VERSION = 35"],
   ["migrations", "migrateVersionTwentySeven"],

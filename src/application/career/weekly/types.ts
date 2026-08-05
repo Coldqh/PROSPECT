@@ -14,6 +14,15 @@ export interface WeeklyReportMatch {
   won: boolean;
   grade?: "A" | "B" | "C" | "D";
   snaps?: number;
+  spotlight?: string;
+}
+
+export interface WeeklyReportChange {
+  id: string;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "positive" | "negative" | "neutral";
 }
 
 export interface WeeklyReportHeadline {
@@ -33,6 +42,7 @@ export interface WeeklyReport {
   summary: string;
   match?: WeeklyReportMatch;
   metrics: WeeklyReportMetric[];
+  changes: WeeklyReportChange[];
   headlines: WeeklyReportHeadline[];
 }
 

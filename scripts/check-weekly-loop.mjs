@@ -11,6 +11,8 @@ const files = {
   college: read("src/components/career/CollegeCareerDashboard.tsx"),
   professional: read("src/components/career/ProfessionalTransitionDashboard.tsx"),
   panel: read("src/components/career/WeeklyReportPanel.tsx"),
+  center: read("src/components/career/CareerWeekCenter.tsx"),
+  timeline: read("src/components/career/SeasonTimelinePanel.tsx"),
 };
 
 const required = [
@@ -22,10 +24,13 @@ const required = [
   [files.advance, "automaticProfessionalFocus", "professional preparation is not automated"],
   [files.report, "newHeadlines", "weekly report has no world composition"],
   [files.hook, "weeklyReport", "weekly report is not exposed to UI"],
-  [files.today, "ПРОДОЛЖИТЬ НЕДЕЛЮ", "school home has no single weekly action"],
-  [files.college, "ПРОДОЛЖИТЬ НЕДЕЛЮ", "college home has no single weekly action"],
-  [files.professional, "ПРОДОЛЖИТЬ НЕДЕЛЮ", "professional home has no single weekly action"],
-  [files.panel, "weekly-report__headlines", "weekly report composition is incomplete"],
+  [files.today, "CareerWeekCenter", "school home does not use the shared weekly center"],
+  [files.college, "CareerWeekCenter", "college home does not use the shared weekly center"],
+  [files.professional, "CareerWeekCenter", "professional home does not use the shared weekly center"],
+  [files.panel, "weekly-report__changes", "weekly report does not expose career changes"],
+  [files.panel, "weekly-scoreboard", "weekly report has no strong result composition"],
+  [files.center, "career-week-stage__action", "main career screen has no single dominant action"],
+  [files.timeline, "season-timeline__track", "main career screen has no persistent season history"],
 ];
 const failures = required.filter(([source, token]) => !source.includes(token)).map(([, , message]) => message);
 
@@ -37,4 +42,4 @@ if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
-console.log("One-button weekly loop: OK (automatic preparation, match, world advance and compact report).");
+console.log("One-button weekly loop: OK (single action, result composition and persistent season timeline).");

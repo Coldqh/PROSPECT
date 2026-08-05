@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { WeeklyReport } from "../../application/career/weekly/types";
 import type { CareerSave } from "../../storage/saves/schema";
-import { getTrainingFocus } from "../../sports/football/training/catalog";
 import { Icon } from "../ui/Icon";
 import { CareerNavigation, type CareerPrimaryView } from "./CareerNavigation";
 import { CareerDrawer, type CareerSecondaryView } from "./CareerDrawer";
@@ -12,7 +11,7 @@ import { CollegeSectionsDashboard } from "./CollegeSectionsDashboard";
 import { SocialLifeDashboard } from "./SocialLifeDashboard";
 import { MarketDashboard } from "./MarketDashboard";
 import { LeagueDirectoryDashboard } from "./LeagueDirectoryDashboard";
-import { WeeklyReportPanel } from "./WeeklyReportPanel";
+import { CareerWeekCenter } from "./CareerWeekCenter";
 
 interface CollegeCareerDashboardProps {
   save: CareerSave;
@@ -42,13 +41,20 @@ export function CollegeCareerDashboard({ save, mutating, actionError, weeklyRepo
 
   const team = save.world.teams.find((item) => item.id === career.teamId);
   const hero = save.world.players.find((player) => player.isHero);
-  const focus = getTrainingFocus(save.football.position, save.football.training.plan.focusId);
   const nextGame = save.world.competition.schedule
     .filter((game) => game.status === "scheduled" && (game.homeTeamId === career.teamId || game.awayTeamId === career.teamId))
     .sort((a, b) => a.week - b.week)[0];
   const nextOpponentId = nextGame ? (nextGame.homeTeamId === career.teamId ? nextGame.awayTeamId : nextGame.homeTeamId) : undefined;
   const nextOpponent = save.world.teams.find((item) => item.id === nextOpponentId);
+  const nationalRank = save.world.competition.rankings.find((ranking) => ranking.teamId === career.teamId)?.rank;
   const canExploreDraft = career.status === "complete" || career.classYear === "Junior" || career.classYear === "Senior" || career.seasonHistory.length >= 2;
+  const focusLabel = save.football.training.body.activeIssue
+    ? "Восстановление"
+    : save.football.training.plan.focusId === "film-install"
+      ? "Плейбук и разбор"
+      : save.football.training.plan.focusId === "explosive-power"
+        ? "Физическая работа"
+        : "Позиционная техника";
 
   function openTeam(teamId?: string) {
     setSelectedTeamId(teamId);
@@ -71,6 +77,10 @@ export function CollegeCareerDashboard({ save, mutating, actionError, weeklyRepo
     return null;
   }
 
+  const draftAction = canExploreDraft
+    ? <button type="button" className="college-pro-entry college-pro-entry--data" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}><span><small>DRAFT</small><strong>Открыть оценку</strong></span><Icon name="arrow-right" /></button>
+    : undefined;
+
   return (
     <div className="college-career-shell college-career-shell--v27">
       <div className="college-career-main">
@@ -84,27 +94,30 @@ export function CollegeCareerDashboard({ save, mutating, actionError, weeklyRepo
           <LeagueDirectoryDashboard save={save} onOpenCollegeTeam={(id) => openTeam(id)} />
         ) : (
           <div className="college-home-page">
-            <header className="college-home-head"><div><small>{career.classYear} · W{career.week}</small><h1>{program.shortName}</h1></div><strong>{team?.wins ?? 0}–{team?.losses ?? 0}</strong></header>
-            <section className="college-home-metrics"><article><small>Роль</small><strong>{roleLabel(career.role)}</strong></article><article><small>Depth</small><strong>#{career.depthRank}</strong></article><article><small>Trust</small><strong>{Math.round(career.coachTrust)}</strong></article><article><small>Reps</small><strong>{Math.round(career.practiceReps)}</strong></article></section>
-
-            <WeeklyReportPanel report={weeklyReport} />
-
-            <section className="college-home-game"><div><small>{nextGame ? `W${nextGame.week} · ${nextGame.homeTeamId === career.teamId ? "ДОМА" : "В ГОСТЯХ"}` : "КАЛЕНДАРЬ"}</small><strong>{nextOpponent?.name ?? "Нет матча"}</strong></div><span>{nextOpponent ? Math.round(nextOpponent.rating) : "—"}</span></section>
-
-            <section className="weekly-composition-card weekly-composition-card--college">
-              <header><small>АВТОМАТИЧЕСКАЯ ПОДГОТОВКА</small><strong>{focus.name}</strong><span>{save.football.training.plan.intensity}</span></header>
-              <div>
-                <article><small>OVR</small><strong>{Math.round(hero?.overall ?? save.football.ratings.overall)}</strong></article>
-                <article><small>Форма</small><strong>{Math.round(hero?.form ?? 0)}</strong></article>
-                <article><small>Здоровье</small><strong>{Math.round(hero?.health ?? 0)}</strong></article>
-                <article><small>Fit</small><strong>{Math.round(hero?.tactical.schemeFit ?? 0)}</strong></article>
-              </div>
-              <p>Штаб сам распределяет нагрузку, повторы и роль. Матч проходит внутри недельного расчёта.</p>
-            </section>
-
-            {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
-            <button type="button" className="primary-action-bar weekly-advance-button" disabled={mutating || career.status === "complete"} onClick={() => void onAdvanceWeek()}><span><small>Тренировки · мир · матч</small><strong>{mutating ? "РАСЧЁТ НЕДЕЛИ…" : career.status === "complete" ? "СЕЗОН ЗАВЕРШЁН" : "ПРОДОЛЖИТЬ НЕДЕЛЮ"}</strong></span><Icon name="arrow-right" /></button>
-            {canExploreDraft && <button type="button" className="college-pro-entry college-pro-entry--data" disabled={mutating} onClick={() => void onOpenProfessionalDraft()}><span><small>DRAFT</small><strong>Открыть оценку</strong></span><Icon name="arrow-right" /></button>}
+            <CareerWeekCenter
+              save={save}
+              {...(weeklyReport ? { report: weeklyReport } : {})}
+              phaseLabel={`${career.classYear.toUpperCase()} · COLLEGE`}
+              weekLabel={`Неделя ${career.week}`}
+              teamName={program.name}
+              teamCode={program.shortName}
+              record={`${team?.wins ?? 0}–${team?.losses ?? 0}`}
+              {...(nextOpponent ? { opponentName: nextOpponent.name, opponentCode: nextOpponent.shortName } : {})}
+              opponentMeta={nextGame ? `W${nextGame.week} · ${nextGame.homeTeamId === career.teamId ? "ДОМА" : "В ГОСТЯХ"}` : "КАЛЕНДАРЬ"}
+              metrics={[
+                { label: "Роль", value: roleLabel(career.role), detail: `Depth #${career.depthRank}` },
+                { label: "Форма", value: Math.round(hero?.form ?? save.football.training.body.readiness), detail: `Health ${Math.round(hero?.health ?? save.character.condition.health)}` },
+                { label: "OVR", value: Math.round(hero?.overall ?? save.football.ratings.overall), detail: `Fit ${Math.round(hero?.tactical.schemeFit ?? 0)}` },
+                { label: "Рейтинг", value: nationalRank ? `#${nationalRank}` : "NR", detail: `${team?.conferenceId ?? "National"}` },
+              ]}
+              preparationLabel={focusLabel}
+              preparationDetail="Штаб сам распределяет повторы, нагрузку и роль. Матч и весь мир рассчитываются одним нажатием."
+              mutating={mutating}
+              disabled={career.status === "complete"}
+              {...(actionError ? { actionError } : {})}
+              {...(draftAction ? { extraAction: draftAction } : {})}
+              onAdvanceWeek={onAdvanceWeek}
+            />
           </div>
         )}
       </div>

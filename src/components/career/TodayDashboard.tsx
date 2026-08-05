@@ -1,21 +1,22 @@
 import type { CSSProperties } from "react";
 import type { WeeklyReport } from "../../application/career/weekly/types";
-import { addGameDays, formatGameDate, formatWeekday, toGameDateKey } from "../../core/calendar/types";
+import { formatGameDate, formatWeekday } from "../../core/calendar/types";
 import type { MedicalStatus } from "../../sports/football/training/types";
 import type { CareerSave } from "../../storage/saves/schema";
-import { Icon } from "../ui/Icon";
+import { CareerWeekCenter } from "./CareerWeekCenter";
 import { teamBrandStyle } from "./teamBrand";
-import { WeeklyReportPanel } from "./WeeklyReportPanel";
-
-const weekdayLabels = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"] as const;
 
 function medicalLabel(status: MedicalStatus): string {
   return {
     cleared: "Допущен",
     questionable: "Под вопросом",
     limited: "Ограничен",
-    out: "Вне работы",
+    out: "Вне состава",
   }[status];
+}
+
+function roleLabel(role: string): string {
+  return { starter: "Стартер", rotation: "Ротация", "special-teams": "Спецкоманды", developmental: "Развитие", reserve: "Резерв", "first-team": "Первая команда", "second-team": "Вторая команда" }[role] ?? role;
 }
 
 interface TodayDashboardProps {
@@ -27,15 +28,12 @@ interface TodayDashboardProps {
 }
 
 export function TodayDashboard({ save, mutating, actionError, weeklyReport, onAdvanceWeek }: TodayDashboardProps) {
-  const { character, football, life } = save;
+  const { football, life } = save;
   const body = football.training.body;
-  const weekStart = addGameDays(save.meta.currentDate, -life.dayIndex);
-  const scheduledMatch = football.match.status === "upcoming" || football.match.status === "in-progress" || football.match.status === "complete"
-    ? football.match
-    : undefined;
-  const currentTeamName = football.college.program?.shortName ?? football.school.shortName;
-  const currentRole = football.college.heroCareer?.role ?? football.depthChart.projectedRole;
-  const seasonRecord = `${football.season.wins}–${football.season.losses}`;
+  const scheduled = football.season.schedule.find((game) => game.status === "scheduled");
+  const standings = [...football.season.standings].sort((left, right) => right.wins - left.wins || (right.pointsFor - right.pointsAgainst) - (left.pointsFor - left.pointsAgainst) || right.rating - left.rating);
+  const standing = standings.findIndex((team) => team.isHeroTeam) + 1;
+  const currentRole = football.depthChart.projectedRole;
   const pageStyle = football.college.program
     ? teamBrandStyle(football.college.program.id)
     : ({
@@ -44,65 +42,38 @@ export function TodayDashboard({ save, mutating, actionError, weeklyReport, onAd
         "--team-ink": "#ffffff",
         "--team-hue": "354",
       } as CSSProperties);
-  const nextOpponent = scheduledMatch?.opponentName ?? football.season.nextOpponent.name;
-  const matchLabel = scheduledMatch?.status === "complete"
-    ? `${scheduledMatch.heroScore}:${scheduledMatch.opponentScore}`
-    : `Неделя ${football.season.week}`;
 
   return (
     <div className="dynasty-page dynasty-home-page" style={pageStyle}>
       <header className="dynasty-page-head">
         <div className="dynasty-page-head__badge">WK</div>
-        <div><strong>Карьера</strong><small>{formatWeekday(save.meta.currentDate).toUpperCase()} · НЕДЕЛЯ {life.weekNumber}</small></div>
+        <div><strong>Карьера</strong><small>{formatWeekday(save.meta.currentDate).toUpperCase()} · {formatGameDate(save.meta.currentDate)}</small></div>
       </header>
 
-      <section className="dynasty-context-bar">
-        <article><small>Команда</small><strong>{currentTeamName}</strong></article>
-        <article><small>Рекорд</small><strong>{seasonRecord}</strong></article>
-        <article><small>OVR</small><strong>{Math.round(football.ratings.overall)}</strong></article>
-        <article><small>Роль</small><strong>{currentRole}</strong></article>
-        <article><small>Дата</small><strong>{formatGameDate(save.meta.currentDate)}</strong></article>
-      </section>
-
-      {actionError && <div className="inline-message inline-message--error">{actionError}</div>}
-      <WeeklyReportPanel report={weeklyReport} />
-
-      <div className="dynasty-stack">
-        <section className="dynasty-panel dynasty-week-panel">
-          <header><div><small>Текущая неделя</small><strong>Автоматический цикл</strong></div><span>{life.dayIndex + 1}/7</span></header>
-          <div className="dynasty-week-days" aria-label="Текущая игровая неделя">
-            {weekdayLabels.map((label, index) => {
-              const date = addGameDays(weekStart, index);
-              const matchOnDate = scheduledMatch && toGameDateKey(scheduledMatch.scheduledDate) === toGameDateKey(date);
-              const className = [index < life.dayIndex ? "is-complete" : index === life.dayIndex ? "is-current" : "", matchOnDate ? "is-game" : ""].filter(Boolean).join(" ");
-              return <span className={className} key={label}><small>{label}</small><strong>{date.day}</strong>{matchOnDate && <em>GAME</em>}</span>;
-            })}
-          </div>
-        </section>
-
-        <section className="weekly-composition-card">
-          <header><small>СЛЕДУЮЩАЯ НЕДЕЛЯ</small><strong>Матч против {nextOpponent}</strong><span>{matchLabel}</span></header>
-          <div>
-            <article><small>Готовность</small><strong>{Math.round(body.readiness)}</strong></article>
-            <article><small>Здоровье</small><strong>{Math.round(character.condition.health)}</strong></article>
-            <article><small>Доверие</small><strong>{Math.round(football.depthChart.coachTrust)}</strong></article>
-            <article><small>Статус</small><strong>{medicalLabel(body.medicalStatus)}</strong></article>
-          </div>
-          <p>Тренировки, восстановление, отношения, рекрутинг и матч рассчитываются автоматически.</p>
-        </section>
-
-        {life.lastOutcome && (
-          <section className="weekly-last-note">
-            <span>{life.lastOutcome.grade}</span>
-            <div><small>Последний день</small><strong>{life.lastOutcome.title}</strong><p>{life.lastOutcome.summary}</p></div>
-          </section>
-        )}
-
-        <button type="button" className="dynasty-primary-action weekly-advance-button" disabled={mutating} onClick={() => void onAdvanceWeek()}>
-          <span><small>7 дней · автоматический матч</small><strong>{mutating ? "РАСЧЁТ НЕДЕЛИ…" : "ПРОДОЛЖИТЬ НЕДЕЛЮ"}</strong></span>
-          <Icon name="arrow-right" />
-        </button>
-      </div>
+      <CareerWeekCenter
+        save={save}
+        {...(weeklyReport ? { report: weeklyReport } : {})}
+        phaseLabel="ШКОЛЬНЫЙ СЕЗОН"
+        weekLabel={`Неделя ${life.weekNumber}`}
+        teamName={football.school.name}
+        teamCode={football.school.shortName}
+        record={`${football.season.wins}–${football.season.losses}`}
+        opponentName={scheduled?.opponentName ?? football.season.nextOpponent.name}
+        opponentCode={scheduled?.opponentShortName ?? "NEXT"}
+        opponentMeta={scheduled ? `W${scheduled.week} · OVR ${Math.round(scheduled.opponentRating)}` : "СЛЕДУЮЩИЙ МАТЧ"}
+        metrics={[
+          { label: "Роль", value: roleLabel(currentRole) },
+          { label: "Форма", value: Math.round(body.readiness), detail: medicalLabel(body.medicalStatus) },
+          { label: "OVR", value: Math.round(football.ratings.overall) },
+          { label: "Таблица", value: standing > 0 ? `#${standing}` : "—", detail: `${standings.length} команд` },
+        ]}
+        preparationLabel={body.activeIssue ? "Восстановление" : football.training.plan.focusId === "film-install" ? "Разбор игры" : football.training.plan.focusId === "explosive-power" ? "Физическая работа" : "Позиционная техника"}
+        preparationDetail="Штаб сам проводит тренировки, двигает состав и рассчитывает матч. Ты видишь только итог недели."
+        mutating={mutating}
+        actionMeta="7 дней · автоматический матч"
+        {...(actionError ? { actionError } : {})}
+        onAdvanceWeek={onAdvanceWeek}
+      />
     </div>
   );
 }

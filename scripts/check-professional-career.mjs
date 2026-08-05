@@ -8,9 +8,9 @@ const checks = [
   ["src/sports/football/pro/league/medical.ts", "advanceProfessionalMedical"],
   ["src/sports/football/pro/league/market.ts", "runProfessionalTradeDeadline"],
   ["src/sports/football/pro/league/roster.ts", "rebuildProfessionalDepthCharts"],
-  ["src/components/career/ProfessionalTransitionDashboard.tsx", "WeeklyReportPanel"],
+  ["src/components/career/ProfessionalTransitionDashboard.tsx", "CareerWeekCenter"],
   ["src/components/career/ProfessionalTransitionDashboard.tsx", "onAdvanceWeek"],
-  ["src/components/career/ProfessionalTransitionDashboard.tsx", "heroCanPlay"],
+  ["src/components/career/ProfessionalTransitionDashboard.tsx", "conferenceStanding"],
   ["src/storage/saves/schema.ts", "injuryWeeks"],
 ];
 for (const [path, token] of checks) {

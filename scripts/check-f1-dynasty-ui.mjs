@@ -23,7 +23,7 @@ const required = [
   [shell, ".game-bottom-nav", "persistent career navigation is missing"],
   [team, "dynasty-team-masthead", "team component still uses the old composition"],
   [profile, "dynasty-profile-hero", "player profile still uses the old composition"],
-  [today, "dynasty-week-panel", "season home still uses the old composition"],
+  [today, "CareerWeekCenter", "season home does not use the unified weekly composition"],
 ];
 for (const [source, token, message] of required) if (!source.includes(token)) errors.push(message);
 

@@ -30,7 +30,7 @@ const assertions = [
   [!matchUi.includes("entryQuarter") && !matchUi.includes("match.totalEpisodes}</strong>"), "no fake entry quarter or snap quota in match UI"],
   [!drawer.includes('"matches"') && !drawer.includes('"standings"') && !drawer.includes('"leagues"'), "consolidated drawer sections"],
   [navigation.includes('label: "Сегодня"') && navigation.includes('label: "Карьера"') && navigation.includes('label: "Лига"'), "shared four-part career navigation"],
-  [professional.includes("heroCanPlay") && professional.includes("onAdvanceWeek") && !professional.includes("onSetProfessionalWeekFocus"), "one-button professional weekly loop"],
+  [professional.includes("CareerWeekCenter") && professional.includes("onAdvanceWeek") && !professional.includes("onSetProfessionalWeekFocus"), "one-button professional weekly loop"],
   [!professional.includes("professional-root-tabs"), "no duplicate professional league tabs"],
 ];
 
