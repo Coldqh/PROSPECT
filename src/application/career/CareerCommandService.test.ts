@@ -8,6 +8,10 @@ function createMemoryStore(): CareerMutationStore & { current(): CareerSave | un
 
   return {
     current: () => persisted,
+    async load(careerId) {
+      if (!persisted || persisted.meta.id !== careerId) throw new Error("Career is missing");
+      return persisted;
+    },
     async save(input) {
       persisted = {
         ...input,

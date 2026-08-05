@@ -4,6 +4,10 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const database = read("src/storage/indexedDb/database.ts");
 const repository = read("src/storage/saves/CareerRepository.ts");
 const commands = read("src/application/career/CareerCommandService.ts");
+const schoolCommands = read("src/application/career/commands/SchoolCareerCommands.ts");
+const collegeCommands = read("src/application/career/commands/CollegeCareerCommands.ts");
+const matchCommands = read("src/application/career/commands/MatchCommands.ts");
+const professionalCommands = read("src/application/career/commands/ProfessionalCareerCommands.ts");
 const slices = read("src/storage/saves/worldSlices.ts");
 const participation = read("src/sports/football/matches/participation.ts");
 const simulation = read("src/sports/football/matches/simulateMatch.ts");
@@ -17,7 +21,7 @@ const assertions = [
   [slices.includes("compactCareerSave") && slices.includes("hydrateCareerSave"), "compact snapshot hydration"],
   [repository.includes("careerSaveSchema.safeParse") && !repository.includes("if (save.meta.schemaVersion === CURRENT_SCHEMA_VERSION) return save"), "current-schema validation"],
   [repository.includes("createWorldSliceRecords") && repository.includes("pruneWorldSlices"), "content-addressed world persistence"],
-  [!repository.includes("sports/football") && commands.includes("advanceFootballCareerDay") && commands.includes("startMatch"), "application command boundary"],
+  [!repository.includes("sports/football") && !commands.includes("advanceFootballCareerDay") && !commands.includes("startMatch(current") && !commands.includes("advanceProfessionalWeek(current") && schoolCommands.includes("advanceFootballCareerDay") && collegeCommands.includes("advanceFootballCareerDay") && matchCommands.includes("startMatch") && professionalCommands.includes("advanceProfessionalWeek"), "phase command boundaries"],
   [participation.includes("expectedHeroSnapShare") && participation.includes("heroParticipationForSnap"), "dynamic package participation"],
   [simulation.includes("advancePastBenchSnaps") && simulation.includes("advanceToSpecialOpportunity"), "bench skipping and real special-team opportunities"],
   [!matchUi.includes("entryQuarter") && !matchUi.includes("match.totalEpisodes}</strong>"), "no fake entry quarter or snap quota in match UI"],

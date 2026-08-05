@@ -447,5 +447,10 @@
   "DELETE_FILES_0.54.0.txt",
   "PACKAGE_0.54.0.md",
   "PATCH_0.54.0.md",
-  "PATCH_FILES_0.54.0.txt"
+  "PATCH_FILES_0.54.0.txt",
+  "src/application/career/commands/CareerPlanningCommands.ts",
+  "src/application/career/commands/CollegeCareerCommands.ts",
+  "src/application/career/commands/MatchCommands.ts",
+  "src/application/career/commands/ProfessionalCareerCommands.ts",
+  "src/application/career/commands/SchoolCareerCommands.ts"
 ]

@@ -8,7 +8,7 @@ const files = {
   field: readFileSync("src/components/career/RealTimeMatchField.tsx", "utf8"),
   dashboard: readFileSync("src/components/career/MatchDashboard.tsx", "utf8"),
   today: readFileSync("src/components/career/TodayDashboard.tsx", "utf8"),
-  commands: readFileSync("src/application/career/CareerCommandService.ts", "utf8"),
+  commands: readFileSync("src/application/career/commands/MatchCommands.ts", "utf8"),
   schema: readFileSync("src/storage/saves/schema.ts", "utf8"),
   migrations: readFileSync("src/storage/saves/migrations.ts", "utf8"),
   tests: readFileSync("src/sports/football/matches/simulateMatch.test.ts", "utf8"),
