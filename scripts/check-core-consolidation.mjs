@@ -8,6 +8,8 @@ const schoolCommands = read("src/application/career/commands/SchoolCareerCommand
 const collegeCommands = read("src/application/career/commands/CollegeCareerCommands.ts");
 const matchCommands = read("src/application/career/commands/MatchCommands.ts");
 const professionalCommands = read("src/application/career/commands/ProfessionalCareerCommands.ts");
+const weekCommands = read("src/application/career/commands/CareerWeekCommands.ts");
+const weeklyAdvance = read("src/application/career/weekly/advanceCareerWeek.ts");
 const slices = read("src/storage/saves/worldSlices.ts");
 const participation = read("src/sports/football/matches/participation.ts");
 const matchLifecycle = read("src/sports/football/matches/simulation/matchLifecycle.ts");
@@ -22,13 +24,13 @@ const assertions = [
   [slices.includes("compactCareerSave") && slices.includes("hydrateCareerSave"), "compact snapshot hydration"],
   [repository.includes("careerSaveSchema.safeParse") && !repository.includes("if (save.meta.schemaVersion === CURRENT_SCHEMA_VERSION) return save"), "current-schema validation"],
   [repository.includes("createWorldSliceRecords") && repository.includes("pruneWorldSlices"), "content-addressed world persistence"],
-  [!repository.includes("sports/football") && !commands.includes("advanceFootballCareerDay") && !commands.includes("startMatch(current") && !commands.includes("advanceProfessionalWeek(current") && schoolCommands.includes("advanceFootballCareerDay") && collegeCommands.includes("advanceFootballCareerDay") && matchCommands.includes("startMatch") && professionalCommands.includes("advanceProfessionalWeek"), "phase command boundaries"],
+  [!repository.includes("sports/football") && !commands.includes("advanceFootballCareerDay") && !commands.includes("startMatch(current") && !commands.includes("advanceProfessionalWeek(current") && schoolCommands.includes("advanceFootballCareerDay") && collegeCommands.includes("advanceFootballCareerDay") && matchCommands.includes("startMatch") && professionalCommands.includes("advanceProfessionalWeek") && weekCommands.includes("advanceCareerWeek") && weeklyAdvance.includes("advanceHighSchoolWeek"), "phase command boundaries"],
   [participation.includes("expectedHeroSnapShare") && participation.includes("heroParticipationForSnap"), "dynamic package participation"],
   [matchLifecycle.includes("advancePastBenchSnaps") && driveSimulation.includes("advanceToSpecialOpportunity"), "bench skipping and real special-team opportunities"],
   [!matchUi.includes("entryQuarter") && !matchUi.includes("match.totalEpisodes}</strong>"), "no fake entry quarter or snap quota in match UI"],
   [!drawer.includes('"matches"') && !drawer.includes('"standings"') && !drawer.includes('"leagues"'), "consolidated drawer sections"],
   [navigation.includes('label: "Сегодня"') && navigation.includes('label: "Карьера"') && navigation.includes('label: "Лига"'), "shared four-part career navigation"],
-  [professional.includes("heroCanPlay") && professional.includes("(!activeGame || !heroCanPlay)"), "inactive professional week escape"],
+  [professional.includes("heroCanPlay") && professional.includes("onAdvanceWeek") && !professional.includes("onSetProfessionalWeekFocus"), "one-button professional weekly loop"],
   [!professional.includes("professional-root-tabs"), "no duplicate professional league tabs"],
 ];
 

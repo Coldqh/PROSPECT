@@ -8,6 +8,7 @@ import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, Professiona
 import { careerCommands } from "../application/career/careerCommands";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
+import type { WeeklyReport } from "../application/career/weekly/types";
 
 interface CareerSaveState {
   save?: CareerSave;
@@ -15,9 +16,11 @@ interface CareerSaveState {
   mutating: boolean;
   error?: string;
   actionError?: string;
+  weeklyReport?: WeeklyReport;
   updateWeeklyPlan(templateId: WeeklyPlanTemplateId, intensity: TrainingIntensity): Promise<void>;
   updateTrainingPlan(focusId: TrainingFocusId, intensity: TrainingIntensity): Promise<void>;
   advanceDay(): Promise<void>;
+  advanceWeek(): Promise<void>;
   startMatch(mode: MatchParticipationMode, analysisMode: boolean): Promise<void>;
   resolveMatchDecision(optionId: string): Promise<void>;
   finalizeCollegeMatch(): Promise<void>;
@@ -49,6 +52,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
   const [mutating, setMutating] = useState(false);
   const [error, setError] = useState<string>();
   const [actionError, setActionError] = useState<string>();
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport>();
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +65,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
 
     setLoading(true);
     setError(undefined);
+    setWeeklyReport(undefined);
 
     void careerRepository
       .load(careerId)
@@ -120,6 +125,22 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить игровой день.");
+    } finally {
+      setMutating(false);
+    }
+  }, [careerId, mutating]);
+
+  const advanceWeek = useCallback(async () => {
+    if (!careerId || mutating) return;
+    setMutating(true);
+    setActionError(undefined);
+    try {
+      const result = await careerCommands.advanceWeek(careerId);
+      setSave(result.save);
+      setWeeklyReport(result.report);
+    } catch (caught) {
+      console.error(caught);
+      setActionError("Не удалось завершить игровую неделю.");
     } finally {
       setMutating(false);
     }
@@ -454,9 +475,11 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     mutating,
     ...(error ? { error } : {}),
     ...(actionError ? { actionError } : {}),
+    ...(weeklyReport ? { weeklyReport } : {}),
     updateWeeklyPlan,
     updateTrainingPlan,
     advanceDay,
+    advanceWeek,
     startMatch,
     resolveMatchDecision,
     finalizeCollegeMatch,

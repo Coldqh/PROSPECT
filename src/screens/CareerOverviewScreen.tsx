@@ -26,7 +26,7 @@ export default function CareerOverviewScreen() {
   const navigate = useNavigate();
   const { careerId } = useParams();
   const state = useCareerSave(careerId);
-  const { save, loading, error, mutating, actionError } = state;
+  const { save, loading, error, mutating, actionError, weeklyReport } = state;
   const [primaryView, setPrimaryView] = useState<CareerPrimaryView>("home");
   const [secondaryView, setSecondaryView] = useState<CareerSecondaryView>();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function CareerOverviewScreen() {
         ) : primaryView === "league" ? (
           <LeagueDirectoryDashboard save={careerSave} initialView="professional" onOpenCollegeTeam={(id) => openTeam(id)} />
         ) : (
-          <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeProfessionalMatch={state.finalizeProfessionalMatch} onSetProfessionalWeekFocus={state.setProfessionalWeekFocus} onAdvanceProfessionalWeek={state.advanceProfessionalWeek} onAdvanceProfessionalOffseason={state.advanceProfessionalOffseason} onAcceptFreeAgentOffer={state.acceptProfessionalFreeAgentOffer} />
+          <ProfessionalTransitionDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} {...(weeklyReport ? { weeklyReport } : {})} onAdvanceWeek={state.advanceWeek} onResolveDeclaration={state.resolveProfessionalDeclaration} onSelectAgent={state.selectProfessionalAgent} onCompleteEvaluation={state.completeProfessionalEvaluation} onRunDraft={state.runProfessionalDraft} onAcceptCampInvite={state.acceptProfessionalCampInvite} onAdvanceCamp={state.advanceProfessionalTrainingCamp} onAdvanceProfessionalOffseason={state.advanceProfessionalOffseason} onAcceptFreeAgentOffer={state.acceptProfessionalFreeAgentOffer} />
         )}
       </div>
       {commonDrawer()}
@@ -68,7 +68,7 @@ export default function CareerOverviewScreen() {
 
   if (careerSave.meta.phase === "college-season") return (
     <ScreenShell narrow header={<AppHeader compact action={menuButton} />} className="career-game-shell">
-      <CollegeCareerDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} drawerOpen={drawerOpen} onDrawerOpenChange={setDrawerOpen} onExit={() => navigate("/")} onAdvanceDay={state.advanceDay} onUpdateTrainingPlan={state.updateTrainingPlan} onResolveRelationshipEvent={state.resolveRelationshipEvent} onResolveDecision={state.resolveCollegeHeroDecision} onStartMatch={state.startMatch} onResolveMatchDecision={state.resolveMatchDecision} onFinalizeMatch={state.finalizeCollegeMatch} onOpenProfessionalDraft={state.openProfessionalDraft} />
+      <CollegeCareerDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} {...(weeklyReport ? { weeklyReport } : {})} drawerOpen={drawerOpen} onDrawerOpenChange={setDrawerOpen} onExit={() => navigate("/")} onAdvanceWeek={state.advanceWeek} onResolveRelationshipEvent={state.resolveRelationshipEvent} onResolveDecision={state.resolveCollegeHeroDecision} onOpenProfessionalDraft={state.openProfessionalDraft} />
     </ScreenShell>
   );
 
@@ -112,7 +112,7 @@ export default function CareerOverviewScreen() {
         ) : primaryView === "league" ? (
           <LeagueDirectoryDashboard save={careerSave} onOpenCollegeTeam={(id) => openTeam(id)} />
         ) : (
-          <TodayDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} onUpdatePlan={state.updateWeeklyPlan} onUpdateTrainingPlan={state.updateTrainingPlan} onAdvanceDay={state.advanceDay} onResolveRelationshipEvent={state.resolveRelationshipEvent} onOpenMatch={() => setMatchOpen(true)} />
+          <TodayDashboard save={careerSave} mutating={mutating} {...(actionError ? { actionError } : {})} {...(weeklyReport ? { weeklyReport } : {})} onAdvanceWeek={state.advanceWeek} />
         )}
       </div>
       {commonDrawer()}

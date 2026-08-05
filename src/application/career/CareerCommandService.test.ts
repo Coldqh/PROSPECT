@@ -62,6 +62,20 @@ describe("CareerCommandService", () => {
     expect(store.current()?.meta.id).toBe(created.meta.id);
   });
 
+  it("advances a complete high-school week with one command", async () => {
+    const store = createMemoryStore();
+    const commands = new CareerCommandService(store);
+    const created = await commands.createFootballCareer(setup);
+
+    const result = await commands.advanceWeek(created.meta.id);
+
+    expect(result.save.life.weekNumber).toBe(created.life.weekNumber + 1);
+    expect(result.save.relationships.pendingEvent).toBeUndefined();
+    expect(result.report.week).toBe(created.life.weekNumber);
+    expect(result.report.metrics.some((metric) => metric.id === "overall")).toBe(true);
+    expect(result.report.summary.length).toBeGreaterThan(10);
+  });
+
   it("keeps phase rules outside the repository", async () => {
     const store = createMemoryStore();
     const commands = new CareerCommandService(store);

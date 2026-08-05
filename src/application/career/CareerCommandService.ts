@@ -10,8 +10,10 @@ import type {
 import type { RecruitingActionId } from "../../sports/football/recruiting/types";
 import type { TrainingFocusId } from "../../sports/football/training/types";
 import type { CareerSave } from "../../storage/saves/schema";
+import type { CareerWeekAdvanceResult } from "./weekly/types";
 import type { CareerMutationStore } from "./CareerMutationStore";
 import { CareerPlanningCommands } from "./commands/CareerPlanningCommands";
+import { CareerWeekCommands } from "./commands/CareerWeekCommands";
 import { CollegeCareerCommands } from "./commands/CollegeCareerCommands";
 import { MatchCommands } from "./commands/MatchCommands";
 import { ProfessionalCareerCommands } from "./commands/ProfessionalCareerCommands";
@@ -23,6 +25,7 @@ export class CareerCommandService {
   private readonly college: CollegeCareerCommands;
   private readonly match: MatchCommands;
   private readonly professional: ProfessionalCareerCommands;
+  private readonly week: CareerWeekCommands;
 
   constructor(private readonly store: CareerMutationStore) {
     this.planning = new CareerPlanningCommands(store);
@@ -30,6 +33,7 @@ export class CareerCommandService {
     this.college = new CollegeCareerCommands(store);
     this.match = new MatchCommands(store);
     this.professional = new ProfessionalCareerCommands(store);
+    this.week = new CareerWeekCommands(store);
   }
 
   createFootballCareer(setup: FootballCareerSetup): Promise<CareerSave> {
@@ -162,6 +166,10 @@ export class CareerCommandService {
 
   acceptProfessionalFreeAgentOffer(careerId: string, teamId: string): Promise<CareerSave> {
     return this.professional.acceptFreeAgentOffer(careerId, teamId);
+  }
+
+  advanceWeek(careerId: string): Promise<CareerWeekAdvanceResult> {
+    return this.week.advance(careerId);
   }
 
   async advanceDay(careerId: string): Promise<CareerSave> {
