@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CareerCommandService } from "../../application/career/CareerCommandService";
 import { CareerRepository, CareerSaveConflictError } from "./CareerRepository";
 import { getDatabase } from "../indexedDb/database";
 import { advanceRelationshipWorld } from "../../sports/football/relationships/relationshipEvents";
@@ -7,7 +8,8 @@ import type { CareerSave } from "./schema";
 describe("CareerRepository", () => {
   it("creates, lists, loads, exports and removes a career", async () => {
     const repository = new CareerRepository();
-    const created = await repository.createFootballCareer({
+    const commands = new CareerCommandService(repository);
+    const created = await commands.createFootballCareer({
       character: {
         firstName: "Jalen",
         lastName: "Cole",
@@ -62,7 +64,7 @@ describe("CareerRepository", () => {
     const pendingConversation = withConversation.relationships.pendingEvent;
     expect(pendingConversation).toBeTruthy();
     if (!pendingConversation) throw new Error("Expected a pending relationship event");
-    const resolvedConversation = await repository.resolveRelationshipEvent(
+    const resolvedConversation = await commands.resolveRelationshipEvent(
       created.meta.id,
       pendingConversation.options[0]!.id,
     );
@@ -108,7 +110,8 @@ describe("CareerRepository", () => {
 
   it("rejects stale writes instead of silently replacing a newer revision", async () => {
     const repository = new CareerRepository();
-    const created = await repository.createFootballCareer({
+    const commands = new CareerCommandService(repository);
+    const created = await commands.createFootballCareer({
       character: {
         firstName: "Micah",
         lastName: "Stone",

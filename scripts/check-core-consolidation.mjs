@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const database = read("src/storage/indexedDb/database.ts");
 const repository = read("src/storage/saves/CareerRepository.ts");
+const commands = read("src/application/career/CareerCommandService.ts");
 const slices = read("src/storage/saves/worldSlices.ts");
 const participation = read("src/sports/football/matches/participation.ts");
 const simulation = read("src/sports/football/matches/simulateMatch.ts");
@@ -16,6 +17,7 @@ const assertions = [
   [slices.includes("compactCareerSave") && slices.includes("hydrateCareerSave"), "compact snapshot hydration"],
   [repository.includes("careerSaveSchema.safeParse") && !repository.includes("if (save.meta.schemaVersion === CURRENT_SCHEMA_VERSION) return save"), "current-schema validation"],
   [repository.includes("createWorldSliceRecords") && repository.includes("pruneWorldSlices"), "content-addressed world persistence"],
+  [!repository.includes("sports/football") && commands.includes("advanceFootballCareerDay") && commands.includes("startMatch"), "application command boundary"],
   [participation.includes("expectedHeroSnapShare") && participation.includes("heroParticipationForSnap"), "dynamic package participation"],
   [simulation.includes("advancePastBenchSnaps") && simulation.includes("advanceToSpecialOpportunity"), "bench skipping and real special-team opportunities"],
   [!matchUi.includes("entryQuarter") && !matchUi.includes("match.totalEpisodes}</strong>"), "no fake entry quarter or snap quota in match UI"],

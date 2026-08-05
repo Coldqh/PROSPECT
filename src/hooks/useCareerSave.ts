@@ -5,6 +5,7 @@ import type { MatchParticipationMode } from "../sports/football/matches/types";
 import type { RecruitingActionId } from "../sports/football/recruiting/types";
 import type { CollegeEntryRoute, CollegeOnboardingPriority } from "../sports/football/college/types";
 import type { ProfessionalCampApproach, ProfessionalEvaluationFocus, ProfessionalWeekFocus } from "../sports/football/pro/types";
+import { careerCommands } from "../application/career/careerCommands";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerSave } from "../storage/saves/schema";
 
@@ -87,7 +88,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.updateWeeklyPlan(careerId, templateId, intensity));
+      setSave(await careerCommands.updateWeeklyPlan(careerId, templateId, intensity));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось сохранить недельный план.");
@@ -101,7 +102,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.updateTrainingPlan(careerId, focusId, intensity));
+      setSave(await careerCommands.updateTrainingPlan(careerId, focusId, intensity));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось сохранить тренировочный план.");
@@ -115,7 +116,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.advanceDay(careerId));
+      setSave(await careerCommands.advanceDay(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить игровой день.");
@@ -130,7 +131,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.startMatch(careerId, mode, analysisMode));
+      setSave(await careerCommands.startMatch(careerId, mode, analysisMode));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось начать матч.");
@@ -144,7 +145,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.resolveMatchDecision(careerId, optionId));
+      setSave(await careerCommands.resolveMatchDecision(careerId, optionId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось рассчитать игровой эпизод.");
@@ -158,7 +159,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.finalizeCollegeMatch(careerId));
+      setSave(await careerCommands.finalizeCollegeMatch(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось зафиксировать результат в общем календаре.");
@@ -172,7 +173,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.resolveRelationshipEvent(careerId, optionId));
+      setSave(await careerCommands.resolveRelationshipEvent(careerId, optionId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить разговор.");
@@ -187,7 +188,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.performRecruitingAction(careerId, programId, actionId));
+      setSave(await careerCommands.performRecruitingAction(careerId, programId, actionId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось выполнить действие в рекрутинге.");
@@ -201,7 +202,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.commitToCollege(careerId, programId));
+      setSave(await careerCommands.commitToCollege(careerId, programId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось подтвердить выбор колледжа.");
@@ -215,7 +216,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.withdrawCollegeCommitment(careerId));
+      setSave(await careerCommands.withdrawCollegeCommitment(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось отозвать устный коммит.");
@@ -229,7 +230,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.signCollegeAgreement(careerId, programId, route));
+      setSave(await careerCommands.signCollegeAgreement(careerId, programId, route));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось оформить итоговый выбор колледжа.");
@@ -243,7 +244,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.reportToCollege(careerId));
+      setSave(await careerCommands.reportToCollege(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить школьный этап.");
@@ -257,7 +258,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.setCollegeOnboardingPriority(careerId, priority));
+      setSave(await careerCommands.setCollegeOnboardingPriority(careerId, priority));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось сохранить приоритет первого года.");
@@ -271,7 +272,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.resolveCollegeHeroDecision(careerId, optionId));
+      setSave(await careerCommands.resolveCollegeHeroDecision(careerId, optionId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось применить решение университетской карьеры.");
@@ -285,7 +286,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.openProfessionalDraft(careerId));
+      setSave(await careerCommands.openProfessionalDraft(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Профессиональная оценка пока недоступна.");
@@ -299,7 +300,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.resolveProfessionalDeclaration(careerId, optionId));
+      setSave(await careerCommands.resolveProfessionalDeclaration(careerId, optionId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось зафиксировать решение по драфту.");
@@ -313,7 +314,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.selectProfessionalAgent(careerId, agentId));
+      setSave(await careerCommands.selectProfessionalAgent(careerId, agentId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось подписать агента.");
@@ -327,7 +328,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.completeProfessionalEvaluation(careerId, focus));
+      setSave(await careerCommands.completeProfessionalEvaluation(careerId, focus));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить Combine и Pro Day.");
@@ -341,7 +342,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.runProfessionalDraft(careerId));
+      setSave(await careerCommands.runProfessionalDraft(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось провести профессиональный драфт.");
@@ -355,7 +356,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.acceptProfessionalCampInvite(careerId, teamId));
+      setSave(await careerCommands.acceptProfessionalCampInvite(careerId, teamId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось подписать контракт и прибыть в лагерь.");
@@ -369,7 +370,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.advanceProfessionalTrainingCamp(careerId, approach));
+      setSave(await careerCommands.advanceProfessionalTrainingCamp(careerId, approach));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить этап тренировочного лагеря.");
@@ -383,7 +384,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.finalizeProfessionalMatch(careerId));
+      setSave(await careerCommands.finalizeProfessionalMatch(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось зафиксировать профессиональный матч.");
@@ -397,7 +398,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.setProfessionalWeekFocus(careerId, focus));
+      setSave(await careerCommands.setProfessionalWeekFocus(careerId, focus));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось подготовить профессиональную неделю.");
@@ -411,7 +412,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.advanceProfessionalWeek(careerId));
+      setSave(await careerCommands.advanceProfessionalWeek(careerId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось завершить неделю профессионального сезона.");
@@ -425,7 +426,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.advanceProfessionalOffseason(careerId));
+      setSave(await careerCommands.advanceProfessionalOffseason(careerId));
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Не удалось начать новый профессиональный сезон");
     } finally {
@@ -438,7 +439,7 @@ export function useCareerSave(careerId: string | undefined): CareerSaveState {
     setMutating(true);
     setActionError(undefined);
     try {
-      setSave(await careerRepository.acceptProfessionalFreeAgentOffer(careerId, teamId));
+      setSave(await careerCommands.acceptProfessionalFreeAgentOffer(careerId, teamId));
     } catch (caught) {
       console.error(caught);
       setActionError("Не удалось подписать контракт свободного агента.");

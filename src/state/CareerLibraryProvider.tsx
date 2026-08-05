@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { careerCommands } from "../application/career/careerCommands";
 import type { FootballCareerSetup } from "../sports/football/career/types";
 import { careerRepository } from "../storage/saves/CareerRepository";
 import type { CareerIndexRecord, CareerSave } from "../storage/saves/schema";
@@ -48,7 +49,7 @@ export function CareerLibraryProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const createFootballCareer = useCallback(async (setup: FootballCareerSetup) => {
-    const save = await careerRepository.createFootballCareer(setup);
+    const save = await careerCommands.createFootballCareer(setup);
     await refresh();
     return save;
   }, [refresh]);
