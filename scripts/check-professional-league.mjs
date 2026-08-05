@@ -3,7 +3,16 @@ import { readFileSync } from "node:fs";
 const files = {
   types: readFileSync("src/sports/football/pro/types.ts", "utf8"),
   state: readFileSync("src/sports/football/pro/createProfessionalState.ts", "utf8"),
-  league: readFileSync("src/sports/football/pro/league.ts", "utf8"),
+  leagueFacade: readFileSync("src/sports/football/pro/league.ts", "utf8"),
+  leagueShared: readFileSync("src/sports/football/pro/league/shared.ts", "utf8"),
+  leagueRoster: readFileSync("src/sports/football/pro/league/roster.ts", "utf8"),
+  leagueMarket: readFileSync("src/sports/football/pro/league/market.ts", "utf8"),
+  leagueDraftClass: readFileSync("src/sports/football/pro/league/draftClass.ts", "utf8"),
+  leagueSchedule: readFileSync("src/sports/football/pro/league/schedule.ts", "utf8"),
+  leagueMatch: readFileSync("src/sports/football/pro/league/match.ts", "utf8"),
+  leagueWeekly: readFileSync("src/sports/football/pro/league/weekly.ts", "utf8"),
+  leagueInitialization: readFileSync("src/sports/football/pro/league/initialization.ts", "utf8"),
+  leagueOffseason: readFileSync("src/sports/football/pro/league/offseason.ts", "utf8"),
   draft: readFileSync("src/sports/football/pro/draft.ts", "utf8"),
   commands: readFileSync("src/application/career/commands/ProfessionalCareerCommands.ts", "utf8"),
   matchCommands: readFileSync("src/application/career/commands/MatchCommands.ts", "utf8"),
@@ -28,15 +37,15 @@ const required = [
   ["types", "ProfessionalRosterPlayer"],
   ["types", 'ProfessionalSeasonPhase = "preseason" | "regular-season" | "playoffs" | "complete"'],
   ["state", "PROFESSIONAL_SALARY_CAP = 255_000_000"],
-  ["league", "PROFESSIONAL_ROSTER_COUNTS"],
-  ["league", "roundRobinSchedule"],
-  ["league", "runNpcFreeAgency"],
-  ["league", "createProfessionalMatchState"],
-  ["league", "finalizeProfessionalMatch"],
-  ["league", "advanceProfessionalWeek"],
-  ["league", "advanceProfessionalOffseason"],
-  ["league", "runLifecycleRookieDraft"],
-  ["league", "buildPlayoffWeek"],
+  ["leagueShared", "PROFESSIONAL_ROSTER_COUNTS"],
+  ["leagueSchedule", "roundRobinSchedule"],
+  ["leagueMarket", "runNpcFreeAgency"],
+  ["leagueMatch", "createProfessionalMatchState"],
+  ["leagueWeekly", "finalizeProfessionalMatch"],
+  ["leagueWeekly", "advanceProfessionalWeek"],
+  ["leagueOffseason", "advanceProfessionalOffseason"],
+  ["leagueDraftClass", "runLifecycleRookieDraft"],
+  ["leagueSchedule", "buildPlayoffWeek"],
   ["draft", "initializeProfessionalLeague"],
   ["matchCommands", "isProfessionalMatchAwaitingResolution"],
   ["commands", "acceptProfessionalFreeAgentOffer"],
@@ -71,10 +80,14 @@ const rosterTargets = { QB: 3, RB: 4, WR: 5, TE: 3, OT: 5, OG: 4, C: 2, EDGE: 4,
 const initialRosterSize = Object.values(rosterTargets).reduce((sum, count) => sum + count, 0);
 if (initialRosterSize !== 50) failures.push(`professional base roster is ${initialRosterSize}, expected 50 before three free-agent signings`);
 for (const [position, count] of Object.entries(rosterTargets)) {
-  if (!files.league.includes(`${position}: ${count}`)) failures.push(`professional ${position} base target must be ${count}`);
+  if (!files.leagueShared.includes(`${position}: ${count}`)) failures.push(`professional ${position} base target must be ${count}`);
 }
-if (!files.league.includes("rosterSize ?? 53) < 53")) failures.push("professional free agency must refill every club to the active roster limit");
-if (!files.league.includes("item.status === \"complete\" && !item.playoffRound")) failures.push("regular-season records must not absorb playoff results");
+if (!files.leagueMarket.includes("rosterSize ?? 53) < 53")) failures.push("professional free agency must refill every club to the active roster limit");
+if (!files.leagueSchedule.includes("item.status === \"complete\" && !item.playoffRound")) failures.push("regular-season records must not absorb playoff results");
+
+if (files.leagueFacade.split("\n").length > 20) failures.push("professional league facade must remain thin");
+if (!files.leagueFacade.includes('from "./league/weekly"')) failures.push("professional league facade must route weekly commands through the phase module");
+if (!files.leagueFacade.includes('from "./league/offseason"')) failures.push("professional league facade must route offseason commands through the phase module");
 
 if (failures.length) {
   console.error(failures.join("\n"));

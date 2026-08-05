@@ -11,7 +11,7 @@ const files = {
   dashboard: read("src/components/career/MatchDashboard.tsx"),
   schema: read("src/storage/saves/schema.ts"),
   migrations: read("src/storage/saves/migrations.ts"),
-  proLeague: read("src/sports/football/pro/league.ts"),
+  proWeekly: read("src/sports/football/pro/league/weekly.ts"),
 };
 const required = [
   ["types", "MatchUsagePlan"],
@@ -29,7 +29,7 @@ const required = [
   ["dashboard", "MISSED"],
   ["schema", "CURRENT_SCHEMA_VERSION = 35"],
   ["migrations", "migrateVersionThirtyTwo"],
-  ["proLeague", "usage: match.finalResult.usage ?? match.usageStats"],
+  ["proWeekly", "usage: match.finalResult.usage ?? match.usageStats"],
   ["schema", "usage: matchUsageStatLineSchema.optional()"],
 ];
 const failures = required

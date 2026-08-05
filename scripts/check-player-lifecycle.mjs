@@ -10,8 +10,8 @@ const required = [
   ["src/sports/football/pro/types.ts", "sourcePlayerId?: string"],
   ["src/sports/football/pro/draft.ts", "function worldProspect"],
   ["src/sports/football/pro/draft.ts", "sourcePlayerId: player.id"],
-  ["src/sports/football/pro/league.ts", "function runLifecycleRookieDraft"],
-  ["src/sports/football/pro/league.ts", "function advanceBackgroundWorld"],
+  ["src/sports/football/pro/league/draftClass.ts", "function runLifecycleRookieDraft"],
+  ["src/sports/football/pro/league/world.ts", "function advanceBackgroundWorld"],
   ["src/components/career/WorldDashboard.tsx", 'setInternalView("careers")'],
   ["src/storage/saves/schema.ts", "CURRENT_SCHEMA_VERSION = 35"],
 ];
@@ -20,7 +20,7 @@ for (const [path, token] of required) {
 }
 const forbidden = [
   ["src/sports/football/pro/draft.ts", "generatedProspect"],
-  ["src/sports/football/pro/league.ts", "generateRookieFreeAgents"],
+  ["src/sports/football/pro/league/draftClass.ts", "generateRookieFreeAgents"],
 ];
 for (const [path, token] of forbidden) {
   if (read(path).includes(token)) throw new Error(`${path}: obsolete parallel player source ${token}`);

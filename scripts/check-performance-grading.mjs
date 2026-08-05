@@ -6,7 +6,7 @@ const engine = read("src/sports/football/matches/realTimeEngine.ts");
 const lifecycle = read("src/sports/football/matches/simulation/matchLifecycle.ts");
 const result = read("src/sports/football/matches/simulation/matchResult.ts");
 const evaluation = read("src/sports/football/matches/performanceEvaluation.ts");
-const league = read("src/sports/football/pro/league.ts");
+const league = read("src/sports/football/pro/league/weekly.ts");
 const participation = read("src/sports/football/matches/participation.ts");
 
 const assertions = [
