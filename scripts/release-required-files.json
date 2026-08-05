@@ -452,5 +452,12 @@
   "src/application/career/commands/CollegeCareerCommands.ts",
   "src/application/career/commands/MatchCommands.ts",
   "src/application/career/commands/ProfessionalCareerCommands.ts",
-  "src/application/career/commands/SchoolCareerCommands.ts"
+  "src/application/career/commands/SchoolCareerCommands.ts",
+  "src/sports/football/ecosystem/simulation/EcosystemCareerState.ts",
+  "src/sports/football/ecosystem/simulation/SimulationContext.ts",
+  "src/sports/football/ecosystem/simulation/SimulationContext.test.ts",
+  "src/sports/football/ecosystem/simulation/story.ts",
+  "src/sports/football/ecosystem/simulation/dailySystems.ts",
+  "src/sports/football/ecosystem/simulation/offseasonSystems.ts",
+  "src/sports/football/ecosystem/simulation/marketSystems.ts"
 ]
