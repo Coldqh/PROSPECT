@@ -58,6 +58,31 @@ import {
 const MAX_AUTOSAVE_BACKUPS = 5;
 const AUTOSAVE_BACKUP_INTERVAL = 5;
 
+export class CareerSaveConflictError extends Error {
+  readonly careerId: string;
+  readonly expectedRevision: number;
+  readonly actualRevision: number | undefined;
+
+  constructor(careerId: string, expectedRevision: number, actualRevision: number | undefined) {
+    super(
+      actualRevision === undefined
+        ? `Career ${careerId} no longer exists at revision ${expectedRevision}`
+        : `Career ${careerId} changed from revision ${expectedRevision} to ${actualRevision}`,
+    );
+    this.name = "CareerSaveConflictError";
+    this.careerId = careerId;
+    this.expectedRevision = expectedRevision;
+    this.actualRevision = actualRevision;
+  }
+}
+
+interface SaveOptions {
+  createIfMissing?: boolean;
+  archivePrevious?: boolean;
+}
+
+type CareerMutation = (current: CareerSave) => CareerSave | Promise<CareerSave>;
+
 function snapshotId(careerId: string, revision: number): string {
   return `${careerId}:${revision.toString().padStart(8, "0")}`;
 }
@@ -224,9 +249,10 @@ export class CareerRepository {
     templateId: WeeklyPlanTemplateId,
     intensity: TrainingIntensity,
   ): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    if (current.meta.phase === "college-orientation") throw new Error("Weekly planning unlocks after college orientation");
-    return this.save(applyWeeklyPlan(current, templateId, intensity));
+    return this.mutate(careerId, (current) => {
+      if (current.meta.phase === "college-orientation") throw new Error("Weekly planning unlocks after college orientation");
+      return applyWeeklyPlan(current, templateId, intensity);
+    });
   }
 
 
@@ -235,160 +261,149 @@ export class CareerRepository {
     focusId: TrainingFocusId,
     intensity: TrainingIntensity,
   ): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    if (current.meta.phase === "college-orientation") throw new Error("Training planning unlocks after college orientation");
-    return this.save(applyTrainingPlan(current, focusId, intensity));
+    return this.mutate(careerId, (current) => {
+      if (current.meta.phase === "college-orientation") throw new Error("Training planning unlocks after college orientation");
+      return applyTrainingPlan(current, focusId, intensity);
+    });
   }
 
 
   async startMatch(careerId: string, mode: MatchParticipationMode, analysisMode: boolean): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    if (current.meta.phase === "college-season") {
-      if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
-      return this.save(startMatch(current, mode, analysisMode));
-    }
-    if (current.meta.phase === "professional-career") {
-      const weeklyPlan = current.football.professional.heroCareer?.weeklyPlan;
-      const prepared = weeklyPlan && !weeklyPlan.resolved ? setProfessionalWeekFocus(current, weeklyPlan.focus) : current;
-      if (!isProfessionalMatchAwaitingResolution(prepared)) throw new Error("No professional match is ready");
-      return this.save(startMatch(prepared, mode, analysisMode));
-    }
-    if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
-    if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
-    if (toGameDateKey(current.meta.currentDate) !== toGameDateKey(current.football.match.scheduledDate)) throw new Error("Match is not scheduled for today");
-    return this.save(startMatch(current, mode, analysisMode));
+    return this.mutate(careerId, (current) => {
+      if (current.meta.phase === "college-season") {
+        if (!isCollegeMatchAwaitingResolution(current)) throw new Error("No college match is ready");
+        return startMatch(current, mode, analysisMode);
+      }
+      if (current.meta.phase === "professional-career") {
+        const weeklyPlan = current.football.professional.heroCareer?.weeklyPlan;
+        const prepared = weeklyPlan && !weeklyPlan.resolved ? setProfessionalWeekFocus(current, weeklyPlan.focus) : current;
+        if (!isProfessionalMatchAwaitingResolution(prepared)) throw new Error("No professional match is ready");
+        return startMatch(prepared, mode, analysisMode);
+      }
+      if (current.meta.phase !== "high-school-preseason") throw new Error("Interactive match mode is unavailable");
+      if (current.relationships.pendingEvent) throw new Error("Relationship event must be resolved before the match");
+      if (toGameDateKey(current.meta.currentDate) !== toGameDateKey(current.football.match.scheduledDate)) throw new Error("Match is not scheduled for today");
+      return startMatch(current, mode, analysisMode);
+    });
   }
 
   async resolveMatchDecision(careerId: string, optionId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(resolveMatchDecision(current, optionId));
+    return this.mutate(careerId, (current) => resolveMatchDecision(current, optionId));
   }
 
   async finalizeCollegeMatch(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(finalizeCollegeMatch(current));
+    return this.mutate(careerId, finalizeCollegeMatch);
   }
 
   async resolveRelationshipEvent(careerId: string, optionId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(resolveRelationshipEvent(current, optionId));
+    return this.mutate(careerId, (current) => resolveRelationshipEvent(current, optionId));
   }
 
   async performRecruitingAction(careerId: string, programId: string, actionId: RecruitingActionId): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(performRecruitingAction(current, programId, actionId));
+    return this.mutate(careerId, (current) => performRecruitingAction(current, programId, actionId));
   }
 
   async commitToCollege(careerId: string, programId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(commitToCollege(current, programId));
+    return this.mutate(careerId, (current) => commitToCollege(current, programId));
   }
 
   async withdrawCollegeCommitment(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(withdrawCollegeCommitment(current));
+    return this.mutate(careerId, withdrawCollegeCommitment);
   }
 
 
   async signCollegeAgreement(careerId: string, programId: string, route: CollegeEntryRoute): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(signCollegeAgreement(current, programId, route));
+    return this.mutate(careerId, (current) => signCollegeAgreement(current, programId, route));
   }
 
   async reportToCollege(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(reportToCollege(current));
+    return this.mutate(careerId, reportToCollege);
   }
 
   async setCollegeOnboardingPriority(careerId: string, priority: CollegeOnboardingPriority): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(setCollegeOnboardingPriority(current, priority));
+    return this.mutate(careerId, (current) => setCollegeOnboardingPriority(current, priority));
   }
 
 
   async resolveCollegeHeroDecision(careerId: string, optionId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(resolveCollegeHeroDecision(current, optionId));
+    return this.mutate(careerId, (current) => resolveCollegeHeroDecision(current, optionId));
   }
 
   async openProfessionalDraft(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(openProfessionalDraftProcess(current));
+    return this.mutate(careerId, openProfessionalDraftProcess);
   }
 
   async resolveProfessionalDeclaration(careerId: string, optionId: "return-college" | "declare"): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(resolveProfessionalDeclaration(current, optionId));
+    return this.mutate(careerId, (current) => resolveProfessionalDeclaration(current, optionId));
   }
 
   async selectProfessionalAgent(careerId: string, agentId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(selectProfessionalAgent(current, agentId));
+    return this.mutate(careerId, (current) => selectProfessionalAgent(current, agentId));
   }
 
   async completeProfessionalEvaluation(careerId: string, focus: ProfessionalEvaluationFocus): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(completeProfessionalEvaluation(current, focus));
+    return this.mutate(careerId, (current) => completeProfessionalEvaluation(current, focus));
   }
 
   async runProfessionalDraft(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(runProfessionalDraft(current));
+    return this.mutate(careerId, runProfessionalDraft);
   }
 
   async acceptProfessionalCampInvite(careerId: string, teamId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(acceptProfessionalCampInvite(current, teamId));
+    return this.mutate(careerId, (current) => acceptProfessionalCampInvite(current, teamId));
   }
 
   async advanceProfessionalTrainingCamp(careerId: string, approach: ProfessionalCampApproach): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(advanceProfessionalTrainingCamp(current, approach));
+    return this.mutate(careerId, (current) => advanceProfessionalTrainingCamp(current, approach));
   }
 
 
   async finalizeProfessionalMatch(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(finalizeProfessionalMatch(current));
+    return this.mutate(careerId, finalizeProfessionalMatch);
   }
 
   async setProfessionalWeekFocus(careerId: string, focus: ProfessionalWeekFocus): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(setProfessionalWeekFocus(current, focus));
+    return this.mutate(careerId, (current) => setProfessionalWeekFocus(current, focus));
   }
 
   async advanceProfessionalWeek(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(advanceProfessionalWeek(current));
+    return this.mutate(careerId, advanceProfessionalWeek);
   }
 
   async advanceProfessionalOffseason(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(advanceProfessionalOffseason(current));
+    return this.mutate(careerId, advanceProfessionalOffseason);
   }
 
   async acceptProfessionalFreeAgentOffer(careerId: string, teamId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    return this.save(acceptProfessionalFreeAgentOffer(current, teamId));
+    return this.mutate(careerId, (current) => acceptProfessionalFreeAgentOffer(current, teamId));
   }
 
   async advanceDay(careerId: string): Promise<CareerSave> {
-    const current = await this.load(careerId);
-    if (current.meta.phase === "professional-draft" || current.meta.phase === "professional-career") throw new Error("Use professional career actions in this phase");
-    if (current.meta.phase === "college-orientation") throw new Error("College orientation must be completed before advancing");
-    if (current.meta.phase === "high-school-preseason" && current.relationships.pendingEvent) {
-      throw new Error("Relationship event must be resolved before advancing");
-    }
-    if (current.meta.phase === "high-school-preseason" && current.life.dayIndex === 5 && current.football.match.status !== "complete") {
-      throw new Error("Match must be completed before advancing Saturday");
-    }
-    if (current.meta.phase === "college-season" && isCollegeMatchAwaitingResolution(current)) {
-      throw new Error(current.football.match.status === "complete" ? "College match must be finalized" : "College match must be played");
-    }
-    return this.save(advanceFootballCareerDay(current));
+    return this.mutate(careerId, (current) => {
+      if (current.meta.phase === "professional-draft" || current.meta.phase === "professional-career") throw new Error("Use professional career actions in this phase");
+      if (current.meta.phase === "college-orientation") throw new Error("College orientation must be completed before advancing");
+      if (current.meta.phase === "high-school-preseason" && current.relationships.pendingEvent) {
+        throw new Error("Relationship event must be resolved before advancing");
+      }
+      if (current.meta.phase === "high-school-preseason" && current.life.dayIndex === 5 && current.football.match.status !== "complete") {
+        throw new Error("Match must be completed before advancing Saturday");
+      }
+      if (current.meta.phase === "college-season" && isCollegeMatchAwaitingResolution(current)) {
+        throw new Error(current.football.match.status === "complete" ? "College match must be finalized" : "College match must be played");
+      }
+      return advanceFootballCareerDay(current);
+    });
   }
 
-  async save(input: CareerSave): Promise<CareerSave> {
+  async mutate(careerId: string, mutation: CareerMutation): Promise<CareerSave> {
+    const current = await this.load(careerId);
+    const next = await mutation(current);
+    if (next.meta.id !== current.meta.id) throw new Error("Career mutation cannot change the career id");
+    if (next.meta.revision !== current.meta.revision) throw new Error("Career mutation cannot change the revision directly");
+    return this.save(next);
+  }
+
+  async save(input: CareerSave, options: SaveOptions = {}): Promise<CareerSave> {
     const now = new Date().toISOString();
     const save: CareerSave = {
       ...input,
@@ -403,24 +418,38 @@ export class CareerRepository {
     const database = await getDatabase();
     const world = createWorldSliceRecords(validated);
     const snapshot = toSnapshot(validated, world.refs);
-    const previous = await this.readLatestSnapshot(validated.meta.id);
     const transaction = database.transaction(
       ["careerIndex", "careerSnapshots", "autosaveBackups", "careerWorldSlices"],
       "readwrite",
     );
 
-    const shouldArchivePrevious = previous !== undefined
+    const snapshotStore = transaction.objectStore("careerSnapshots");
+    const previousCursor = await snapshotStore.index("by-career-revision").openCursor(
+      IDBKeyRange.bound([validated.meta.id, 0], [validated.meta.id, Number.MAX_SAFE_INTEGER]),
+      "prev",
+    );
+    const previous = previousCursor?.value;
+    const actualRevision = previous?.revision;
+    const expectedRevision = input.meta.revision;
+    const missingAllowed = options.createIfMissing === true || expectedRevision === 0;
+
+    if (actualRevision === undefined ? !missingAllowed : actualRevision !== expectedRevision) {
+      throw new CareerSaveConflictError(validated.meta.id, expectedRevision, actualRevision);
+    }
+
+    const shouldArchivePrevious = options.archivePrevious !== false
+      && previous !== undefined
       && validated.meta.revision % AUTOSAVE_BACKUP_INTERVAL === 0;
     if (previous) {
       if (shouldArchivePrevious) await transaction.objectStore("autosaveBackups").put(previous);
-      await transaction.objectStore("careerSnapshots").delete(previous.id);
+      await snapshotStore.delete(previous.id);
     }
 
     for (const record of world.records) {
       const existing = await transaction.objectStore("careerWorldSlices").get(record.id);
       if (!existing) await transaction.objectStore("careerWorldSlices").put(record);
     }
-    await transaction.objectStore("careerSnapshots").put(snapshot);
+    await snapshotStore.put(snapshot);
     await transaction.objectStore("careerIndex").put(toIndexRecord(validated));
     await transaction.done;
     if (shouldArchivePrevious) await pruneBackups(validated.meta.id);
@@ -451,9 +480,17 @@ export class CareerRepository {
       const hydrated = await hydrateSnapshot(backup);
       if (!hydrated) continue;
       const migration = migrateCareerSave(hydrated);
-      return migration.migratedFrom !== undefined
-        ? this.save(migration.save)
-        : careerSaveSchemaSafeParse(migration.save);
+      const recovered = careerSaveSchemaSafeParse(migration.save);
+      return this.save(
+        {
+          ...recovered,
+          meta: {
+            ...recovered.meta,
+            revision: latest?.revision ?? recovered.meta.revision,
+          },
+        },
+        { createIfMissing: true, archivePrevious: false },
+      );
     }
 
     throw new Error("Career save is missing or corrupted");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CareerRepository } from "./CareerRepository";
+import { CareerRepository, CareerSaveConflictError } from "./CareerRepository";
 import { getDatabase } from "../indexedDb/database";
 import { advanceRelationshipWorld } from "../../sports/football/relationships/relationshipEvents";
 import type { CareerSave } from "./schema";
@@ -104,5 +104,72 @@ describe("CareerRepository", () => {
 
     await repository.remove(created.meta.id);
     expect(await repository.list()).toEqual([]);
+  });
+
+  it("rejects stale writes instead of silently replacing a newer revision", async () => {
+    const repository = new CareerRepository();
+    const created = await repository.createFootballCareer({
+      character: {
+        firstName: "Micah",
+        lastName: "Stone",
+        birthDate: "2008-08-17",
+        gender: "male",
+        handedness: "right",
+        originId: "houston",
+        familyIncome: "comfortable",
+        familyStructure: "two-parent",
+        familySupport: "supportive",
+        mindset: "composed",
+      },
+      position: "CB",
+      archetypeId: "press-corner",
+      jerseyNumber: 2,
+    });
+
+    const firstCopy = await repository.load(created.meta.id);
+    const staleCopy = await repository.load(created.meta.id);
+    const firstEventId = crypto.randomUUID();
+    const staleEventId = crypto.randomUUID();
+    const committed = await repository.save({
+      ...firstCopy,
+      history: [
+        ...firstCopy.history,
+        {
+          id: firstEventId,
+          occurredAt: firstCopy.meta.updatedAt,
+          type: "career-imported",
+          title: "Первая запись",
+          description: "Эта запись должна сохраниться.",
+        },
+      ],
+    });
+
+    const staleWrite = repository.save({
+      ...staleCopy,
+      history: [
+        ...staleCopy.history,
+        {
+          id: staleEventId,
+          occurredAt: staleCopy.meta.updatedAt,
+          type: "career-imported",
+          title: "Устаревшая запись",
+          description: "Эта запись не должна затереть новую ревизию.",
+        },
+      ],
+    });
+    await expect(staleWrite).rejects.toBeInstanceOf(CareerSaveConflictError);
+    await expect(staleWrite).rejects.toMatchObject({
+      name: "CareerSaveConflictError",
+      careerId: created.meta.id,
+      expectedRevision: staleCopy.meta.revision,
+      actualRevision: committed.meta.revision,
+    });
+
+    const persisted = await repository.load(created.meta.id);
+    expect(persisted.meta.revision).toBe(committed.meta.revision);
+    expect(persisted.history.some((event) => event.id === firstEventId)).toBe(true);
+    expect(persisted.history.some((event) => event.id === staleEventId)).toBe(false);
+
+    await repository.remove(created.meta.id);
   });
 });
